@@ -2,7 +2,13 @@ import { useMemo } from 'react';
 import { usePedigreeStore, createDefaultIndividual } from '../stores/pedigreeStore';
 import { useUIStore } from '../stores/uiStore';
 import { useViewportStore } from '../stores/viewportStore';
-import { ZOOM_STEP } from '../utils/constants';
+import { generateId } from '../utils/idGenerator';
+import { computeAnnotationDropPosition } from '../utils/annotationPlacement';
+import {
+  ZOOM_STEP,
+  ANNOTATION_DEFAULT_FONT_SIZE,
+  ANNOTATION_PLACEHOLDER_TEXT,
+} from '../utils/constants';
 import { openDocumentAction, deleteSelectedAction } from './editorActions';
 
 /**
@@ -39,7 +45,13 @@ export interface EditorActions {
    *   screen/stage-local space by the caller, e.g. via `screenToCanvas`).
    */
   addPersonAt: (position: { x: number; y: number }) => void;
-  /** Delete every currently-selected individual, then clear the selection. */
+  /**
+   * Add a free-text annotation in clear space below the existing pedigree
+   * (falling back to the visible-canvas centre when empty) and open it
+   * straight into inline edit mode.
+   */
+  addText: () => void;
+  /** Delete every currently-selected node, then clear the selection. */
   deleteSelected: () => void;
   /** Undo the last pedigree document change. */
   undo: () => void;
@@ -121,6 +133,37 @@ export function useEditorActions(): EditorActions {
     addPersonAt(canvasCenter);
   };
 
+  const addText = (): void => {
+    // Drop the annotation in clear space below the existing pedigree so it does
+    // not land on top of a symbol. When the document is empty, fall back to the
+    // centre of the visible canvas area (same stage-local → canvas conversion
+    // as adding an individual).
+    const { screenToCanvas } = useViewportStore.getState();
+    const { document: doc } = usePedigreeStore.getState();
+    const canvasEl = document.querySelector('.konvajs-content');
+    let stageCenter = { x: 300, y: 300 };
+    if (canvasEl) {
+      const rect = canvasEl.getBoundingClientRect();
+      stageCenter = { x: rect.width / 2, y: rect.height / 2 };
+    }
+    const fallback = screenToCanvas(stageCenter);
+    const position = computeAnnotationDropPosition(
+      Object.values(doc.individuals),
+      Object.values(doc.textAnnotations),
+      fallback
+    );
+
+    const annotation = {
+      id: generateId(),
+      text: ANNOTATION_PLACEHOLDER_TEXT,
+      position,
+      fontSize: ANNOTATION_DEFAULT_FONT_SIZE,
+    };
+    usePedigreeStore.getState().addTextAnnotation(annotation);
+    // Open straight into inline edit mode (text pre-selected for replacement).
+    useUIStore.getState().startEditingAnnotation(annotation.id);
+  };
+
   const deleteSelected = (): void => deleteSelectedAction();
 
   const undo = (): void => {
@@ -171,6 +214,7 @@ export function useEditorActions(): EditorActions {
       openLegend,
       addPerson,
       addPersonAt,
+      addText,
       deleteSelected,
       undo,
       redo,

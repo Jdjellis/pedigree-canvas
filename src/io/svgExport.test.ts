@@ -25,7 +25,7 @@ function makeFixture(): PedigreeDocument {
     age: 60,
     conditionIds: [],
     conditions: [],
-    geneticTests: [],
+    investigations: ['BRCA1 +', 'CMA: 22q11.2 deletion'],
     isProband: true,
     isPregnancy: false,
     position: { x: 100, y: 100 },
@@ -41,7 +41,7 @@ function makeFixture(): PedigreeDocument {
     age: 58,
     conditionIds: [],
     conditions: [],
-    geneticTests: [],
+    investigations: [],
     isProband: false,
     isPregnancy: false,
     position: { x: 220, y: 100 },
@@ -57,7 +57,7 @@ function makeFixture(): PedigreeDocument {
     age: 30,
     conditionIds: ['cond-1'],
     conditions: [{ id: 'cond-1', name: 'Condition A', ageOfOnset: 25 }],
-    geneticTests: [],
+    investigations: [],
     isProband: false,
     isPregnancy: false,
     position: { x: 160, y: 250 },
@@ -93,6 +93,7 @@ function makeFixture(): PedigreeDocument {
       },
     },
     twinGroups: {},
+    textAnnotations: {},
     generationOrder: [['father', 'mother'], ['child']],
     legendConfig: {
       entries: [
@@ -146,9 +147,87 @@ describe('buildPedigreeSvg', () => {
     expect(svg).toContain('Condition A (dx 25)');
     // Legend "Key" box.
     expect(svg).toContain('>Key</text>');
+    // Legend rows read "icon = description" (issue #18).
+    expect(svg).toContain('>= Condition A</text>');
     // Generation numerals (Roman).
     expect(svg).toContain('>I</text>');
     expect(svg).toContain('>II</text>');
+  });
+
+  it('ranks the topmost generation as I even when its raw value is negative', () => {
+    // Simulate adding a parent generation above founders: founders stay at
+    // generation 0 and the new parents get generation -1 (see RadialMenu). The
+    // topmost (minimum) generation must still render as "I".
+    const doc = makeFixture();
+    const grandfather: Individual = {
+      ...doc.individuals.father,
+      id: 'grandfather',
+      displayName: 'George',
+      isProband: false,
+      position: { x: 100, y: -50 },
+      generation: -1,
+    };
+    doc.individuals = { ...doc.individuals, grandfather };
+
+    const svg = buildPedigreeSvg(doc, 'Test Pedigree');
+
+    // Three generations (-1, 0, 1) read I, II, III top-to-bottom.
+    expect(svg).toContain('>I</text>');
+    expect(svg).toContain('>II</text>');
+    expect(svg).toContain('>III</text>');
+  });
+
+  it('ranks the topmost generation as I even when raw generations are all > 0', () => {
+    const doc = makeFixture();
+    doc.individuals.father.generation = 2;
+    doc.individuals.mother.generation = 2;
+    doc.individuals.child.generation = 3;
+
+    const svg = buildPedigreeSvg(doc, 'Test Pedigree');
+
+    // Min-relative: generation 2 -> I, generation 3 -> II.
+    expect(svg).toContain('>I</text>');
+    expect(svg).toContain('>II</text>');
+    // Absolute numbering would have produced III for generation 2; it must not.
+    expect(svg).not.toContain('>III</text>');
+  });
+
+  it('renders free-text annotations as positioned <text> at their font size', () => {
+    const doc = makeFixture();
+    doc.textAnnotations = {
+      'anno-1': {
+        id: 'anno-1',
+        text: 'Family Pedigree',
+        position: { x: 80, y: 40 },
+        fontSize: 24,
+      },
+    };
+
+    const svg = buildPedigreeSvg(doc, 'Test Pedigree');
+
+    expect(svg).toContain('Family Pedigree');
+    expect(svg).toContain('font-size="24"');
+    expect(svg).toContain('class="annotations"');
+  });
+
+  it('escapes XML-special characters in annotations and renders multi-line text', () => {
+    const doc = makeFixture();
+    doc.textAnnotations = {
+      'anno-1': {
+        id: 'anno-1',
+        text: 'A & B\n<line two>',
+        position: { x: 0, y: 0 },
+        fontSize: 16,
+      },
+    };
+
+    const svg = buildPedigreeSvg(doc, 'Test Pedigree');
+
+    expect(svg).toContain('A &amp; B');
+    expect(svg).toContain('&lt;line two&gt;');
+    expect(svg).not.toContain('A & B');
+    // Each line becomes its own <tspan>.
+    expect(svg).toContain('<tspan');
   });
 
   it('escapes XML-special characters in the title and labels', () => {
@@ -178,5 +257,18 @@ describe('buildPedigreeSvg', () => {
     expect(svg).toContain('<svg');
     expect(svg).toContain('viewBox=');
     expect(svg).not.toContain('<image');
+  });
+
+  it('renders investigation lines beside the symbol', () => {
+    const svg = buildPedigreeSvg(makeFixture(), 'Test Pedigree');
+    expect(svg).toContain('BRCA1 +');
+    expect(svg).toContain('CMA: 22q11.2 deletion');
+  });
+
+  it('renders an Investigations subheading listing the distinct sorted set', () => {
+    const svg = buildPedigreeSvg(makeFixture(), 'Test Pedigree');
+    expect(svg).toContain('Investigations');
+    // Alphabetical: BRCA1 + before CMA: ...
+    expect(svg.indexOf('BRCA1 +')).toBeLessThan(svg.indexOf('CMA: 22q11.2 deletion'));
   });
 });

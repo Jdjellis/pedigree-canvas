@@ -6,6 +6,7 @@ import type {
   ParentChildRelationship,
 } from '../../types/pedigree';
 import { LINE_COLOR, LINE_WIDTH, DASH_PATTERN } from '../../utils/constants';
+import { computeParentChildSegments } from './parentChildGeometry';
 
 interface ParentChildLineProps {
   partnership: PartnershipRelationship;
@@ -30,45 +31,44 @@ export function ParentChildLine({
 
   if (children.length === 0) return null;
 
-  // Partnership midpoint
   const partnershipY = (p1.position.y + p2.position.y) / 2;
   const partnershipMidX = (p1.position.x + p2.position.x) / 2;
 
-  // Sibship line Y position (halfway between partnership and children)
-  const childrenY = Math.min(...children.map((c) => c.position.y));
-  const sibshipY = partnershipY + (childrenY - partnershipY) / 2;
-
-  // Sibship line spans from leftmost to rightmost child
-  const childXPositions = children.map((c) => c.position.x);
-  const minChildX = Math.min(...childXPositions);
-  const maxChildX = Math.max(...childXPositions);
+  const { parentDrop, sibship, childDrops } = computeParentChildSegments(
+    partnershipMidX,
+    partnershipY,
+    children.map((c) => ({ x: c.position.x, y: c.position.y })),
+  );
 
   const lines: JSX.Element[] = [];
 
-  // Vertical line from partnership midpoint down to sibship line
+  // Vertical line from partnership midpoint down to the sibship line.
   lines.push(
     <Line
       key={`vert-${partnership.id}`}
-      points={[partnershipMidX, partnershipY, partnershipMidX, sibshipY]}
+      points={parentDrop}
       stroke={LINE_COLOR}
       strokeWidth={LINE_WIDTH}
     />
   );
 
-  // Horizontal sibship line (only if more than one child)
-  if (children.length > 1) {
+  // Horizontal sibship line joining the parents' drop to every child drop.
+  // Drawn whenever anything is horizontally offset (incl. a single child whose
+  // x differs from the partnership midpoint), so the connector never breaks
+  // into disconnected stubs.
+  if (sibship) {
     lines.push(
       <Line
         key={`sib-${partnership.id}`}
-        points={[minChildX, sibshipY, maxChildX, sibshipY]}
+        points={sibship}
         stroke={LINE_COLOR}
         strokeWidth={LINE_WIDTH}
       />
     );
   }
 
-  // Vertical drops from sibship line to each child
-  for (const child of children) {
+  // Vertical drops from the sibship line down to each child.
+  children.forEach((child, i) => {
     const link = Object.values(parentChildLinks).find(
       (l) =>
         l.parentPartnershipId === partnership.id &&
@@ -79,13 +79,13 @@ export function ParentChildLine({
     lines.push(
       <Line
         key={`drop-${child.id}`}
-        points={[child.position.x, sibshipY, child.position.x, child.position.y]}
+        points={childDrops[i]}
         stroke={LINE_COLOR}
         strokeWidth={LINE_WIDTH}
         dash={isAdopted ? DASH_PATTERN : undefined}
       />
     );
-  }
+  });
 
   return <>{lines}</>;
 }

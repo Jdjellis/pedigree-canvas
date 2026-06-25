@@ -11,6 +11,7 @@ function makeNoopActions(): EditorActions {
     openLegend: vi.fn(),
     addPerson: vi.fn(),
     addPersonAt: vi.fn(),
+    addText: vi.fn(),
     deleteSelected: vi.fn(),
     undo: vi.fn(),
     redo: vi.fn(),

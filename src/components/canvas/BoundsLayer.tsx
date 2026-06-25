@@ -2,7 +2,7 @@ import React from 'react';
 import { Rect, Text } from 'react-konva';
 import type { CanvasBounds } from '../../utils/boundsCalculation';
 import type { Individual } from '../../types/pedigree';
-import { toRomanNumeral } from '../../utils/boundsCalculation';
+import { computeGenerationNumerals } from '../../utils/boundsCalculation';
 import { LABEL_FONT_FAMILY, LABEL_COLOR } from '../../utils/constants';
 
 interface BoundsLayerProps {
@@ -14,19 +14,7 @@ export const BoundsLayer: React.FC<BoundsLayerProps> = React.memo(
   ({ bounds, individuals }) => {
     if (!bounds) return null;
 
-    const genYMap = new Map<number, number[]>();
-    for (const ind of individuals) {
-      const gen = ind.generation ?? 0;
-      if (!genYMap.has(gen)) genYMap.set(gen, []);
-      genYMap.get(gen)!.push(ind.position.y);
-    }
-
-    const genLabels: { gen: number; y: number }[] = [];
-    for (const [gen, ys] of genYMap) {
-      const avgY = ys.reduce((a, b) => a + b, 0) / ys.length;
-      genLabels.push({ gen, y: avgY });
-    }
-    genLabels.sort((a, b) => a.gen - b.gen);
+    const genLabels = computeGenerationNumerals(individuals);
 
     return (
       <>
@@ -41,12 +29,12 @@ export const BoundsLayer: React.FC<BoundsLayerProps> = React.memo(
           listening={false}
           name="export-exclude"
         />
-        {genLabels.map(({ gen, y }) => (
+        {genLabels.map(({ generation, roman, y }) => (
           <Text
-            key={`gen-${gen}`}
+            key={`gen-${generation}`}
             x={bounds.x + 10}
             y={y - 7}
-            text={toRomanNumeral(gen)}
+            text={roman}
             fontSize={14}
             fontFamily={LABEL_FONT_FAMILY}
             fontStyle="bold"

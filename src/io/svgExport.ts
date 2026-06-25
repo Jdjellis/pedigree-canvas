@@ -4,12 +4,14 @@ import type {
   PartnershipRelationship,
   ParentChildRelationship,
   TwinGroup,
+  TextAnnotation,
   LegendEntry,
   QuarterPosition,
   FillPatternType,
 } from '../types/pedigree';
 import { GenderIdentity, RelationshipType, TwinType, VitalStatus } from '../types/enums';
-import { computeBounds, toRomanNumeral } from '../utils/boundsCalculation';
+import { computeBounds, computeGenerationNumerals } from '../utils/boundsCalculation';
+import { collectInvestigations } from '../utils/investigations';
 import {
   SYMBOL_SIZE,
   SYMBOL_STROKE_WIDTH,
@@ -37,6 +39,11 @@ const PATTERN_TILE_SIZE = 8;
 const PATTERN_STROKE_WIDTH = 1.5;
 /** Vertical spacing between successive label lines (see `SymbolLabel`). */
 const LABEL_LINE_HEIGHT = LABEL_FONT_SIZE + 4;
+/**
+ * Horizontal gap between the symbol's right edge and the start of the
+ * bottom-right individual number (see `SymbolLabel`).
+ */
+const NUMBER_CORNER_GAP = 3;
 /** Padding added around the content bounding box for the export viewBox. */
 const VIEWBOX_PADDING = 40;
 
@@ -261,43 +268,18 @@ function computeIndividualNumbers(individuals: Individual[]): Map<string, number
   return numbers;
 }
 
-/**
- * Compute generation numeral labels, matching `BoundsLayer.tsx`: one Roman
- * numeral per generation, vertically positioned at the average y of that
- * generation's individuals.
- */
-function computeGenerationLabels(
-  individuals: Individual[],
-): { roman: string; y: number }[] {
-  const genYMap = new Map<number, number[]>();
-  for (const ind of individuals) {
-    const gen = ind.generation ?? 0;
-    if (!genYMap.has(gen)) genYMap.set(gen, []);
-    genYMap.get(gen)!.push(ind.position.y);
-  }
-  const labels: { gen: number; y: number }[] = [];
-  for (const [gen, ys] of genYMap) {
-    const avgY = ys.reduce((a, b) => a + b, 0) / ys.length;
-    labels.push({ gen, y: avgY });
-  }
-  labels.sort((a, b) => a.gen - b.gen);
-  return labels.map(({ gen, y }) => ({ roman: toRomanNumeral(gen), y }));
-}
-
 // ---------------------------------------------------------------------------
 // Per-symbol rendering
 // ---------------------------------------------------------------------------
 
-/** Build the label lines for an individual, matching `SymbolLabel.tsx`. */
-function buildLabelLines(
-  individual: Individual,
-  individualNumber: number | undefined,
-): string[] {
+/**
+ * Build the centred name/age/condition label lines for an individual, matching
+ * `SymbolLabel.tsx`. The individual number is rendered separately at the
+ * symbol's bottom-right corner and is therefore not included here.
+ */
+function buildLabelLines(individual: Individual): string[] {
   const lines: string[] = [];
 
-  if (individualNumber != null) {
-    lines.push(`${individualNumber}`);
-  }
   if (individual.displayName) {
     lines.push(individual.displayName);
   }
@@ -320,6 +302,11 @@ function buildLabelLines(
     } else {
       lines.push(condition.name);
     }
+  }
+
+  for (const investigation of individual.investigations) {
+    const value = investigation.trim();
+    if (value) lines.push(value);
   }
 
   return lines;
@@ -401,8 +388,24 @@ function renderIndividual(
     }
   }
 
+  // Individual number at the symbol's bottom-right corner (pedigree
+  // convention). Left-anchored just outside the shape's bounding box. Konva
+  // places its Text top at y = half - FONT/2; the SVG baseline sits FONT below
+  // the top, so the baseline lands at y = half + FONT/2.
+  if (individualNumber != null) {
+    const numberX = half + NUMBER_CORNER_GAP;
+    const numberBaselineY = half + LABEL_FONT_SIZE / 2;
+    parts.push(
+      `<text x="${num(numberX)}" y="${num(
+        numberBaselineY,
+      )}" font-size="${LABEL_FONT_SIZE}" font-family="${escapeXml(
+        LABEL_FONT_FAMILY,
+      )}" fill="${LABEL_COLOR}">${individualNumber}</text>`,
+    );
+  }
+
   // Text labels (centred under the symbol).
-  const lines = buildLabelLines(individual, individualNumber);
+  const lines = buildLabelLines(individual);
   if (lines.length > 0) {
     const startY = SYMBOL_SIZE / 2 + LABEL_OFFSET_Y;
     const textParts = lines
@@ -601,24 +604,61 @@ function renderTwinConnector(
 }
 
 // ---------------------------------------------------------------------------
+// Free-text annotations
+// ---------------------------------------------------------------------------
+
+/**
+ * Render a single free-text annotation as a positioned SVG `<text>`.
+ *
+ * Matches the on-canvas Konva `Text`: `position` is the top-left of the text
+ * block, so the first baseline sits one font-size below it. Multi-line text is
+ * split into `<tspan>` rows spaced by the font size.
+ */
+function renderTextAnnotation(annotation: TextAnnotation): string {
+  const lines = annotation.text.split('\n');
+  const x = num(annotation.position.x);
+  const firstBaselineY = num(annotation.position.y + annotation.fontSize);
+
+  const tspans = lines
+    .map((lineText, index) => {
+      const dy = index === 0 ? 0 : annotation.fontSize;
+      return `<tspan x="${x}" dy="${num(dy)}">${escapeXml(lineText)}</tspan>`;
+    })
+    .join('');
+
+  return `<text x="${x}" y="${firstBaselineY}" font-size="${num(
+    annotation.fontSize,
+  )}" font-family="${escapeXml(
+    LABEL_FONT_FAMILY,
+  )}" fill="${LABEL_COLOR}">${tspans}</text>`;
+}
+
+// ---------------------------------------------------------------------------
 // Legend / key box
 // ---------------------------------------------------------------------------
 
 /** Render the legend "Key" box, matching `LegendLayer.tsx`. */
 function renderLegend(
   entries: LegendEntry[],
+  investigations: string[],
   legendX: number,
   legendY: number,
 ): { markup: string; right: number; bottom: number } {
-  if (entries.length === 0) {
+  if (entries.length === 0 && investigations.length === 0) {
     return { markup: '', right: legendX, bottom: legendY };
   }
 
   const hasBothGender = entries.some((e) => !e.applicableTo);
   const swatchWidth = hasBothGender ? LEGEND_SWATCH_SIZE * 2 + 4 : LEGEND_SWATCH_SIZE;
   const contentWidth = LEGEND_PADDING * 2 + swatchWidth + 8 + LEGEND_LABEL_WIDTH;
+
+  // Investigations add a subheading row plus one row per entry.
+  const investigationRows = investigations.length > 0 ? investigations.length + 1 : 0;
   const contentHeight =
-    LEGEND_PADDING * 2 + LEGEND_TITLE_HEIGHT + entries.length * LEGEND_ROW_HEIGHT;
+    LEGEND_PADDING * 2 +
+    LEGEND_TITLE_HEIGHT +
+    entries.length * LEGEND_ROW_HEIGHT +
+    investigationRows * LEGEND_ROW_HEIGHT;
 
   const parts: string[] = [];
 
@@ -636,7 +676,7 @@ function renderLegend(
     )}" font-weight="bold" fill="${SYMBOL_COLOR}">Key</text>`,
   );
 
-  // Entries.
+  // Condition entries.
   entries.forEach((entry, idx) => {
     const rowY = LEGEND_PADDING + LEGEND_TITLE_HEIGHT + idx * LEGEND_ROW_HEIGHT;
     const showBoth = !entry.applicableTo;
@@ -656,9 +696,31 @@ function renderLegend(
         rowY + 4 + 12,
       )}" font-size="12" font-family="${escapeXml(
         LABEL_FONT_FAMILY,
-      )}" fill="${SYMBOL_COLOR}">${escapeXml(entry.name)}</text>`,
+      )}" fill="${SYMBOL_COLOR}">${escapeXml(`= ${entry.name}`)}</text>`,
     );
   });
+
+  // Investigations subheading + rows.
+  if (investigations.length > 0) {
+    const baseY = LEGEND_PADDING + LEGEND_TITLE_HEIGHT + entries.length * LEGEND_ROW_HEIGHT;
+    parts.push(
+      `<text x="${LEGEND_PADDING}" y="${num(
+        baseY + 12,
+      )}" font-size="12" font-family="${escapeXml(
+        LABEL_FONT_FAMILY,
+      )}" font-weight="bold" fill="${SYMBOL_COLOR}">Investigations</text>`,
+    );
+    investigations.forEach((text, idx) => {
+      const rowY = baseY + (idx + 1) * LEGEND_ROW_HEIGHT;
+      parts.push(
+        `<text x="${LEGEND_PADDING}" y="${num(
+          rowY + 12,
+        )}" font-size="12" font-family="${escapeXml(
+          LABEL_FONT_FAMILY,
+        )}" fill="${SYMBOL_COLOR}">${escapeXml(text)}</text>`,
+      );
+    });
+  }
 
   const markup = `<g transform="translate(${num(legendX)}, ${num(legendY)})">${parts.join(
     '',
@@ -761,7 +823,7 @@ export function buildPedigreeSvg(doc: PedigreeDocument, title: string): string {
   const entries = doc.legendConfig.entries;
 
   const individualNumbers = computeIndividualNumbers(individuals);
-  const generationLabels = computeGenerationLabels(individuals);
+  const generationLabels = computeGenerationNumerals(individuals);
 
   // ---- Collect pattern + clip defs --------------------------------------
   const patternDefs = new Map<string, string>();
@@ -813,6 +875,13 @@ export function buildPedigreeSvg(doc: PedigreeDocument, title: string): string {
     symbolMarkup.push(renderIndividual(ind, individualNumbers.get(ind.id), entries));
   }
 
+  // ---- Free-text annotations --------------------------------------------
+  const annotations = Object.values(doc.textAnnotations);
+  const annotationMarkup: string[] = [];
+  for (const annotation of annotations) {
+    annotationMarkup.push(renderTextAnnotation(annotation));
+  }
+
   // ---- Generation numerals ----------------------------------------------
   // Canvas places these at `bounds.x + 10`; reuse computeBounds for parity.
   const bounds = computeBounds(individuals);
@@ -835,7 +904,7 @@ export function buildPedigreeSvg(doc: PedigreeDocument, title: string): string {
   const legendY = bounds
     ? bounds.y + bounds.height + 16
     : doc.legendConfig.position.y;
-  const legend = renderLegend(entries, legendX, legendY);
+  const legend = renderLegend(entries, collectInvestigations(individuals), legendX, legendY);
 
   // ---- Compute tight viewBox over all rendered content -------------------
   const extent = emptyExtent();
@@ -847,7 +916,7 @@ export function buildPedigreeSvg(doc: PedigreeDocument, title: string): string {
     expand(extent, ind.position.x - reach, ind.position.y - half);
     expand(extent, ind.position.x + reach, ind.position.y + half);
     // Label lines extend below the symbol.
-    const lines = buildLabelLines(ind, individualNumbers.get(ind.id));
+    const lines = buildLabelLines(ind);
     if (lines.length > 0) {
       const labelBottom =
         ind.position.y +
@@ -863,6 +932,20 @@ export function buildPedigreeSvg(doc: PedigreeDocument, title: string): string {
   if (bounds) {
     // Generation numerals sit at bounds.x + 10.
     expand(extent, bounds.x + 6, bounds.y);
+  }
+
+  for (const annotation of annotations) {
+    const lines = annotation.text.split('\n');
+    // Rough monospace-ish glyph width estimate; only used for viewBox padding.
+    const longest = lines.reduce((max, l) => Math.max(max, l.length), 0);
+    const estWidth = longest * annotation.fontSize * 0.6;
+    const estHeight = lines.length * annotation.fontSize;
+    expand(extent, annotation.position.x, annotation.position.y);
+    expand(
+      extent,
+      annotation.position.x + estWidth,
+      annotation.position.y + estHeight,
+    );
   }
 
   if (legend.markup) {
@@ -897,6 +980,7 @@ export function buildPedigreeSvg(doc: PedigreeDocument, title: string): string {
     )}" fill="#ffffff" />`,
     `<g class="connections">${connectionMarkup.join('')}</g>`,
     `<g class="symbols">${symbolMarkup.join('')}</g>`,
+    `<g class="annotations">${annotationMarkup.join('')}</g>`,
     `<g class="generations">${generationMarkup.join('')}</g>`,
     `<g class="legend">${legend.markup}</g>`,
     `</svg>`,

@@ -36,13 +36,19 @@ export async function openDocumentAction(): Promise<void> {
 }
 
 /**
- * Delete every currently-selected individual from the document, then clear
- * the selection.
+ * Delete every currently-selected node from the document, then clear the
+ * selection. Selected ids may reference either individuals or text
+ * annotations, so route each id to the matching remover.
  */
 export function deleteSelectedAction(): void {
   const { selectedIds } = useUIStore.getState();
+  const { textAnnotations } = usePedigreeStore.getState().document;
   for (const id of selectedIds) {
-    usePedigreeStore.getState().removeIndividual(id);
+    if (textAnnotations[id]) {
+      usePedigreeStore.getState().removeTextAnnotation(id);
+    } else {
+      usePedigreeStore.getState().removeIndividual(id);
+    }
   }
   useUIStore.getState().clearSelection();
 }

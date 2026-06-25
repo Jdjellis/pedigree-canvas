@@ -27,12 +27,25 @@ interface UIState {
     screenPosition: { x: number; y: number };
   };
 
+  relationshipPopup: {
+    visible: boolean;
+    partnershipId: string | null;
+    screenPosition: { x: number; y: number };
+  };
+
   propertiesPanelOpen: boolean;
   activeModal: ActiveModal;
   activeTool: ActiveTool;
 
   /** Whether the ⌘K command palette is open. */
   commandPaletteOpen: boolean;
+
+  /**
+   * Id of the text annotation currently being edited in the inline overlay,
+   * or `null` when no annotation is in edit mode. Drives the `<textarea>`
+   * overlay and hides the on-canvas Konva text while editing.
+   */
+  editingAnnotationId: string | null;
 
   /**
    * Timestamp (ms since epoch) of the most recent successful autosave to
@@ -57,6 +70,11 @@ interface UIState {
   endDragLink: () => void;
   showLinkPopup: (sourceId: string, targetId: string, screenPos: { x: number; y: number }) => void;
   hideLinkPopup: () => void;
+  showRelationshipPopup: (
+    partnershipId: string,
+    screenPos: { x: number; y: number }
+  ) => void;
+  hideRelationshipPopup: () => void;
   setActiveTool: (tool: ActiveTool) => void;
   openModal: (modal: ActiveModal) => void;
   closeModal: () => void;
@@ -68,6 +86,10 @@ interface UIState {
   /** Toggles `commandPaletteOpen` between true and false. */
   toggleCommandPalette: () => void;
   setLastSavedAt: (timestamp: number) => void;
+  /** Enter inline edit mode for the given annotation id. */
+  startEditingAnnotation: (id: string) => void;
+  /** Leave inline annotation edit mode. */
+  stopEditingAnnotation: () => void;
 }
 
 export const useUIStore = create<UIState>()((set) => ({
@@ -94,28 +116,40 @@ export const useUIStore = create<UIState>()((set) => ({
     screenPosition: { x: 0, y: 0 },
   },
 
+  relationshipPopup: {
+    visible: false,
+    partnershipId: null,
+    screenPosition: { x: 0, y: 0 },
+  },
+
   propertiesPanelOpen: false,
   activeModal: null,
   activeTool: 'select',
   commandPaletteOpen: false,
+  editingAnnotationId: null,
   lastSavedAt: null,
 
   select: (id) =>
-    set({
+    set((state) => ({
       selectedIds: new Set([id]),
       propertiesPanelOpen: true,
-    }),
+      // Leave annotation edit mode unless we're re-selecting the same one.
+      editingAnnotationId:
+        state.editingAnnotationId === id ? state.editingAnnotationId : null,
+    })),
 
   selectMultiple: (ids) =>
     set({
       selectedIds: new Set(ids),
       propertiesPanelOpen: ids.length > 0,
+      editingAnnotationId: null,
     }),
 
   clearSelection: () =>
     set({
       selectedIds: new Set(),
       propertiesPanelOpen: false,
+      editingAnnotationId: null,
     }),
 
   toggleSelection: (id) =>
@@ -179,6 +213,20 @@ export const useUIStore = create<UIState>()((set) => ({
       linkPopup: { visible: false, sourceId: null, targetId: null, screenPosition: { x: 0, y: 0 } },
     }),
 
+  showRelationshipPopup: (partnershipId, screenPosition) =>
+    set({
+      relationshipPopup: { visible: true, partnershipId, screenPosition },
+    }),
+
+  hideRelationshipPopup: () =>
+    set({
+      relationshipPopup: {
+        visible: false,
+        partnershipId: null,
+        screenPosition: { x: 0, y: 0 },
+      },
+    }),
+
   setActiveTool: (activeTool) => set({ activeTool }),
 
   openModal: (activeModal) => set({ activeModal }),
@@ -196,4 +244,13 @@ export const useUIStore = create<UIState>()((set) => ({
     set((state) => ({ commandPaletteOpen: !state.commandPaletteOpen })),
 
   setLastSavedAt: (timestamp) => set({ lastSavedAt: timestamp }),
+
+  startEditingAnnotation: (id) =>
+    set({
+      editingAnnotationId: id,
+      selectedIds: new Set([id]),
+      propertiesPanelOpen: true,
+    }),
+
+  stopEditingAnnotation: () => set({ editingAnnotationId: null }),
 }));

@@ -4,7 +4,6 @@ import type { KonvaEventObject } from 'konva/lib/Node';
 import type { Individual } from '../../../types/pedigree';
 import { GenderIdentity, VitalStatus } from '../../../types/enums';
 import { useUIStore } from '../../../stores/uiStore';
-import { usePedigreeStore } from '../../../stores/pedigreeStore';
 import { useViewportStore } from '../../../stores/viewportStore';
 import {
   SYMBOL_SIZE,
@@ -14,6 +13,12 @@ import {
   RADIAL_MENU_HOVER_DELAY,
 } from '../../../utils/constants';
 
+import {
+  beginSymbolDrag,
+  updateSymbolDragPosition,
+  commitSymbolDrag,
+  cancelSymbolDrag,
+} from './symbolDrag';
 import { SquareShape } from './SquareShape';
 import { CircleShape } from './CircleShape';
 import { DiamondShape } from './DiamondShape';
@@ -229,6 +234,13 @@ export const PedigreeSymbol: React.FC<PedigreeSymbolProps> = React.memo(
     panMode = false,
   }) => {
     const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    // Position of the symbol when a drag began. Captured so the whole drag can
+    // be committed as a single undo step on drag end (see handleDragEnd).
+    const dragStartPosRef = useRef<{ x: number; y: number } | null>(null);
+    // Absolute y the symbol is pinned to during a drag. Dragging is constrained
+    // to the horizontal axis so a symbol stays within its generation; see
+    // dragBoundFunc and handleDragStart.
+    const dragLockYRef = useRef<number | null>(null);
 
     const isDeceased =
       individual.vitalStatus === VitalStatus.Deceased ||
@@ -295,18 +307,50 @@ export const PedigreeSymbol: React.FC<PedigreeSymbolProps> = React.memo(
           e.target.stopDrag();
           // Start link mode
           useUIStore.getState().startDragLink(individual.id);
+          return;
         }
+        const node = e.target;
+        // Remember where the symbol started so the final commit can be recorded
+        // as a single pre-drag -> drop-point undo step (see handleDragEnd).
+        dragStartPosRef.current = { x: node.x(), y: node.y() };
+        // Pin the vertical position for the duration of the drag (horizontal-only).
+        dragLockYRef.current = node.absolutePosition().y;
+        beginSymbolDrag();
       },
       [individual.id],
     );
 
-    const handleDragEnd = useCallback(
+    const dragBoundFunc = useCallback((pos: { x: number; y: number }) => {
+      // Constrain dragging to the horizontal axis: a symbol may be repositioned
+      // within its generation but cannot be moved between generations, which
+      // would misalign parent/child connectors. Vertical position is locked to
+      // where the drag began (dragBoundFunc receives absolute coordinates).
+      const lockedY = dragLockYRef.current;
+      return { x: pos.x, y: lockedY ?? pos.y };
+    }, []);
+
+    const handleDragMove = useCallback(
       (e: KonvaEventObject<DragEvent>) => {
         const node = e.target;
-        usePedigreeStore.getState().moveIndividual(individual.id, {
-          x: node.x(),
-          y: node.y(),
-        });
+        updateSymbolDragPosition(individual.id, { x: node.x(), y: node.y() });
+      },
+      [individual.id]
+    );
+
+    const handleDragEnd = useCallback(
+      (e: KonvaEventObject<DragEvent>) => {
+        const startPos = dragStartPosRef.current;
+        dragStartPosRef.current = null;
+
+        // No drag was actually tracked (e.g. the alt-drag link gesture, which
+        // calls stopDrag in handleDragStart). Just make sure history is resumed.
+        if (!startPos) {
+          cancelSymbolDrag();
+          return;
+        }
+
+        const node = e.target;
+        commitSymbolDrag(individual.id, startPos, { x: node.x(), y: node.y() });
       },
       [individual.id]
     );
@@ -331,11 +375,13 @@ export const PedigreeSymbol: React.FC<PedigreeSymbolProps> = React.memo(
         x={individual.position.x}
         y={individual.position.y}
         draggable={!panMode}
+        dragBoundFunc={dragBoundFunc}
         onClick={handleClick}
         onTap={handleClick}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
         onDragStart={handleDragStart}
+        onDragMove={handleDragMove}
         onDragEnd={handleDragEnd}
         onMouseUp={handleMouseUp}
       >

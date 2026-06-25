@@ -18,7 +18,7 @@ import styles from './islands.module.css';
  */
 export function ToolIsland(): React.JSX.Element {
   const activeTool = useUIStore((s) => s.activeTool);
-  const { selectTool, handTool, addPersonTool } = useEditorActions();
+  const { selectTool, handTool, addPersonTool, addText } = useEditorActions();
 
   return (
     <Island aria-label="Tools">
@@ -64,6 +64,16 @@ export function ToolIsland(): React.JSX.Element {
         aria-pressed={activeTool === 'addIndividual'}
       >
         ＋ Person
+      </button>
+
+      <button
+        type="button"
+        className={clsx(styles.button, styles.textButton)}
+        onClick={addText}
+        title="Add a free-text annotation (title, caption, note)"
+        aria-label="Add Text"
+      >
+        ＋ Text
       </button>
     </Island>
   );

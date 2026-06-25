@@ -18,8 +18,10 @@ import { ConnectionsLayer } from '../connections/ConnectionsLayer';
 import { PedigreeSymbol } from './symbols/PedigreeSymbol';
 import { DragLinkLayer } from './DragLinkLayer';
 import { LegendLayer } from './LegendLayer';
+import { TextAnnotationLayer } from './TextAnnotationLayer';
 import { BoundsLayer } from './BoundsLayer';
 import { computeBounds } from '../../utils/boundsCalculation';
+import { collectInvestigations } from '../../utils/investigations';
 import type { ActiveQuarter } from './symbols/ConditionOverlay';
 import type { Individual } from '../../types/pedigree';
 import {
@@ -55,6 +57,7 @@ export const CanvasContainer = forwardRef<CanvasContainerHandle>(
     const clearSelection = useUIStore((s) => s.clearSelection);
     const selectedIds = useUIStore((s) => s.selectedIds);
     const hoveredId = useUIStore((s) => s.hoveredId);
+    const editingAnnotationId = useUIStore((s) => s.editingAnnotationId);
     const dragLink = useUIStore((s) => s.dragLink);
     const updateDragLinkCursor = useUIStore((s) => s.updateDragLinkCursor);
     const endDragLink = useUIStore((s) => s.endDragLink);
@@ -64,6 +67,7 @@ export const CanvasContainer = forwardRef<CanvasContainerHandle>(
     const partnerships = usePedigreeStore((s) => s.document.partnerships);
     const parentChildLinks = usePedigreeStore((s) => s.document.parentChildLinks);
     const twinGroups = usePedigreeStore((s) => s.document.twinGroups);
+    const textAnnotations = usePedigreeStore((s) => s.document.textAnnotations);
     const legendConfig = usePedigreeStore((s) => s.document.legendConfig);
     const moveLegend = usePedigreeStore((s) => s.moveLegend);
 
@@ -301,6 +305,11 @@ export const CanvasContainer = forwardRef<CanvasContainerHandle>(
 
     const bounds = useMemo(() => computeBounds(individualsList), [individualsList]);
 
+    const investigations = useMemo(
+      () => collectInvestigations(individualsList),
+      [individualsList],
+    );
+
     const individualNumbers = useMemo(() => {
       const numbers = new Map<string, number>();
       const genGroups = new Map<number, Individual[]>();
@@ -390,6 +399,14 @@ export const CanvasContainer = forwardRef<CanvasContainerHandle>(
               ))}
             </Layer>
 
+            <Layer>
+              <TextAnnotationLayer
+                annotations={textAnnotations}
+                selectedIds={selectedIds}
+                editingId={editingAnnotationId}
+              />
+            </Layer>
+
             <Layer name="selection" />
 
             <Layer>
@@ -404,6 +421,7 @@ export const CanvasContainer = forwardRef<CanvasContainerHandle>(
             <Layer>
               <LegendLayer
                 legendConfig={legendConfig}
+                investigations={investigations}
                 onMove={moveLegend}
                 bounds={bounds}
               />

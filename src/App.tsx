@@ -9,7 +9,9 @@ import { RadialMenu } from './components/ui/RadialMenu';
 import { ImportExportModal } from './components/ui/ImportExportModal';
 import { LegendEditor } from './components/ui/LegendEditor';
 import { LinkTypePopup } from './components/ui/LinkTypePopup';
+import { RelationshipPopup } from './components/ui/RelationshipPopup';
 import { LegendOverlay } from './components/ui/LegendOverlay';
+import { AnnotationEditor } from './components/ui/AnnotationEditor';
 import { CommandPalette } from './components/ui/CommandPalette';
 import { ShortcutsOverlay } from './components/ui/ShortcutsOverlay';
 import { MenuIsland } from './components/ui/islands/MenuIsland';
@@ -42,6 +44,7 @@ function App() {
         <OnboardingHints />
         <RadialMenu />
         <LegendOverlay />
+        <AnnotationEditor />
       </div>
 
       {/* Floating island slots */}
@@ -73,6 +76,7 @@ function App() {
       <ImportExportModal getStage={getStage} />
       <LegendEditor />
       <LinkTypePopup />
+      <RelationshipPopup />
       <CommandPalette />
       <ShortcutsOverlay />
     </div>
