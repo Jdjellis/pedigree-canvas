@@ -2,20 +2,25 @@
 
 **Issue:** [#10 — Full Excalidraw-style floating-island UI overhaul](https://github.com/Jdjellis/pedigree/issues/10)
 **Date:** 2026-06-25
-**Status:** Approved design. This pass is design-only; implementation is broken into phases (see §7).
+**Status:** Approved design. This pass is design-only; implementation is broken into phases (see §9) and executed autonomously into a single PR to `main`.
 
 ## Purpose
 
 Replace the current full-width top toolbar + docked properties panel with an
 Excalidraw-style **floating-island** UI: a full-bleed canvas with discrete,
 rounded, softly-shadowed control islands overlaid at the screen corners and
-center. The goal is the Excalidraw onboarding/working *feel* the user values,
-expressed in a **calm clinical voice** (restrained color, crisp type, no
-hand-drawn whimsy in working chrome) appropriate for genetic counselors.
+center, plus a **⌘K command palette** for keyboard-driven action. The goal is
+the Excalidraw onboarding/working *feel* the user values, expressed in a **calm
+clinical voice** (restrained color, crisp type, no hand-drawn whimsy in working
+chrome) appropriate for genetic counselors.
 
 ## Direction decisions (locked during brainstorming)
 
-- **Scope of this pass:** design only. Produce this spec, then phase the work.
+- **Scope of this pass:** design only. Produce this spec, then phase + build.
+- **Execution:** full autonomy — build all phases, self-review + visually verify
+  each, deliver one PR to `main` with per-phase commits. Return to the user only
+  at the end, or earlier only for a genuine product decision the spec can't
+  answer.
 - **Visual voice:** adopt Excalidraw's island *structure* (islands, soft
   shadows, rounded chrome) with a professional/clinical tone. Hand-drawn accents
   appear **only** in the empty-state onboarding hints, never in working chrome.
@@ -27,6 +32,7 @@ hand-drawn whimsy in working chrome) appropriate for genetic counselors.
 - **Tool island:** minimal and clinical — **Select · Hand · Add Person** — not a
   per-gender split. A contextual gender sub-picker is *reserved* for a later
   phase (designed-for, not built now).
+- **Command palette:** **in scope**, fully designed here (§4).
 
 ## 1. Layout map
 
@@ -45,6 +51,7 @@ hand-drawn whimsy in working chrome) appropriate for genetic counselors.
 │ │ − 100% + │ │  ↩   ↪    │                          │   ?    │    │
 │ └──────────┘ └───────────┘                          └────────┘    │
 └─────────────────────────────────────────────────────────────────┘
+        (⌘K opens the command palette, centered, over everything)
 ```
 
 Every island is `position: absolute` over a **full-bleed canvas**. The canvas
@@ -78,7 +85,73 @@ The main tool island stays at three modes. Gender is one clinical attribute
 among many (affected status, deceased, carrier…), so it is set in properties /
 via the reserved sub-picker, not split into the toolbar.
 
-## 4. Empty-state onboarding
+## 4. Command palette (⌘K)
+
+A keyboard-first launcher for every discrete action in the app, and the third
+add-node/command journey alongside the islands and radial menu.
+
+### Interaction
+
+- **Open:** `⌘K` (macOS) / `Ctrl+K` (Windows/Linux). Also reachable from the
+  Menu island ("Command palette… ⌘K").
+- **Close:** `Esc`, click-outside, or after running a command.
+- **Layout:** a centered floating panel (island chrome, slightly elevated
+  shadow + dimmed backdrop) near the upper third of the screen — a search input
+  at top, a scrollable filtered command list below, each row showing
+  `icon · title · shortcut hint`.
+- **Search:** case-insensitive fuzzy/substring match over each command's
+  `title` + `keywords`. Empty query shows all available commands grouped by
+  category (Document, Edit, View, Tools).
+- **Keyboard nav:** `↑`/`↓` move the highlight (wraps), `Enter` runs the
+  highlighted command, `Esc` closes. The input keeps focus throughout; the
+  highlighted row scrolls into view.
+- **Context awareness:** commands expose an `isAvailable(ctx)` predicate.
+  Selection-dependent commands (Delete selected, Add partner/child/parent) are
+  hidden or disabled when nothing is selected. The palette reads the same
+  context the islands read.
+
+### Command registry (single source of truth)
+
+A new `src/commands/` module defines a typed `Command` descriptor and a registry
+the **palette and the islands both consume**, so "what actions exist" lives in
+exactly one place:
+
+```ts
+interface CommandContext {
+  selectedIds: ReadonlySet<string>;
+  // plus any other state predicates need (e.g. canUndo/canRedo)
+}
+
+interface Command {
+  id: string;                       // stable, e.g. 'document.export'
+  title: string;                    // 'Export…'
+  category: 'document' | 'edit' | 'view' | 'tools';
+  keywords?: string[];              // extra search terms
+  shortcut?: string;                // display only, e.g. '⌘O'
+  isAvailable?: (ctx: CommandContext) => boolean;
+  run: () => void;                  // calls store actions via getState()
+}
+```
+
+`run` handlers call the existing store actions through `useXStore.getState()`
+(the established pattern for imperative actions), so there is no new state layer.
+Island buttons become thin wrappers that look a command up by `id` and call its
+`run`, guaranteeing the palette and the islands never drift.
+
+### Initial command set
+
+- **Document:** New, Open (`⌘O`), Import, Export, Legend, Document details,
+  Command palette (self).
+- **Edit:** Undo (`⌘Z`), Redo (`⌘⇧Z`), Delete selected *(selection-only)*,
+  Add Person.
+- **View:** Zoom in, Zoom out, Fit / Reset view, Toggle properties panel,
+  Keyboard shortcuts.
+- **Tools:** Select tool (`V`), Hand tool (`H`), Add Person tool (`P`).
+
+(Relationship commands — add partner/child/parent — may be added when a node is
+selected, mirroring the radial menu, once that wiring is confirmed reusable.)
+
+## 5. Empty-state onboarding
 
 Shown only when the document has **zero individuals** (extends today's
 `EmptyStateHint`):
@@ -94,7 +167,7 @@ Shown only when the document has **zero individuals** (extends today's
 
 The hand-drawn arrow/label style is the **only** place whimsy appears.
 
-## 5. Behavior changes
+## 6. Behavior changes
 
 - **Canvas → full-bleed.** `App.tsx` layout flattens: the flex row that
   currently shrinks the canvas is removed; the canvas fills the viewport and
@@ -105,14 +178,14 @@ The hand-drawn arrow/label style is the **only** place whimsy appears.
 - **Top bar removed.** `Toolbar.tsx` is decomposed into the Menu, Tools, and
   Actions islands.
 
-## 6. Visual language (clinical voice)
+## 7. Visual language (clinical voice)
 
 Reuse the existing CSS variables (violet accent + surfaces already aligned in
 prior commits). Island chrome: white/surface background, existing `--radius`
 rounding, soft shadow, hairline border. No hand-drawn font in working chrome.
 The hand-drawn arrows are confined to the onboarding layer.
 
-## 7. Architecture / files
+## 8. Architecture / files
 
 - `App.tsx` / `App.module.css` — flatten layout to a full-bleed canvas with
   absolute island slots.
@@ -120,42 +193,54 @@ The hand-drawn arrows are confined to the onboarding layer.
   `ActionsIsland`, `ZoomIsland`, `HistoryIsland`, `HelpIsland`, split out of
   `Toolbar.tsx` (currently 400+ lines doing too much; the bar ceases to exist).
 - **New** shared `Island.module.css` (or shared tokens) for consistent chrome.
+- **New** `src/commands/` — `Command`/`CommandContext` types + the command
+  registry; consumed by both the islands and the palette.
+- **New** `src/components/ui/CommandPalette.tsx` (+ module CSS) — the ⌘K UI.
 - `PropertiesPanel` — restyle as a floating island; add toggle wiring in
   `uiStore` (a `propertiesPanelOpen` toggle action; the flag already exists).
 - `EmptyStateHint` — extend into the onboarding layer with hint arrows + quick
   links.
 - **New** `ShortcutsOverlay` — the `?` help dialog (lists existing
   `useKeyboardShortcuts` bindings).
+- `useKeyboardShortcuts` — add `⌘K` (open palette) and tool hotkeys `V`/`H`/`P`.
 
 ### Konva/Zustand constraint (project gotcha)
 
 Any new canvas-affecting state must respect the project rule: Zustand
 subscriptions inside react-konva components silently fail. Subscriptions stay
-lifted to `CanvasContainer` (react-dom); islands are plain react-dom components
-and may subscribe normally.
+lifted to `CanvasContainer` (react-dom); islands, the palette, and overlays are
+plain react-dom components and may subscribe normally. Command `run` handlers
+use `getState()` for imperative store actions.
 
-## 8. Phasing
+## 9. Phasing
+
+Each phase is an independently-verifiable slice, committed separately, all
+landing in one PR.
 
 1. **Layout foundation** — full-bleed canvas + island scaffold; relocate
    existing controls into islands (no new features). Lowest risk, highest
-   visual payoff (~80% of the Excalidraw feel).
-2. **Empty-state onboarding** — logo, hint arrows, quick links.
-3. **Menu + Actions polish** — dropdown menu, title/save relocation, Export CTA.
-4. **Help / shortcuts overlay** (`?`).
-5. **Command palette (`⌘K`)** — separate feature carried over from #10; its own
-   spec/plan when reached.
+   visual payoff (~80% of the Excalidraw feel). Introduces `Island.module.css`.
+2. **Command registry + ⌘K palette** — extract action handlers into
+   `src/commands/`, rewire islands to consume the registry, build the palette.
+   Done after Phase 1 so the islands and palette share one command source.
+3. **Empty-state onboarding** — logo, hint arrows, quick links.
+4. **Menu + Actions polish** — dropdown menu, title/save relocation, Export CTA.
+5. **Help / shortcuts overlay** (`?`), incl. tool hotkeys `V`/`H`/`P`.
 6. **Reserved/optional** — gender sub-picker; expanded keyboard affordances.
+   Built only if cheap after the above; otherwise documented as follow-up.
 
-Each phase becomes its own implementation plan.
-
-## 9. Testing
+## 10. Testing
 
 - Component tests per island: renders the correct actions/labels; toggle wiring
   (e.g. properties panel open/close); empty-state shows/hides on individual
   count.
+- Command registry tests: each command's `isAvailable` predicate; palette
+  filtering (query → expected command ids); keyboard nav (highlight move, Enter
+  runs, Esc closes).
 - Manual preview-verify pass per phase: islands position correctly at all four
   corners + center, canvas stays full-bleed (does not resize when panels
-  toggle), onboarding appears at zero individuals and clears after the first.
+  toggle), onboarding appears at zero individuals and clears after the first,
+  ⌘K opens/filters/runs/closes.
 
 ## Out of scope
 
