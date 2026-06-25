@@ -25,7 +25,7 @@ function makeFixture(): PedigreeDocument {
     age: 60,
     conditionIds: [],
     conditions: [],
-    investigations: [],
+    investigations: ['BRCA1 +', 'CMA: 22q11.2 deletion'],
     isProband: true,
     isPregnancy: false,
     position: { x: 100, y: 100 },
@@ -180,5 +180,18 @@ describe('buildPedigreeSvg', () => {
     expect(svg).toContain('<svg');
     expect(svg).toContain('viewBox=');
     expect(svg).not.toContain('<image');
+  });
+
+  it('renders investigation lines beside the symbol', () => {
+    const svg = buildPedigreeSvg(makeFixture(), 'Test Pedigree');
+    expect(svg).toContain('BRCA1 +');
+    expect(svg).toContain('CMA: 22q11.2 deletion');
+  });
+
+  it('renders an Investigations subheading listing the distinct sorted set', () => {
+    const svg = buildPedigreeSvg(makeFixture(), 'Test Pedigree');
+    expect(svg).toContain('Investigations');
+    // Alphabetical: BRCA1 + before CMA: ...
+    expect(svg.indexOf('BRCA1 +')).toBeLessThan(svg.indexOf('CMA: 22q11.2 deletion'));
   });
 });
