@@ -3,7 +3,7 @@ import {
   CanvasContainer,
   type CanvasContainerHandle,
 } from './components/canvas/CanvasContainer';
-import { EmptyStateHint } from './components/canvas/EmptyStateHint';
+import { OnboardingHints } from './components/canvas/OnboardingHints';
 import { PropertiesPanel } from './components/ui/PropertiesPanel';
 import { RadialMenu } from './components/ui/RadialMenu';
 import { ImportExportModal } from './components/ui/ImportExportModal';
@@ -38,7 +38,7 @@ function App() {
       {/* Full-bleed canvas layer */}
       <div className={styles.canvasArea}>
         <CanvasContainer ref={canvasRef} />
-        <EmptyStateHint />
+        <OnboardingHints />
         <RadialMenu />
         <LegendOverlay />
       </div>
