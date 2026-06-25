@@ -37,6 +37,11 @@ const PATTERN_TILE_SIZE = 8;
 const PATTERN_STROKE_WIDTH = 1.5;
 /** Vertical spacing between successive label lines (see `SymbolLabel`). */
 const LABEL_LINE_HEIGHT = LABEL_FONT_SIZE + 4;
+/**
+ * Horizontal gap between the symbol's right edge and the start of the
+ * bottom-right individual number (see `SymbolLabel`).
+ */
+const NUMBER_CORNER_GAP = 3;
 /** Padding added around the content bounding box for the export viewBox. */
 const VIEWBOX_PADDING = 40;
 
@@ -288,16 +293,14 @@ function computeGenerationLabels(
 // Per-symbol rendering
 // ---------------------------------------------------------------------------
 
-/** Build the label lines for an individual, matching `SymbolLabel.tsx`. */
-function buildLabelLines(
-  individual: Individual,
-  individualNumber: number | undefined,
-): string[] {
+/**
+ * Build the centred name/age/condition label lines for an individual, matching
+ * `SymbolLabel.tsx`. The individual number is rendered separately at the
+ * symbol's bottom-right corner and is therefore not included here.
+ */
+function buildLabelLines(individual: Individual): string[] {
   const lines: string[] = [];
 
-  if (individualNumber != null) {
-    lines.push(`${individualNumber}`);
-  }
   if (individual.displayName) {
     lines.push(individual.displayName);
   }
@@ -401,8 +404,24 @@ function renderIndividual(
     }
   }
 
+  // Individual number at the symbol's bottom-right corner (pedigree
+  // convention). Left-anchored just outside the shape's bounding box. Konva
+  // places its Text top at y = half - FONT/2; the SVG baseline sits FONT below
+  // the top, so the baseline lands at y = half + FONT/2.
+  if (individualNumber != null) {
+    const numberX = half + NUMBER_CORNER_GAP;
+    const numberBaselineY = half + LABEL_FONT_SIZE / 2;
+    parts.push(
+      `<text x="${num(numberX)}" y="${num(
+        numberBaselineY,
+      )}" font-size="${LABEL_FONT_SIZE}" font-family="${escapeXml(
+        LABEL_FONT_FAMILY,
+      )}" fill="${LABEL_COLOR}">${individualNumber}</text>`,
+    );
+  }
+
   // Text labels (centred under the symbol).
-  const lines = buildLabelLines(individual, individualNumber);
+  const lines = buildLabelLines(individual);
   if (lines.length > 0) {
     const startY = SYMBOL_SIZE / 2 + LABEL_OFFSET_Y;
     const textParts = lines
@@ -848,7 +867,7 @@ export function buildPedigreeSvg(doc: PedigreeDocument, title: string): string {
     expand(extent, ind.position.x - reach, ind.position.y - half);
     expand(extent, ind.position.x + reach, ind.position.y + half);
     // Label lines extend below the symbol.
-    const lines = buildLabelLines(ind, individualNumbers.get(ind.id));
+    const lines = buildLabelLines(ind);
     if (lines.length > 0) {
       const labelBottom =
         ind.position.y +

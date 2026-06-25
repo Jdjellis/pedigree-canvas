@@ -17,22 +17,23 @@ export interface SymbolLabelProps {
 
 const LINE_HEIGHT = LABEL_FONT_SIZE + 4;
 
+/**
+ * Horizontal gap between the symbol's right edge and the start of the
+ * bottom-right individual number, so the digits never touch the outline.
+ */
+const NUMBER_CORNER_GAP = 3;
+
 export const SymbolLabel: React.FC<SymbolLabelProps> = React.memo(
   ({ individual, individualNumber }) => {
     const lines = useMemo(() => {
       const result: string[] = [];
 
-      // Line 1: individual number within generation
-      if (individualNumber != null) {
-        result.push(`${individualNumber}`);
-      }
-
-      // Line 2: display name
+      // Display name
       if (individual.displayName) {
         result.push(individual.displayName);
       }
 
-      // Line 2: age (or "d. [age]" if deceased)
+      // Age (or "d. [age]" if deceased)
       if (individual.age != null) {
         if (
           individual.vitalStatus === VitalStatus.Deceased ||
@@ -44,7 +45,7 @@ export const SymbolLabel: React.FC<SymbolLabelProps> = React.memo(
         }
       }
 
-      // Line 3: sex assigned at birth annotation (AMAB / AFAB)
+      // Sex assigned at birth annotation (AMAB / AFAB)
       if (individual.sexAssignedAtBirth) {
         result.push(individual.sexAssignedAtBirth);
       }
@@ -59,16 +60,32 @@ export const SymbolLabel: React.FC<SymbolLabelProps> = React.memo(
       }
 
       return result;
-    }, [individual, individualNumber]);
+    }, [individual]);
 
-    if (lines.length === 0) {
+    if (lines.length === 0 && individualNumber == null) {
       return null;
     }
 
-    const startY = SYMBOL_SIZE / 2 + LABEL_OFFSET_Y;
+    const half = SYMBOL_SIZE / 2;
+    const startY = half + LABEL_OFFSET_Y;
 
     return (
       <Group>
+        {/* Individual number at the symbol's bottom-right corner (pedigree
+            convention). Left-anchored just outside the shape's bounding box so
+            it reads as sitting at the corner without overlapping the outline. */}
+        {individualNumber != null && (
+          <Text
+            text={`${individualNumber}`}
+            x={half + NUMBER_CORNER_GAP}
+            y={half - LABEL_FONT_SIZE / 2}
+            fontSize={LABEL_FONT_SIZE}
+            fontFamily={LABEL_FONT_FAMILY}
+            fill={LABEL_COLOR}
+          />
+        )}
+
+        {/* Name / age / conditions stack, centred below the symbol. */}
         {lines.map((line, index) => (
           <Text
             key={index}
