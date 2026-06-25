@@ -4,12 +4,13 @@ import type {
   PartnershipRelationship,
   ParentChildRelationship,
   TwinGroup,
+  TextAnnotation,
   LegendEntry,
   QuarterPosition,
   FillPatternType,
 } from '../types/pedigree';
 import { GenderIdentity, RelationshipType, TwinType, VitalStatus } from '../types/enums';
-import { computeBounds, toRomanNumeral } from '../utils/boundsCalculation';
+import { computeBounds, computeGenerationNumerals } from '../utils/boundsCalculation';
 import {
   SYMBOL_SIZE,
   SYMBOL_STROKE_WIDTH,
@@ -37,6 +38,11 @@ const PATTERN_TILE_SIZE = 8;
 const PATTERN_STROKE_WIDTH = 1.5;
 /** Vertical spacing between successive label lines (see `SymbolLabel`). */
 const LABEL_LINE_HEIGHT = LABEL_FONT_SIZE + 4;
+/**
+ * Horizontal gap between the symbol's right edge and the start of the
+ * bottom-right individual number (see `SymbolLabel`).
+ */
+const NUMBER_CORNER_GAP = 3;
 /** Padding added around the content bounding box for the export viewBox. */
 const VIEWBOX_PADDING = 40;
 
@@ -261,43 +267,18 @@ function computeIndividualNumbers(individuals: Individual[]): Map<string, number
   return numbers;
 }
 
-/**
- * Compute generation numeral labels, matching `BoundsLayer.tsx`: one Roman
- * numeral per generation, vertically positioned at the average y of that
- * generation's individuals.
- */
-function computeGenerationLabels(
-  individuals: Individual[],
-): { roman: string; y: number }[] {
-  const genYMap = new Map<number, number[]>();
-  for (const ind of individuals) {
-    const gen = ind.generation ?? 0;
-    if (!genYMap.has(gen)) genYMap.set(gen, []);
-    genYMap.get(gen)!.push(ind.position.y);
-  }
-  const labels: { gen: number; y: number }[] = [];
-  for (const [gen, ys] of genYMap) {
-    const avgY = ys.reduce((a, b) => a + b, 0) / ys.length;
-    labels.push({ gen, y: avgY });
-  }
-  labels.sort((a, b) => a.gen - b.gen);
-  return labels.map(({ gen, y }) => ({ roman: toRomanNumeral(gen), y }));
-}
-
 // ---------------------------------------------------------------------------
 // Per-symbol rendering
 // ---------------------------------------------------------------------------
 
-/** Build the label lines for an individual, matching `SymbolLabel.tsx`. */
-function buildLabelLines(
-  individual: Individual,
-  individualNumber: number | undefined,
-): string[] {
+/**
+ * Build the centred name/age/condition label lines for an individual, matching
+ * `SymbolLabel.tsx`. The individual number is rendered separately at the
+ * symbol's bottom-right corner and is therefore not included here.
+ */
+function buildLabelLines(individual: Individual): string[] {
   const lines: string[] = [];
 
-  if (individualNumber != null) {
-    lines.push(`${individualNumber}`);
-  }
   if (individual.displayName) {
     lines.push(individual.displayName);
   }
@@ -401,8 +382,24 @@ function renderIndividual(
     }
   }
 
+  // Individual number at the symbol's bottom-right corner (pedigree
+  // convention). Left-anchored just outside the shape's bounding box. Konva
+  // places its Text top at y = half - FONT/2; the SVG baseline sits FONT below
+  // the top, so the baseline lands at y = half + FONT/2.
+  if (individualNumber != null) {
+    const numberX = half + NUMBER_CORNER_GAP;
+    const numberBaselineY = half + LABEL_FONT_SIZE / 2;
+    parts.push(
+      `<text x="${num(numberX)}" y="${num(
+        numberBaselineY,
+      )}" font-size="${LABEL_FONT_SIZE}" font-family="${escapeXml(
+        LABEL_FONT_FAMILY,
+      )}" fill="${LABEL_COLOR}">${individualNumber}</text>`,
+    );
+  }
+
   // Text labels (centred under the symbol).
-  const lines = buildLabelLines(individual, individualNumber);
+  const lines = buildLabelLines(individual);
   if (lines.length > 0) {
     const startY = SYMBOL_SIZE / 2 + LABEL_OFFSET_Y;
     const textParts = lines
@@ -601,6 +598,36 @@ function renderTwinConnector(
 }
 
 // ---------------------------------------------------------------------------
+// Free-text annotations
+// ---------------------------------------------------------------------------
+
+/**
+ * Render a single free-text annotation as a positioned SVG `<text>`.
+ *
+ * Matches the on-canvas Konva `Text`: `position` is the top-left of the text
+ * block, so the first baseline sits one font-size below it. Multi-line text is
+ * split into `<tspan>` rows spaced by the font size.
+ */
+function renderTextAnnotation(annotation: TextAnnotation): string {
+  const lines = annotation.text.split('\n');
+  const x = num(annotation.position.x);
+  const firstBaselineY = num(annotation.position.y + annotation.fontSize);
+
+  const tspans = lines
+    .map((lineText, index) => {
+      const dy = index === 0 ? 0 : annotation.fontSize;
+      return `<tspan x="${x}" dy="${num(dy)}">${escapeXml(lineText)}</tspan>`;
+    })
+    .join('');
+
+  return `<text x="${x}" y="${firstBaselineY}" font-size="${num(
+    annotation.fontSize,
+  )}" font-family="${escapeXml(
+    LABEL_FONT_FAMILY,
+  )}" fill="${LABEL_COLOR}">${tspans}</text>`;
+}
+
+// ---------------------------------------------------------------------------
 // Legend / key box
 // ---------------------------------------------------------------------------
 
@@ -651,12 +678,13 @@ function renderLegend(
       parts.push(renderLegendSwatch(sx, rowY, GenderIdentity.Woman, entry));
     }
 
+    // Read as "icon = description" to match the on-canvas legend.
     parts.push(
       `<text x="${LEGEND_PADDING + swatchWidth + 8}" y="${num(
         rowY + 4 + 12,
       )}" font-size="12" font-family="${escapeXml(
         LABEL_FONT_FAMILY,
-      )}" fill="${SYMBOL_COLOR}">${escapeXml(entry.name)}</text>`,
+      )}" fill="${SYMBOL_COLOR}">${escapeXml(`= ${entry.name}`)}</text>`,
     );
   });
 
@@ -761,7 +789,7 @@ export function buildPedigreeSvg(doc: PedigreeDocument, title: string): string {
   const entries = doc.legendConfig.entries;
 
   const individualNumbers = computeIndividualNumbers(individuals);
-  const generationLabels = computeGenerationLabels(individuals);
+  const generationLabels = computeGenerationNumerals(individuals);
 
   // ---- Collect pattern + clip defs --------------------------------------
   const patternDefs = new Map<string, string>();
@@ -813,6 +841,13 @@ export function buildPedigreeSvg(doc: PedigreeDocument, title: string): string {
     symbolMarkup.push(renderIndividual(ind, individualNumbers.get(ind.id), entries));
   }
 
+  // ---- Free-text annotations --------------------------------------------
+  const annotations = Object.values(doc.textAnnotations);
+  const annotationMarkup: string[] = [];
+  for (const annotation of annotations) {
+    annotationMarkup.push(renderTextAnnotation(annotation));
+  }
+
   // ---- Generation numerals ----------------------------------------------
   // Canvas places these at `bounds.x + 10`; reuse computeBounds for parity.
   const bounds = computeBounds(individuals);
@@ -847,7 +882,7 @@ export function buildPedigreeSvg(doc: PedigreeDocument, title: string): string {
     expand(extent, ind.position.x - reach, ind.position.y - half);
     expand(extent, ind.position.x + reach, ind.position.y + half);
     // Label lines extend below the symbol.
-    const lines = buildLabelLines(ind, individualNumbers.get(ind.id));
+    const lines = buildLabelLines(ind);
     if (lines.length > 0) {
       const labelBottom =
         ind.position.y +
@@ -863,6 +898,20 @@ export function buildPedigreeSvg(doc: PedigreeDocument, title: string): string {
   if (bounds) {
     // Generation numerals sit at bounds.x + 10.
     expand(extent, bounds.x + 6, bounds.y);
+  }
+
+  for (const annotation of annotations) {
+    const lines = annotation.text.split('\n');
+    // Rough monospace-ish glyph width estimate; only used for viewBox padding.
+    const longest = lines.reduce((max, l) => Math.max(max, l.length), 0);
+    const estWidth = longest * annotation.fontSize * 0.6;
+    const estHeight = lines.length * annotation.fontSize;
+    expand(extent, annotation.position.x, annotation.position.y);
+    expand(
+      extent,
+      annotation.position.x + estWidth,
+      annotation.position.y + estHeight,
+    );
   }
 
   if (legend.markup) {
@@ -897,6 +946,7 @@ export function buildPedigreeSvg(doc: PedigreeDocument, title: string): string {
     )}" fill="#ffffff" />`,
     `<g class="connections">${connectionMarkup.join('')}</g>`,
     `<g class="symbols">${symbolMarkup.join('')}</g>`,
+    `<g class="annotations">${annotationMarkup.join('')}</g>`,
     `<g class="generations">${generationMarkup.join('')}</g>`,
     `<g class="legend">${legend.markup}</g>`,
     `</svg>`,

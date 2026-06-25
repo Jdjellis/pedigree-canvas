@@ -58,6 +58,22 @@ export interface Annotation {
   label: string;
 }
 
+/**
+ * A free-text annotation placed anywhere on the canvas (titles, captions,
+ * notes). Unlike {@link Annotation}, which decorates an individual, a
+ * TextAnnotation is a first-class, independently positioned document entity.
+ */
+export interface TextAnnotation {
+  /** Stable unique identifier. */
+  id: string;
+  /** The text to display. May contain newlines. */
+  text: string;
+  /** Top-left position of the text in canvas coordinates. */
+  position: Position;
+  /** Font size in canvas units (pixels at 1x zoom). */
+  fontSize: number;
+}
+
 export interface Individual {
   id: string;
 
@@ -137,6 +153,7 @@ export interface PedigreeDocument {
   partnerships: Record<string, PartnershipRelationship>;
   parentChildLinks: Record<string, ParentChildRelationship>;
   twinGroups: Record<string, TwinGroup>;
+  textAnnotations: Record<string, TextAnnotation>;
   generationOrder: string[][];
   legendConfig: LegendConfig;
 }

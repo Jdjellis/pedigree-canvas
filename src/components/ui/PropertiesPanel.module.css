@@ -138,6 +138,73 @@
   margin: 0;
 }
 
+.clashWarning {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--color-danger);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--color-danger) 8%, transparent);
+}
+
+.clashTitle {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-danger);
+  margin: 0 0 6px;
+}
+
+.clashGroup {
+  margin-bottom: 8px;
+}
+
+.clashGroup:last-child {
+  margin-bottom: 0;
+}
+
+.clashText {
+  font-size: 12px;
+  color: var(--color-text);
+  margin: 0 0 6px;
+}
+
+.clashResolveRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.clashResolveRow:last-child {
+  margin-bottom: 0;
+}
+
+.clashResolveLabel {
+  flex: 1;
+  font-size: 12px;
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.clashResolveName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.clashSelect {
+  flex-shrink: 0;
+  padding: 4px 6px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  cursor: pointer;
+}
+
 .divider {
   height: 1px;
   background: var(--color-border);

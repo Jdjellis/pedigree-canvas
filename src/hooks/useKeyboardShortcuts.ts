@@ -90,9 +90,15 @@ export function useKeyboardShortcuts() {
           const ui = useUIStore.getState();
           if (ui.selectedIds.size > 0) {
             e.preventDefault();
-            const { removeIndividual } = usePedigreeStore.getState();
+            const pedigree = usePedigreeStore.getState();
+            const { removeIndividual, removeTextAnnotation } = pedigree;
+            const annotations = pedigree.document.textAnnotations;
             for (const id of ui.selectedIds) {
-              removeIndividual(id);
+              if (annotations[id]) {
+                removeTextAnnotation(id);
+              } else {
+                removeIndividual(id);
+              }
             }
             ui.clearSelection();
           }

@@ -101,6 +101,13 @@ export function deserializeDocument(json: string): PedigreeDocument {
     result.legendConfig = { entries: [], position: { x: 50, y: 50 } };
   }
 
+  // Migrate: ensure textAnnotations exists. Documents saved before free-text
+  // annotations were introduced lack this field; default it to an empty map so
+  // they load cleanly. (Intentionally not part of `requiredKeys` for this reason.)
+  if (!result.textAnnotations) {
+    result.textAnnotations = {};
+  }
+
   // Migrate: convert old affectedStatus to conditionIds
   let migrationEntryId: string | null = null;
   for (const ind of Object.values(result.individuals)) {

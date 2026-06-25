@@ -18,6 +18,7 @@ import { ConnectionsLayer } from '../connections/ConnectionsLayer';
 import { PedigreeSymbol } from './symbols/PedigreeSymbol';
 import { DragLinkLayer } from './DragLinkLayer';
 import { LegendLayer } from './LegendLayer';
+import { TextAnnotationLayer } from './TextAnnotationLayer';
 import { BoundsLayer } from './BoundsLayer';
 import { computeBounds } from '../../utils/boundsCalculation';
 import type { ActiveQuarter } from './symbols/ConditionOverlay';
@@ -55,6 +56,7 @@ export const CanvasContainer = forwardRef<CanvasContainerHandle>(
     const clearSelection = useUIStore((s) => s.clearSelection);
     const selectedIds = useUIStore((s) => s.selectedIds);
     const hoveredId = useUIStore((s) => s.hoveredId);
+    const editingAnnotationId = useUIStore((s) => s.editingAnnotationId);
     const dragLink = useUIStore((s) => s.dragLink);
     const updateDragLinkCursor = useUIStore((s) => s.updateDragLinkCursor);
     const endDragLink = useUIStore((s) => s.endDragLink);
@@ -64,6 +66,7 @@ export const CanvasContainer = forwardRef<CanvasContainerHandle>(
     const partnerships = usePedigreeStore((s) => s.document.partnerships);
     const parentChildLinks = usePedigreeStore((s) => s.document.parentChildLinks);
     const twinGroups = usePedigreeStore((s) => s.document.twinGroups);
+    const textAnnotations = usePedigreeStore((s) => s.document.textAnnotations);
     const legendConfig = usePedigreeStore((s) => s.document.legendConfig);
     const moveLegend = usePedigreeStore((s) => s.moveLegend);
 
@@ -365,6 +368,14 @@ export const CanvasContainer = forwardRef<CanvasContainerHandle>(
                   panMode={isSpaceHeld}
                 />
               ))}
+            </Layer>
+
+            <Layer>
+              <TextAnnotationLayer
+                annotations={textAnnotations}
+                selectedIds={selectedIds}
+                editingId={editingAnnotationId}
+              />
             </Layer>
 
             <Layer name="selection" />

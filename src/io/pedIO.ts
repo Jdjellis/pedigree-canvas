@@ -190,6 +190,7 @@ export function importFromPed(
     partnerships,
     parentChildLinks,
     twinGroups: {},
+    textAnnotations: {},
     generationOrder,
     legendConfig: { entries: [], position: { x: 50, y: 50 } },
   };

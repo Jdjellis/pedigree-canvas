@@ -7,6 +7,7 @@ import type {
   PartnershipRelationship,
   ParentChildRelationship,
   TwinGroup,
+  TextAnnotation,
   Position,
   LegendEntry,
 } from '../types/pedigree';
@@ -15,6 +16,40 @@ import {
   VitalStatus,
 } from '../types/enums';
 import { generateId } from '../utils/idGenerator';
+import { respaceGeneration } from '../utils/respacing';
+import { MIN_GENERATION_NODE_SPACING } from '../utils/constants';
+
+/**
+ * Return a new individuals map with the bounded respacing applied to the given
+ * generation. Only nodes that actually overlap are shifted; their x is updated
+ * immutably and every other individual is returned untouched. Vertical (y)
+ * positions and all other generations are never changed.
+ *
+ * Callers must invoke this on the already-inserted individuals map within the
+ * SAME `set(...)` update as the insert, so the add and the nudge collapse into a
+ * single zundo history entry (one undo reverts both).
+ */
+function applyGenerationRespacing(
+  individuals: Record<string, Individual>,
+  generation: number,
+): Record<string, Individual> {
+  const moved = respaceGeneration(
+    individuals,
+    generation,
+    MIN_GENERATION_NODE_SPACING,
+  );
+  if (Object.keys(moved).length === 0) return individuals;
+
+  const next: Record<string, Individual> = { ...individuals };
+  for (const [id, newX] of Object.entries(moved)) {
+    const individual = next[id];
+    next[id] = {
+      ...individual,
+      position: { ...individual.position, x: newX },
+    };
+  }
+  return next;
+}
 
 function createEmptyDocument(): PedigreeDocument {
   return {
@@ -29,6 +64,7 @@ function createEmptyDocument(): PedigreeDocument {
     partnerships: {},
     parentChildLinks: {},
     twinGroups: {},
+    textAnnotations: {},
     generationOrder: [],
     legendConfig: { entries: [], position: { x: 50, y: 50 } },
   };
@@ -80,6 +116,11 @@ interface PedigreeState {
   // Twin group actions
   addTwinGroup: (tg: TwinGroup) => void;
   removeTwinGroup: (id: string) => void;
+
+  // Text annotation actions
+  addTextAnnotation: (annotation: TextAnnotation) => void;
+  updateTextAnnotation: (id: string, patch: Partial<TextAnnotation>) => void;
+  removeTextAnnotation: (id: string) => void;
 
   // Compound / atomic family actions (each produces one undo step)
   addParentsForChild: (
@@ -385,9 +426,24 @@ export const usePedigreeStore = create<PedigreeState>()(
           };
         }),
 
-      addParentsForChild: (parent1, parent2, partnership, link, childId, childGeneration) =>
+      addTextAnnotation: (annotation) =>
+        set((state) => ({
+          document: {
+            ...state.document,
+            metadata: {
+              ...state.document.metadata,
+              updatedAt: new Date().toISOString(),
+            },
+            textAnnotations: {
+              ...state.document.textAnnotations,
+              [annotation.id]: annotation,
+            },
+          },
+        })),
+
+      updateTextAnnotation: (id, patch) =>
         set((state) => {
-          const existing = state.document.individuals[childId];
+          const existing = state.document.textAnnotations[id];
           if (!existing) return state;
           return {
             document: {
@@ -396,12 +452,54 @@ export const usePedigreeStore = create<PedigreeState>()(
                 ...state.document.metadata,
                 updatedAt: new Date().toISOString(),
               },
-              individuals: {
-                ...state.document.individuals,
-                [parent1.id]: parent1,
-                [parent2.id]: parent2,
-                [childId]: { ...existing, generation: childGeneration },
+              textAnnotations: {
+                ...state.document.textAnnotations,
+                [id]: { ...existing, ...patch },
               },
+            },
+          };
+        }),
+
+      removeTextAnnotation: (id) =>
+        set((state) => {
+          const { [id]: _, ...remaining } = state.document.textAnnotations;
+          return {
+            document: {
+              ...state.document,
+              metadata: {
+                ...state.document.metadata,
+                updatedAt: new Date().toISOString(),
+              },
+              textAnnotations: remaining,
+            },
+          };
+        }),
+
+      addParentsForChild: (parent1, parent2, partnership, link, childId, childGeneration) =>
+        set((state) => {
+          const existing = state.document.individuals[childId];
+          if (!existing) return state;
+          // Insert the parents, then respace the parents' generation so the new
+          // nodes do not overlap existing ones. Insert + respace share this one
+          // `set` so a single undo reverts both.
+          const inserted: Record<string, Individual> = {
+            ...state.document.individuals,
+            [parent1.id]: parent1,
+            [parent2.id]: parent2,
+            [childId]: { ...existing, generation: childGeneration },
+          };
+          const respaced =
+            parent1.generation !== undefined
+              ? applyGenerationRespacing(inserted, parent1.generation)
+              : inserted;
+          return {
+            document: {
+              ...state.document,
+              metadata: {
+                ...state.document.metadata,
+                updatedAt: new Date().toISOString(),
+              },
+              individuals: respaced,
               partnerships: {
                 ...state.document.partnerships,
                 [partnership.id]: partnership,
@@ -415,28 +513,18 @@ export const usePedigreeStore = create<PedigreeState>()(
         }),
 
       addPartnerToIndividual: (partner, partnership) =>
-        set((state) => ({
-          document: {
-            ...state.document,
-            metadata: {
-              ...state.document.metadata,
-              updatedAt: new Date().toISOString(),
-            },
-            individuals: {
-              ...state.document.individuals,
-              [partner.id]: partner,
-            },
-            partnerships: {
-              ...state.document.partnerships,
-              [partnership.id]: partnership,
-            },
-          },
-        })),
-
-      addChildToFamily: (child, partnershipId, link) =>
         set((state) => {
-          const partnership = state.document.partnerships[partnershipId];
-          if (!partnership) return state;
+          // Insert the partner, then respace the partner's generation so the new
+          // node does not overlap existing ones. Insert + respace share this one
+          // `set` so a single undo reverts both.
+          const inserted: Record<string, Individual> = {
+            ...state.document.individuals,
+            [partner.id]: partner,
+          };
+          const respaced =
+            partner.generation !== undefined
+              ? applyGenerationRespacing(inserted, partner.generation)
+              : inserted;
           return {
             document: {
               ...state.document,
@@ -444,10 +532,38 @@ export const usePedigreeStore = create<PedigreeState>()(
                 ...state.document.metadata,
                 updatedAt: new Date().toISOString(),
               },
-              individuals: {
-                ...state.document.individuals,
-                [child.id]: child,
+              individuals: respaced,
+              partnerships: {
+                ...state.document.partnerships,
+                [partnership.id]: partnership,
               },
+            },
+          };
+        }),
+
+      addChildToFamily: (child, partnershipId, link) =>
+        set((state) => {
+          const partnership = state.document.partnerships[partnershipId];
+          if (!partnership) return state;
+          // Insert the child, then respace the child's generation so the new
+          // node does not overlap existing siblings/cousins. Insert + respace
+          // share this one `set` so a single undo reverts both.
+          const inserted: Record<string, Individual> = {
+            ...state.document.individuals,
+            [child.id]: child,
+          };
+          const respaced =
+            child.generation !== undefined
+              ? applyGenerationRespacing(inserted, child.generation)
+              : inserted;
+          return {
+            document: {
+              ...state.document,
+              metadata: {
+                ...state.document.metadata,
+                updatedAt: new Date().toISOString(),
+              },
+              individuals: respaced,
               partnerships: {
                 ...state.document.partnerships,
                 [partnershipId]: {

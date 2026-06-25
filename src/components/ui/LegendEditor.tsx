@@ -6,30 +6,12 @@ import type {
   FillPatternType,
 } from '../../types/pedigree';
 import { generateId } from '../../utils/idGenerator';
+import {
+  COLOR_OPTIONS,
+  PATTERN_OPTIONS,
+  QUARTER_OPTIONS,
+} from './legendOptions';
 import styles from './LegendEditor.module.css';
-
-const COLOR_OPTIONS: { value: string; label: string }[] = [
-  { value: '#1a1a1a', label: 'Black' },
-  { value: '#dc2626', label: 'Red' },
-  { value: '#16a34a', label: 'Green' },
-  { value: '#2563eb', label: 'Blue' },
-];
-
-const QUARTER_OPTIONS: { value: QuarterPosition; label: string }[] = [
-  { value: 'topRight', label: 'Top-Right' },
-  { value: 'topLeft', label: 'Top-Left' },
-  { value: 'bottomLeft', label: 'Bottom-Left' },
-  { value: 'bottomRight', label: 'Bottom-Right' },
-];
-
-const PATTERN_OPTIONS: { value: FillPatternType; label: string }[] = [
-  { value: 'solid', label: 'Solid' },
-  { value: 'diagonalLines', label: 'Diagonal Lines' },
-  { value: 'dots', label: 'Dots' },
-  { value: 'crosshatch', label: 'Crosshatch' },
-  { value: 'horizontalStripes', label: 'Horizontal Stripes' },
-  { value: 'verticalStripes', label: 'Vertical Stripes' },
-];
 
 export function LegendEditor() {
   const activeModal = useUIStore((s) => s.activeModal);
@@ -41,18 +23,13 @@ export function LegendEditor() {
 
   if (activeModal !== 'legendEditor') return null;
 
-  const usedQuarters = new Set(legendConfig.entries.map((e) => e.quarter));
-
   const handleAdd = () => {
-    // Find first unused quarter
-    const availableQuarter = QUARTER_OPTIONS.find(
-      (q) => !usedQuarters.has(q.value),
-    );
-    if (!availableQuarter) return;
-
+    // Conditions may share a quarter (they are differentiated by colour /
+    // pattern), so there is no longer a per-quarter cap. New conditions default
+    // to the top-right quarter; the user can move them afterwards.
     addLegendEntry({
       id: generateId(),
-      quarter: availableQuarter.value,
+      quarter: 'topRight',
       fillColor: '#1a1a1a',
       fillPattern: 'solid',
       name: 'New Condition',
@@ -73,6 +50,8 @@ export function LegendEditor() {
           {legendConfig.entries.length === 0 && (
             <p className={styles.emptyMessage}>
               No conditions defined. Add conditions to shade symbol quarters.
+              Multiple conditions can share a quarter — distinguish them by
+              colour and pattern.
             </p>
           )}
 
@@ -80,19 +59,13 @@ export function LegendEditor() {
             <LegendEntryRow
               key={entry.id}
               entry={entry}
-              usedQuarters={usedQuarters}
               onUpdate={(patch) => updateLegendEntry(entry.id, patch)}
               onRemove={() => removeLegendEntry(entry.id)}
             />
           ))}
 
-          <button
-            className={styles.addButton}
-            onClick={handleAdd}
-            disabled={legendConfig.entries.length >= 4}
-          >
+          <button className={styles.addButton} onClick={handleAdd}>
             + Add Condition
-            {legendConfig.entries.length >= 4 && ' (max 4)'}
           </button>
         </div>
       </div>
@@ -102,17 +75,11 @@ export function LegendEditor() {
 
 interface LegendEntryRowProps {
   entry: LegendEntry;
-  usedQuarters: Set<QuarterPosition>;
   onUpdate: (patch: Partial<LegendEntry>) => void;
   onRemove: () => void;
 }
 
-function LegendEntryRow({
-  entry,
-  usedQuarters,
-  onUpdate,
-  onRemove,
-}: LegendEntryRowProps) {
+function LegendEntryRow({ entry, onUpdate, onRemove }: LegendEntryRowProps) {
   return (
     <div className={styles.entryRow}>
       <div className={styles.entryFields}>
@@ -137,17 +104,8 @@ function LegendEntryRow({
               }
             >
               {QUARTER_OPTIONS.map((q) => (
-                <option
-                  key={q.value}
-                  value={q.value}
-                  disabled={
-                    usedQuarters.has(q.value) && q.value !== entry.quarter
-                  }
-                >
+                <option key={q.value} value={q.value}>
                   {q.label}
-                  {usedQuarters.has(q.value) && q.value !== entry.quarter
-                    ? ' (in use)'
-                    : ''}
                 </option>
               ))}
             </select>

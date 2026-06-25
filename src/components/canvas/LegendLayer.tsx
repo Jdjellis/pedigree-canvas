@@ -158,11 +158,11 @@ export const LegendLayer: React.FC<LegendLayerProps> = React.memo(
                 />
               )}
 
-              {/* Label — no gender suffix */}
+              {/* Label — read as "icon = description", no gender suffix */}
               <Text
                 x={PADDING + swatchWidth + 8}
                 y={rowY + 4}
-                text={entry.name}
+                text={`= ${entry.name}`}
                 fontSize={12}
                 fontFamily={LABEL_FONT_FAMILY}
                 fill={SYMBOL_COLOR}

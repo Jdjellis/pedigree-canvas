@@ -32,6 +32,13 @@ interface UIState {
   activeTool: ActiveTool;
 
   /**
+   * Id of the text annotation currently being edited in the inline overlay,
+   * or `null` when no annotation is in edit mode. Drives the `<textarea>`
+   * overlay and hides the on-canvas Konva text while editing.
+   */
+  editingAnnotationId: string | null;
+
+  /**
    * Timestamp (ms since epoch) of the most recent successful autosave to
    * localStorage, or `null` if nothing has been saved yet this session.
    * Drives the "Saved locally" indicator in the toolbar.
@@ -59,6 +66,10 @@ interface UIState {
   closeModal: () => void;
   setPropertiesPanelOpen: (open: boolean) => void;
   setLastSavedAt: (timestamp: number) => void;
+  /** Enter inline edit mode for the given annotation id. */
+  startEditingAnnotation: (id: string) => void;
+  /** Leave inline annotation edit mode. */
+  stopEditingAnnotation: () => void;
 }
 
 export const useUIStore = create<UIState>()((set) => ({
@@ -88,24 +99,30 @@ export const useUIStore = create<UIState>()((set) => ({
   propertiesPanelOpen: false,
   activeModal: null,
   activeTool: 'select',
+  editingAnnotationId: null,
   lastSavedAt: null,
 
   select: (id) =>
-    set({
+    set((state) => ({
       selectedIds: new Set([id]),
       propertiesPanelOpen: true,
-    }),
+      // Leave annotation edit mode unless we're re-selecting the same one.
+      editingAnnotationId:
+        state.editingAnnotationId === id ? state.editingAnnotationId : null,
+    })),
 
   selectMultiple: (ids) =>
     set({
       selectedIds: new Set(ids),
       propertiesPanelOpen: ids.length > 0,
+      editingAnnotationId: null,
     }),
 
   clearSelection: () =>
     set({
       selectedIds: new Set(),
       propertiesPanelOpen: false,
+      editingAnnotationId: null,
     }),
 
   toggleSelection: (id) =>
@@ -178,4 +195,13 @@ export const useUIStore = create<UIState>()((set) => ({
   setPropertiesPanelOpen: (open) => set({ propertiesPanelOpen: open }),
 
   setLastSavedAt: (timestamp) => set({ lastSavedAt: timestamp }),
+
+  startEditingAnnotation: (id) =>
+    set({
+      editingAnnotationId: id,
+      selectedIds: new Set([id]),
+      propertiesPanelOpen: true,
+    }),
+
+  stopEditingAnnotation: () => set({ editingAnnotationId: null }),
 }));

@@ -26,3 +26,4 @@ dist-ssr
 # Tooling artifacts
 .playwright-mcp/
 .claude/settings.local.json
+.vercel
