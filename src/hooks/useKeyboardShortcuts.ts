@@ -7,16 +7,22 @@ import { loadFromFile, saveToFile } from '../io/jsonIO';
  * Global keyboard shortcuts for the pedigree editor.
  *
  * Shortcuts:
- * - Cmd/Ctrl+K: Toggle command palette (works even when an input is focused)
+ * - Cmd/Ctrl+K: Toggle command palette (fires even when an input is focused)
  * - Cmd/Ctrl+Z: Undo
  * - Cmd/Ctrl+Shift+Z: Redo
  * - Cmd/Ctrl+S: Save to JSON
  * - Cmd/Ctrl+O: Open JSON file
  * - Cmd/Ctrl+E: Open export modal
+ * - V: Select tool
+ * - H: Hand (pan) tool
+ * - P: Add Person tool
+ * - ?: Open keyboard shortcuts overlay
  * - Delete/Backspace: Delete selected individuals
  * - Escape: Clear selection, close modal, hide radial menu
- * - A: Toggle select tool
- * - P: Toggle pan tool
+ *
+ * All plain-letter shortcuts (V/H/P/?) are guarded by an input-focus check
+ * so they do not fire while the user is typing in an INPUT, TEXTAREA, SELECT,
+ * or contentEditable element.
  */
 export function useKeyboardShortcuts() {
   useEffect(() => {
@@ -84,6 +90,26 @@ export function useKeyboardShortcuts() {
 
       // --- Non-modifier shortcuts ---
       switch (e.key) {
+        case 'v': {
+          e.preventDefault();
+          useUIStore.getState().setActiveTool('select');
+          return;
+        }
+        case 'h': {
+          e.preventDefault();
+          useUIStore.getState().setActiveTool('pan');
+          return;
+        }
+        case 'p': {
+          e.preventDefault();
+          useUIStore.getState().setActiveTool('addIndividual');
+          return;
+        }
+        case '?': {
+          e.preventDefault();
+          useUIStore.getState().openModal('shortcuts');
+          return;
+        }
         case 'Escape': {
           const ui = useUIStore.getState();
           if (ui.activeModal) {

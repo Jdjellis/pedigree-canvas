@@ -11,6 +11,7 @@ import { LegendEditor } from './components/ui/LegendEditor';
 import { LinkTypePopup } from './components/ui/LinkTypePopup';
 import { LegendOverlay } from './components/ui/LegendOverlay';
 import { CommandPalette } from './components/ui/CommandPalette';
+import { ShortcutsOverlay } from './components/ui/ShortcutsOverlay';
 import { MenuIsland } from './components/ui/islands/MenuIsland';
 import { ToolIsland } from './components/ui/islands/ToolIsland';
 import { ActionsIsland } from './components/ui/islands/ActionsIsland';
@@ -73,6 +74,7 @@ function App() {
       <LegendEditor />
       <LinkTypePopup />
       <CommandPalette />
+      <ShortcutsOverlay />
     </div>
   );
 }

@@ -59,7 +59,7 @@ export function ToolIsland(): React.JSX.Element {
           activeTool === 'addIndividual' && styles.buttonActive
         )}
         onClick={addPersonTool}
-        title="Add individual (A)"
+        title="Add individual (P)"
         aria-label="Add Person"
         aria-pressed={activeTool === 'addIndividual'}
       >
