@@ -1,4 +1,4 @@
-import type { PedigreeDocument, Individual } from '../types/pedigree';
+import type { PedigreeDocument, Individual, Investigation } from '../types/pedigree';
 import { generateId } from '../utils/idGenerator';
 
 // ---------------------------------------------------------------------------
@@ -118,9 +118,18 @@ export function deserializeDocument(json: string): PedigreeDocument {
       individual.conditionIds = [];
     }
 
-    // Ensure investigations exists (added after some documents were saved)
+    // Ensure investigations exists (added after some documents were saved) and
+    // migrate the legacy single-string form to the { label, description } shape.
     if (!individual.investigations) {
       individual.investigations = [];
+    } else {
+      const legacyInvestigations = individual.investigations as unknown as (
+        | string
+        | Investigation
+      )[];
+      individual.investigations = legacyInvestigations.map((inv) =>
+        typeof inv === 'string' ? { label: inv, description: '' } : inv,
+      );
     }
 
     // If old affectedStatus === 'affected', create a default legend entry and map

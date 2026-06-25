@@ -52,6 +52,21 @@ export interface Annotation {
 }
 
 /**
+ * A genetic test / investigation recorded on an individual.
+ *
+ * Split into two fields so the short identifier and the free-text result can be
+ * surfaced in different places: the {@link label} appears on the canvas symbol,
+ * while the {@link description} appears in the properties panel and the exported
+ * key (SVG/PDF), where each row reads `label = description`.
+ */
+export interface Investigation {
+  /** Short identifier shown on the canvas symbol (e.g. "Karyotype", "BRCA1"). */
+  label: string;
+  /** Free-text result or note (e.g. "46,XX", "Pathogenic variant detected"). */
+  description: string;
+}
+
+/**
  * A free-text annotation placed anywhere on the canvas (titles, captions,
  * notes). Unlike {@link Annotation}, which decorates an individual, a
  * TextAnnotation is a first-class, independently positioned document entity.
@@ -97,7 +112,7 @@ export interface Individual {
   generation?: number;
 
   // Annotations
-  investigations: string[];
+  investigations: Investigation[];
   annotations: Annotation[];
   notes?: string;
 }

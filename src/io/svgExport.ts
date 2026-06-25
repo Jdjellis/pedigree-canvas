@@ -6,12 +6,13 @@ import type {
   TwinGroup,
   TextAnnotation,
   LegendEntry,
+  Investigation,
   QuarterPosition,
   FillPatternType,
 } from '../types/pedigree';
 import { GenderIdentity, RelationshipType, TwinType, VitalStatus } from '../types/enums';
 import { computeBounds, computeGenerationNumerals } from '../utils/boundsCalculation';
-import { collectInvestigations } from '../utils/investigations';
+import { collectInvestigations, formatInvestigation } from '../utils/investigations';
 import {
   SYMBOL_SIZE,
   SYMBOL_STROKE_WIDTH,
@@ -305,7 +306,7 @@ function buildLabelLines(individual: Individual): string[] {
   }
 
   for (const investigation of individual.investigations) {
-    const value = investigation.trim();
+    const value = investigation.label.trim();
     if (value) lines.push(value);
   }
 
@@ -640,7 +641,7 @@ function renderTextAnnotation(annotation: TextAnnotation): string {
 /** Render the legend "Key" box, matching `LegendLayer.tsx`. */
 function renderLegend(
   entries: LegendEntry[],
-  investigations: string[],
+  investigations: Investigation[],
   legendX: number,
   legendY: number,
 ): { markup: string; right: number; bottom: number } {
@@ -652,13 +653,12 @@ function renderLegend(
   const swatchWidth = hasBothGender ? LEGEND_SWATCH_SIZE * 2 + 4 : LEGEND_SWATCH_SIZE;
   const contentWidth = LEGEND_PADDING * 2 + swatchWidth + 8 + LEGEND_LABEL_WIDTH;
 
-  // Investigations add a subheading row plus one row per entry.
-  const investigationRows = investigations.length > 0 ? investigations.length + 1 : 0;
+  // Investigations add one self-describing "label = description" row each.
   const contentHeight =
     LEGEND_PADDING * 2 +
     LEGEND_TITLE_HEIGHT +
     entries.length * LEGEND_ROW_HEIGHT +
-    investigationRows * LEGEND_ROW_HEIGHT;
+    investigations.length * LEGEND_ROW_HEIGHT;
 
   const parts: string[] = [];
 
@@ -700,27 +700,19 @@ function renderLegend(
     );
   });
 
-  // Investigations subheading + rows.
-  if (investigations.length > 0) {
-    const baseY = LEGEND_PADDING + LEGEND_TITLE_HEIGHT + entries.length * LEGEND_ROW_HEIGHT;
+  // Investigation rows ("label = description"), continuing straight on from the
+  // condition entries with no separate subheading.
+  const baseY = LEGEND_PADDING + LEGEND_TITLE_HEIGHT + entries.length * LEGEND_ROW_HEIGHT;
+  investigations.forEach((investigation, idx) => {
+    const rowY = baseY + idx * LEGEND_ROW_HEIGHT;
     parts.push(
       `<text x="${LEGEND_PADDING}" y="${num(
-        baseY + 12,
+        rowY + 12,
       )}" font-size="12" font-family="${escapeXml(
         LABEL_FONT_FAMILY,
-      )}" font-weight="bold" fill="${SYMBOL_COLOR}">Investigations</text>`,
+      )}" fill="${SYMBOL_COLOR}">${escapeXml(formatInvestigation(investigation))}</text>`,
     );
-    investigations.forEach((text, idx) => {
-      const rowY = baseY + (idx + 1) * LEGEND_ROW_HEIGHT;
-      parts.push(
-        `<text x="${LEGEND_PADDING}" y="${num(
-          rowY + 12,
-        )}" font-size="12" font-family="${escapeXml(
-          LABEL_FONT_FAMILY,
-        )}" fill="${SYMBOL_COLOR}">${escapeXml(text)}</text>`,
-      );
-    });
-  }
+  });
 
   const markup = `<g transform="translate(${num(legendX)}, ${num(legendY)})">${parts.join(
     '',

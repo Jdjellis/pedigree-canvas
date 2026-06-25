@@ -21,11 +21,30 @@ describe('deserializeDocument', () => {
 
   it('round-trips investigations that are present', () => {
     const doc = createDefaultDocument();
-    const individual = createDefaultIndividual({ investigations: ['BRCA1 +'] });
+    const individual = createDefaultIndividual({
+      investigations: [{ label: 'BRCA1', description: 'Pathogenic variant' }],
+    });
     doc.individuals[individual.id] = individual;
 
     const loaded = deserializeDocument(serializeDocument(doc));
-    expect(loaded.individuals[individual.id].investigations).toEqual(['BRCA1 +']);
+    expect(loaded.individuals[individual.id].investigations).toEqual([
+      { label: 'BRCA1', description: 'Pathogenic variant' },
+    ]);
+  });
+
+  it('migrates legacy string investigations to { label, description }', () => {
+    const doc = createDefaultDocument();
+    const individual = createDefaultIndividual();
+    doc.individuals[individual.id] = individual;
+
+    // Simulate a document saved with the old single-string investigations form.
+    const parsed = JSON.parse(serializeDocument(doc));
+    parsed.document.individuals[individual.id].investigations = ['BRCA1 +'];
+
+    const loaded = deserializeDocument(JSON.stringify(parsed));
+    expect(loaded.individuals[individual.id].investigations).toEqual([
+      { label: 'BRCA1 +', description: '' },
+    ]);
   });
 });
 

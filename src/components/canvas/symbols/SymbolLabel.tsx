@@ -59,9 +59,10 @@ export const SymbolLabel: React.FC<SymbolLabelProps> = React.memo(
         }
       }
 
-      // Free-text investigations (genetic tests etc.)
+      // Investigations (genetic tests etc.) — the short label only; the
+      // free-text description is surfaced in the key and properties panel.
       for (const investigation of individual.investigations) {
-        const value = investigation.trim();
+        const value = investigation.label.trim();
         if (value) result.push(value);
       }
 

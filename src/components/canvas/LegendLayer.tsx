@@ -1,16 +1,22 @@
 import React from 'react';
 import { Group, Rect, Text, Shape, Circle as KonvaCircle } from 'react-konva';
 import type { KonvaEventObject } from 'konva/lib/Node';
-import type { LegendConfig, LegendEntry, Position } from '../../types/pedigree';
+import type {
+  Investigation,
+  LegendConfig,
+  LegendEntry,
+  Position,
+} from '../../types/pedigree';
 import type { CanvasBounds } from '../../utils/boundsCalculation';
 import { GenderIdentity } from '../../types/enums';
 import { clipSymbolPath } from '../../utils/symbolClip';
 import { createPatternCanvas } from '../../utils/fillPatterns';
+import { formatInvestigation } from '../../utils/investigations';
 import { SYMBOL_COLOR, LABEL_FONT_FAMILY } from '../../utils/constants';
 
 interface LegendLayerProps {
   legendConfig: LegendConfig;
-  investigations: string[];
+  investigations: Investigation[];
   onMove: (position: Position) => void;
   bounds?: CanvasBounds | null;
 }
@@ -94,12 +100,11 @@ export const LegendLayer: React.FC<LegendLayerProps> = React.memo(
     const hasBothGender = legendConfig.entries.some((e) => !e.applicableTo);
     const swatchWidth = hasBothGender ? SWATCH_SIZE * 2 + 4 : SWATCH_SIZE;
     const contentWidth = PADDING * 2 + swatchWidth + 8 + 120;
-    const investigationRows = investigations.length > 0 ? investigations.length + 1 : 0;
     const contentHeight =
       PADDING * 2 +
       TITLE_HEIGHT +
       legendConfig.entries.length * ROW_HEIGHT +
-      investigationRows * ROW_HEIGHT;
+      investigations.length * ROW_HEIGHT;
 
     const handleDragEnd = (e: KonvaEventObject<DragEvent>) => {
       onMove({ x: e.target.x(), y: e.target.y() });
@@ -179,39 +184,27 @@ export const LegendLayer: React.FC<LegendLayerProps> = React.memo(
           );
         })}
 
-        {investigations.length > 0 && (
-          <>
-            <Text
-              x={PADDING}
-              y={PADDING + TITLE_HEIGHT + legendConfig.entries.length * ROW_HEIGHT + 4}
-              text="Investigations"
-              fontSize={12}
-              fontFamily={LABEL_FONT_FAMILY}
-              fontStyle="bold"
-              fill={SYMBOL_COLOR}
-            />
-            {investigations.map((text, idx) => (
-              <Text
-                key={text}
-                x={PADDING}
-                y={
-                  PADDING +
-                  TITLE_HEIGHT +
-                  legendConfig.entries.length * ROW_HEIGHT +
-                  (idx + 1) * ROW_HEIGHT +
-                  4
-                }
-                text={text}
-                fontSize={12}
-                fontFamily={LABEL_FONT_FAMILY}
-                fill={SYMBOL_COLOR}
-                width={contentWidth - PADDING * 2}
-                ellipsis
-                wrap="none"
-              />
-            ))}
-          </>
-        )}
+        {/* Investigation rows ("label = description"), continuing on from the
+            condition entries with no separate subheading. */}
+        {investigations.map((investigation, idx) => (
+          <Text
+            key={`${investigation.label} ${investigation.description}`}
+            x={PADDING}
+            y={
+              PADDING +
+              TITLE_HEIGHT +
+              (legendConfig.entries.length + idx) * ROW_HEIGHT +
+              4
+            }
+            text={formatInvestigation(investigation)}
+            fontSize={12}
+            fontFamily={LABEL_FONT_FAMILY}
+            fill={SYMBOL_COLOR}
+            width={contentWidth - PADDING * 2}
+            ellipsis
+            wrap="none"
+          />
+        ))}
       </Group>
     );
   },

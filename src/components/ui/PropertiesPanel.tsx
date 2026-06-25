@@ -102,7 +102,8 @@ export function PropertiesPanel() {
   const [addingNote, setAddingNote] = useState(false);
   const [noteName, setNoteName] = useState('');
   const [noteAge, setNoteAge] = useState('');
-  const [investigationText, setInvestigationText] = useState('');
+  const [investigationLabel, setInvestigationLabel] = useState('');
+  const [investigationDescription, setInvestigationDescription] = useState('');
 
   const resetNoteForm = useCallback(() => {
     setAddingNote(false);
@@ -131,18 +132,32 @@ export function PropertiesPanel() {
 
   const submitInvestigation = useCallback(() => {
     if (!individual) return;
-    const value = investigationText.trim();
-    if (!value) return;
-    if (individual.investigations.includes(value)) {
-      setInvestigationText('');
-      return;
+    const label = investigationLabel.trim();
+    const description = investigationDescription.trim();
+    if (!label) return;
+    const exists = individual.investigations.some(
+      (inv) => inv.label === label && inv.description === description,
+    );
+    if (!exists) {
+      update({
+        investigations: [...individual.investigations, { label, description }],
+      });
     }
-    update({ investigations: [...individual.investigations, value] });
-    setInvestigationText('');
-  }, [individual, investigationText, update]);
+    setInvestigationLabel('');
+    setInvestigationDescription('');
+  }, [individual, investigationLabel, investigationDescription, update]);
 
-  const investigationOptions = useMemo(
-    () => collectInvestigations(Object.values(individuals)),
+  // Distinct labels already used anywhere in the chart, for the add-input
+  // autocomplete.
+  const investigationLabelOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          collectInvestigations(Object.values(individuals)).map(
+            (inv) => inv.label,
+          ),
+        ),
+      ),
     [individuals]
   );
 
@@ -397,8 +412,16 @@ export function PropertiesPanel() {
 
         <div className={styles.field}>
           {individual.investigations.map((investigation, idx) => (
-            <div key={investigation} className={styles.conditionItem}>
-              <span className={styles.conditionName}>{investigation}</span>
+            <div
+              key={`${investigation.label} ${investigation.description}`}
+              className={styles.conditionItem}
+            >
+              <span className={styles.conditionName}>
+                {investigation.label}
+                {investigation.description
+                  ? `: ${investigation.description}`
+                  : ''}
+              </span>
               <button
                 className={styles.removeButton}
                 onClick={() =>
@@ -412,20 +435,44 @@ export function PropertiesPanel() {
             </div>
           ))}
 
-          <input
-            className={styles.input}
-            list={INVESTIGATION_DATALIST_ID}
-            value={investigationText}
-            placeholder="e.g. BRCA1 +"
-            onChange={(e) => setInvestigationText(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') submitInvestigation();
-              if (e.key === 'Escape') setInvestigationText('');
-            }}
-            onBlur={submitInvestigation}
-          />
+          <div className={styles.noteForm}>
+            <input
+              className={styles.input}
+              list={INVESTIGATION_DATALIST_ID}
+              value={investigationLabel}
+              placeholder="Label (e.g. BRCA1)"
+              onChange={(e) => setInvestigationLabel(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') submitInvestigation();
+                if (e.key === 'Escape') {
+                  setInvestigationLabel('');
+                  setInvestigationDescription('');
+                }
+              }}
+            />
+            <input
+              className={styles.input}
+              value={investigationDescription}
+              placeholder="Result / description (e.g. Pathogenic variant)"
+              onChange={(e) => setInvestigationDescription(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') submitInvestigation();
+                if (e.key === 'Escape') {
+                  setInvestigationLabel('');
+                  setInvestigationDescription('');
+                }
+              }}
+            />
+            <button
+              className={styles.noteAddButton}
+              onClick={submitInvestigation}
+              disabled={!investigationLabel.trim()}
+            >
+              Add
+            </button>
+          </div>
           <datalist id={INVESTIGATION_DATALIST_ID}>
-            {investigationOptions.map((option) => (
+            {investigationLabelOptions.map((option) => (
               <option key={option} value={option} />
             ))}
           </datalist>

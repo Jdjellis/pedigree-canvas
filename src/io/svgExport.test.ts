@@ -25,7 +25,10 @@ function makeFixture(): PedigreeDocument {
     age: 60,
     conditionIds: [],
     conditions: [],
-    investigations: ['BRCA1 +', 'CMA: 22q11.2 deletion'],
+    investigations: [
+      { label: 'BRCA1', description: 'Pathogenic variant' },
+      { label: 'Karyotype', description: '46,XY' },
+    ],
     isProband: true,
     isPregnancy: false,
     position: { x: 100, y: 100 },
@@ -259,16 +262,24 @@ describe('buildPedigreeSvg', () => {
     expect(svg).not.toContain('<image');
   });
 
-  it('renders investigation lines beside the symbol', () => {
+  it('renders the investigation label beside the symbol', () => {
     const svg = buildPedigreeSvg(makeFixture(), 'Test Pedigree');
-    expect(svg).toContain('BRCA1 +');
-    expect(svg).toContain('CMA: 22q11.2 deletion');
+    expect(svg).toContain('>BRCA1</text>');
+    expect(svg).toContain('>Karyotype</text>');
   });
 
-  it('renders an Investigations subheading listing the distinct sorted set', () => {
+  it('renders investigations in the key as "label = description" rows, sorted by label', () => {
     const svg = buildPedigreeSvg(makeFixture(), 'Test Pedigree');
-    expect(svg).toContain('Investigations');
-    // Alphabetical: BRCA1 + before CMA: ...
-    expect(svg.indexOf('BRCA1 +')).toBeLessThan(svg.indexOf('CMA: 22q11.2 deletion'));
+    expect(svg).toContain('BRCA1 = Pathogenic variant');
+    expect(svg).toContain('Karyotype = 46,XY');
+    // Alphabetical by label: BRCA1 before Karyotype.
+    expect(svg.indexOf('BRCA1 = Pathogenic variant')).toBeLessThan(
+      svg.indexOf('Karyotype = 46,XY'),
+    );
+  });
+
+  it('does not render an "Investigations" heading in the key', () => {
+    const svg = buildPedigreeSvg(makeFixture(), 'Test Pedigree');
+    expect(svg).not.toContain('>Investigations</text>');
   });
 });
