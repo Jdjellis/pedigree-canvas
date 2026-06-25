@@ -11,7 +11,14 @@ import {
   detectQuarterClashes,
   freeQuartersFor,
 } from '../../utils/quarterClashes';
+import {
+  COLOR_OPTIONS,
+  PATTERN_OPTIONS,
+  QUARTER_OPTIONS,
+  createConditionEntry,
+} from './legendOptions';
 import type {
+  FillPatternType,
   Individual,
   LegendEntry,
   QuarterPosition,
@@ -31,6 +38,7 @@ export function PropertiesPanel() {
   const individuals = usePedigreeStore((s) => s.document.individuals);
   const updateIndividual = usePedigreeStore((s) => s.updateIndividual);
   const updateLegendEntry = usePedigreeStore((s) => s.updateLegendEntry);
+  const addLegendEntry = usePedigreeStore((s) => s.addLegendEntry);
   const legendConfig = usePedigreeStore((s) => s.document.legendConfig);
 
   const selectedId =
@@ -43,6 +51,50 @@ export function PropertiesPanel() {
     },
     [selectedId, updateIndividual]
   );
+
+  const [addingCondition, setAddingCondition] = useState(false);
+  const [conditionName, setConditionName] = useState('');
+  const [conditionColor, setConditionColor] = useState(COLOR_OPTIONS[0].value);
+  const [conditionQuarter, setConditionQuarter] = useState<QuarterPosition>(
+    QUARTER_OPTIONS[0].value,
+  );
+  const [conditionPattern, setConditionPattern] = useState<FillPatternType>(
+    PATTERN_OPTIONS[0].value,
+  );
+
+  const resetConditionForm = useCallback(() => {
+    setAddingCondition(false);
+    setConditionName('');
+    setConditionColor(COLOR_OPTIONS[0].value);
+    setConditionQuarter(QUARTER_OPTIONS[0].value);
+    setConditionPattern(PATTERN_OPTIONS[0].value);
+  }, []);
+
+  const submitCondition = useCallback(() => {
+    if (!individual) return;
+    if (!conditionName.trim()) return;
+    const entry = createConditionEntry(
+      generateId(),
+      conditionName,
+      conditionColor,
+      conditionQuarter,
+      conditionPattern,
+    );
+    addLegendEntry(entry);
+    // Immediately apply the new condition to the selected individual.
+    const current = individual.conditionIds ?? [];
+    update({ conditionIds: [...current, entry.id] });
+    resetConditionForm();
+  }, [
+    individual,
+    conditionName,
+    conditionColor,
+    conditionQuarter,
+    conditionPattern,
+    addLegendEntry,
+    update,
+    resetConditionForm,
+  ]);
 
   const [addingNote, setAddingNote] = useState(false);
   const [noteName, setNoteName] = useState('');
@@ -201,6 +253,90 @@ export function PropertiesPanel() {
               </label>
             </div>
           ))
+        )}
+
+        {addingCondition ? (
+          <div className={styles.noteForm}>
+            <input
+              className={styles.input}
+              value={conditionName}
+              onChange={(e) => setConditionName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') submitCondition();
+                if (e.key === 'Escape') resetConditionForm();
+              }}
+              placeholder="Condition name"
+              autoFocus
+            />
+            <div className={styles.field}>
+              <label className={styles.label}>Color</label>
+              <select
+                className={styles.select}
+                value={conditionColor}
+                onChange={(e) => setConditionColor(e.target.value)}
+              >
+                {COLOR_OPTIONS.map((c) => (
+                  <option key={c.value} value={c.value}>
+                    {c.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className={styles.field}>
+              <label className={styles.label}>Quarter</label>
+              <select
+                className={styles.select}
+                value={conditionQuarter}
+                onChange={(e) =>
+                  setConditionQuarter(e.target.value as QuarterPosition)
+                }
+              >
+                {QUARTER_OPTIONS.map((q) => (
+                  <option key={q.value} value={q.value}>
+                    {q.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className={styles.field}>
+              <label className={styles.label}>Pattern</label>
+              <select
+                className={styles.select}
+                value={conditionPattern}
+                onChange={(e) =>
+                  setConditionPattern(e.target.value as FillPatternType)
+                }
+              >
+                {PATTERN_OPTIONS.map((p) => (
+                  <option key={p.value} value={p.value}>
+                    {p.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className={styles.noteFormActions}>
+              <button
+                className={styles.noteAddButton}
+                onClick={submitCondition}
+                disabled={!conditionName.trim()}
+              >
+                Add
+              </button>
+              <button
+                className={styles.noteCancelButton}
+                onClick={resetConditionForm}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            className={styles.addButton}
+            onClick={() => setAddingCondition(true)}
+          >
+            + Add Condition
+          </button>
         )}
 
         {clashes.length > 0 && (

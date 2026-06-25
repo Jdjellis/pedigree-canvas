@@ -6,30 +6,12 @@ import type {
   FillPatternType,
 } from '../../types/pedigree';
 import { generateId } from '../../utils/idGenerator';
+import {
+  COLOR_OPTIONS,
+  PATTERN_OPTIONS,
+  QUARTER_OPTIONS,
+} from './legendOptions';
 import styles from './LegendEditor.module.css';
-
-const COLOR_OPTIONS: { value: string; label: string }[] = [
-  { value: '#1a1a1a', label: 'Black' },
-  { value: '#dc2626', label: 'Red' },
-  { value: '#16a34a', label: 'Green' },
-  { value: '#2563eb', label: 'Blue' },
-];
-
-const QUARTER_OPTIONS: { value: QuarterPosition; label: string }[] = [
-  { value: 'topRight', label: 'Top-Right' },
-  { value: 'topLeft', label: 'Top-Left' },
-  { value: 'bottomLeft', label: 'Bottom-Left' },
-  { value: 'bottomRight', label: 'Bottom-Right' },
-];
-
-const PATTERN_OPTIONS: { value: FillPatternType; label: string }[] = [
-  { value: 'solid', label: 'Solid' },
-  { value: 'diagonalLines', label: 'Diagonal Lines' },
-  { value: 'dots', label: 'Dots' },
-  { value: 'crosshatch', label: 'Crosshatch' },
-  { value: 'horizontalStripes', label: 'Horizontal Stripes' },
-  { value: 'verticalStripes', label: 'Vertical Stripes' },
-];
 
 export function LegendEditor() {
   const activeModal = useUIStore((s) => s.activeModal);
