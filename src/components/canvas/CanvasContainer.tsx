@@ -21,6 +21,7 @@ import { LegendLayer } from './LegendLayer';
 import { TextAnnotationLayer } from './TextAnnotationLayer';
 import { BoundsLayer } from './BoundsLayer';
 import { computeBounds } from '../../utils/boundsCalculation';
+import { collectInvestigations } from '../../utils/investigations';
 import type { ActiveQuarter } from './symbols/ConditionOverlay';
 import type { Individual } from '../../types/pedigree';
 import {
@@ -281,6 +282,11 @@ export const CanvasContainer = forwardRef<CanvasContainerHandle>(
 
     const bounds = useMemo(() => computeBounds(individualsList), [individualsList]);
 
+    const investigations = useMemo(
+      () => collectInvestigations(individualsList),
+      [individualsList],
+    );
+
     const individualNumbers = useMemo(() => {
       const numbers = new Map<string, number>();
       const genGroups = new Map<number, Individual[]>();
@@ -392,6 +398,7 @@ export const CanvasContainer = forwardRef<CanvasContainerHandle>(
             <Layer>
               <LegendLayer
                 legendConfig={legendConfig}
+                investigations={investigations}
                 onMove={moveLegend}
                 bounds={bounds}
               />

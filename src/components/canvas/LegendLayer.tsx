@@ -10,6 +10,7 @@ import { SYMBOL_COLOR, LABEL_FONT_FAMILY } from '../../utils/constants';
 
 interface LegendLayerProps {
   legendConfig: LegendConfig;
+  investigations: string[];
   onMove: (position: Position) => void;
   bounds?: CanvasBounds | null;
 }
@@ -86,15 +87,19 @@ function SwatchShape({
 }
 
 export const LegendLayer: React.FC<LegendLayerProps> = React.memo(
-  ({ legendConfig, onMove, bounds }) => {
-    if (legendConfig.entries.length === 0) return null;
+  ({ legendConfig, investigations, onMove, bounds }) => {
+    if (legendConfig.entries.length === 0 && investigations.length === 0) return null;
 
     // Calculate width: entries with "both" genders need wider rows
     const hasBothGender = legendConfig.entries.some((e) => !e.applicableTo);
     const swatchWidth = hasBothGender ? SWATCH_SIZE * 2 + 4 : SWATCH_SIZE;
     const contentWidth = PADDING * 2 + swatchWidth + 8 + 120;
+    const investigationRows = investigations.length > 0 ? investigations.length + 1 : 0;
     const contentHeight =
-      PADDING * 2 + TITLE_HEIGHT + legendConfig.entries.length * ROW_HEIGHT;
+      PADDING * 2 +
+      TITLE_HEIGHT +
+      legendConfig.entries.length * ROW_HEIGHT +
+      investigationRows * ROW_HEIGHT;
 
     const handleDragEnd = (e: KonvaEventObject<DragEvent>) => {
       onMove({ x: e.target.x(), y: e.target.y() });
@@ -173,6 +178,40 @@ export const LegendLayer: React.FC<LegendLayerProps> = React.memo(
             </React.Fragment>
           );
         })}
+
+        {investigations.length > 0 && (
+          <>
+            <Text
+              x={PADDING}
+              y={PADDING + TITLE_HEIGHT + legendConfig.entries.length * ROW_HEIGHT + 4}
+              text="Investigations"
+              fontSize={12}
+              fontFamily={LABEL_FONT_FAMILY}
+              fontStyle="bold"
+              fill={SYMBOL_COLOR}
+            />
+            {investigations.map((text, idx) => (
+              <Text
+                key={text}
+                x={PADDING}
+                y={
+                  PADDING +
+                  TITLE_HEIGHT +
+                  legendConfig.entries.length * ROW_HEIGHT +
+                  (idx + 1) * ROW_HEIGHT +
+                  4
+                }
+                text={text}
+                fontSize={12}
+                fontFamily={LABEL_FONT_FAMILY}
+                fill={SYMBOL_COLOR}
+                width={contentWidth - PADDING * 2}
+                ellipsis
+                wrap="none"
+              />
+            ))}
+          </>
+        )}
       </Group>
     );
   },

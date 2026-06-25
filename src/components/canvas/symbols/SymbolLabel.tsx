@@ -59,6 +59,12 @@ export const SymbolLabel: React.FC<SymbolLabelProps> = React.memo(
         }
       }
 
+      // Free-text investigations (genetic tests etc.)
+      for (const investigation of individual.investigations) {
+        const value = investigation.trim();
+        if (value) result.push(value);
+      }
+
       return result;
     }, [individual]);
 

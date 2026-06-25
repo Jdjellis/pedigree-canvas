@@ -18,7 +18,7 @@ function makeIndividual(
     vitalStatus: VitalStatus.Alive,
     conditionIds: [],
     conditions: [],
-    geneticTests: [],
+    investigations: [],
     isProband: false,
     isPregnancy: false,
     position: { x: 0, y },

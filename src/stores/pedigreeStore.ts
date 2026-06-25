@@ -51,7 +51,8 @@ function applyGenerationRespacing(
   return next;
 }
 
-function createEmptyDocument(): PedigreeDocument {
+/** Build an empty PedigreeDocument with sensible defaults. */
+export function createDefaultDocument(): PedigreeDocument {
   return {
     metadata: {
       id: generateId(),
@@ -79,7 +80,7 @@ export function createDefaultIndividual(
     vitalStatus: VitalStatus.Alive,
     conditionIds: [],
     conditions: [],
-    geneticTests: [],
+    investigations: [],
     isProband: false,
     isPregnancy: false,
     position: { x: 0, y: 0 },
@@ -162,7 +163,7 @@ type PartializedState = Pick<PedigreeState, 'document'>;
 export const usePedigreeStore = create<PedigreeState>()(
   temporal(
     (set) => ({
-      document: createEmptyDocument(),
+      document: createDefaultDocument(),
 
       addIndividual: (individual) =>
         set((state) => ({
@@ -678,7 +679,7 @@ export const usePedigreeStore = create<PedigreeState>()(
 
       setDocument: (doc) => set({ document: doc }),
 
-      resetDocument: () => set({ document: createEmptyDocument() }),
+      resetDocument: () => set({ document: createDefaultDocument() }),
 
       updateMetadata: (patch) =>
         set((state) => ({

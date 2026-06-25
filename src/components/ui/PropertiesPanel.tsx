@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { usePedigreeStore } from '../../stores/pedigreeStore';
 import { useUIStore } from '../../stores/uiStore';
 import {
@@ -7,6 +7,7 @@ import {
   VitalStatus,
 } from '../../types/enums';
 import { generateId } from '../../utils/idGenerator';
+import { collectInvestigations } from '../../utils/investigations';
 import {
   detectQuarterClashes,
   freeQuartersFor,
@@ -24,6 +25,8 @@ import type {
   QuarterPosition,
 } from '../../types/pedigree';
 import styles from './PropertiesPanel.module.css';
+
+const INVESTIGATION_DATALIST_ID = 'pedigree-investigation-options';
 
 const QUARTER_LABELS: Record<QuarterPosition, string> = {
   topRight: 'Top-Right',
@@ -99,6 +102,7 @@ export function PropertiesPanel() {
   const [addingNote, setAddingNote] = useState(false);
   const [noteName, setNoteName] = useState('');
   const [noteAge, setNoteAge] = useState('');
+  const [investigationText, setInvestigationText] = useState('');
 
   const resetNoteForm = useCallback(() => {
     setAddingNote(false);
@@ -124,6 +128,23 @@ export function PropertiesPanel() {
     });
     resetNoteForm();
   }, [individual, noteName, noteAge, update, resetNoteForm]);
+
+  const submitInvestigation = useCallback(() => {
+    if (!individual) return;
+    const value = investigationText.trim();
+    if (!value) return;
+    if (individual.investigations.includes(value)) {
+      setInvestigationText('');
+      return;
+    }
+    update({ investigations: [...individual.investigations, value] });
+    setInvestigationText('');
+  }, [individual, investigationText, update]);
+
+  const investigationOptions = useMemo(
+    () => collectInvestigations(Object.values(individuals)),
+    [individuals]
+  );
 
   if (!propertiesPanelOpen || !individual) {
     return (
@@ -366,6 +387,49 @@ export function PropertiesPanel() {
             ))}
           </div>
         )}
+      </div>
+
+      <div className={styles.divider} />
+
+      {/* Investigations */}
+      <div className={styles.section}>
+        <div className={styles.sectionTitle}>Investigations</div>
+
+        <div className={styles.field}>
+          {individual.investigations.map((investigation, idx) => (
+            <div key={investigation} className={styles.conditionItem}>
+              <span className={styles.conditionName}>{investigation}</span>
+              <button
+                className={styles.removeButton}
+                onClick={() =>
+                  update({
+                    investigations: individual.investigations.filter((_, i) => i !== idx),
+                  })
+                }
+              >
+                &times;
+              </button>
+            </div>
+          ))}
+
+          <input
+            className={styles.input}
+            list={INVESTIGATION_DATALIST_ID}
+            value={investigationText}
+            placeholder="e.g. BRCA1 +"
+            onChange={(e) => setInvestigationText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') submitInvestigation();
+              if (e.key === 'Escape') setInvestigationText('');
+            }}
+            onBlur={submitInvestigation}
+          />
+          <datalist id={INVESTIGATION_DATALIST_ID}>
+            {investigationOptions.map((option) => (
+              <option key={option} value={option} />
+            ))}
+          </datalist>
+        </div>
       </div>
 
       <div className={styles.divider} />

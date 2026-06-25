@@ -11,6 +11,7 @@ import type {
 } from '../types/pedigree';
 import { GenderIdentity, RelationshipType, TwinType, VitalStatus } from '../types/enums';
 import { computeBounds, computeGenerationNumerals } from '../utils/boundsCalculation';
+import { collectInvestigations } from '../utils/investigations';
 import {
   SYMBOL_SIZE,
   SYMBOL_STROKE_WIDTH,
@@ -301,6 +302,11 @@ function buildLabelLines(individual: Individual): string[] {
     } else {
       lines.push(condition.name);
     }
+  }
+
+  for (const investigation of individual.investigations) {
+    const value = investigation.trim();
+    if (value) lines.push(value);
   }
 
   return lines;
@@ -634,18 +640,25 @@ function renderTextAnnotation(annotation: TextAnnotation): string {
 /** Render the legend "Key" box, matching `LegendLayer.tsx`. */
 function renderLegend(
   entries: LegendEntry[],
+  investigations: string[],
   legendX: number,
   legendY: number,
 ): { markup: string; right: number; bottom: number } {
-  if (entries.length === 0) {
+  if (entries.length === 0 && investigations.length === 0) {
     return { markup: '', right: legendX, bottom: legendY };
   }
 
   const hasBothGender = entries.some((e) => !e.applicableTo);
   const swatchWidth = hasBothGender ? LEGEND_SWATCH_SIZE * 2 + 4 : LEGEND_SWATCH_SIZE;
   const contentWidth = LEGEND_PADDING * 2 + swatchWidth + 8 + LEGEND_LABEL_WIDTH;
+
+  // Investigations add a subheading row plus one row per entry.
+  const investigationRows = investigations.length > 0 ? investigations.length + 1 : 0;
   const contentHeight =
-    LEGEND_PADDING * 2 + LEGEND_TITLE_HEIGHT + entries.length * LEGEND_ROW_HEIGHT;
+    LEGEND_PADDING * 2 +
+    LEGEND_TITLE_HEIGHT +
+    entries.length * LEGEND_ROW_HEIGHT +
+    investigationRows * LEGEND_ROW_HEIGHT;
 
   const parts: string[] = [];
 
@@ -663,7 +676,7 @@ function renderLegend(
     )}" font-weight="bold" fill="${SYMBOL_COLOR}">Key</text>`,
   );
 
-  // Entries.
+  // Condition entries.
   entries.forEach((entry, idx) => {
     const rowY = LEGEND_PADDING + LEGEND_TITLE_HEIGHT + idx * LEGEND_ROW_HEIGHT;
     const showBoth = !entry.applicableTo;
@@ -678,7 +691,6 @@ function renderLegend(
       parts.push(renderLegendSwatch(sx, rowY, GenderIdentity.Woman, entry));
     }
 
-    // Read as "icon = description" to match the on-canvas legend.
     parts.push(
       `<text x="${LEGEND_PADDING + swatchWidth + 8}" y="${num(
         rowY + 4 + 12,
@@ -687,6 +699,28 @@ function renderLegend(
       )}" fill="${SYMBOL_COLOR}">${escapeXml(`= ${entry.name}`)}</text>`,
     );
   });
+
+  // Investigations subheading + rows.
+  if (investigations.length > 0) {
+    const baseY = LEGEND_PADDING + LEGEND_TITLE_HEIGHT + entries.length * LEGEND_ROW_HEIGHT;
+    parts.push(
+      `<text x="${LEGEND_PADDING}" y="${num(
+        baseY + 12,
+      )}" font-size="12" font-family="${escapeXml(
+        LABEL_FONT_FAMILY,
+      )}" font-weight="bold" fill="${SYMBOL_COLOR}">Investigations</text>`,
+    );
+    investigations.forEach((text, idx) => {
+      const rowY = baseY + (idx + 1) * LEGEND_ROW_HEIGHT;
+      parts.push(
+        `<text x="${LEGEND_PADDING}" y="${num(
+          rowY + 12,
+        )}" font-size="12" font-family="${escapeXml(
+          LABEL_FONT_FAMILY,
+        )}" fill="${SYMBOL_COLOR}">${escapeXml(text)}</text>`,
+      );
+    });
+  }
 
   const markup = `<g transform="translate(${num(legendX)}, ${num(legendY)})">${parts.join(
     '',
@@ -870,7 +904,7 @@ export function buildPedigreeSvg(doc: PedigreeDocument, title: string): string {
   const legendY = bounds
     ? bounds.y + bounds.height + 16
     : doc.legendConfig.position.y;
-  const legend = renderLegend(entries, legendX, legendY);
+  const legend = renderLegend(entries, collectInvestigations(individuals), legendX, legendY);
 
   // ---- Compute tight viewBox over all rendered content -------------------
   const extent = emptyExtent();

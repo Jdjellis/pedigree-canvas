@@ -47,13 +47,6 @@ export interface Condition {
   ageOfDiagnosis?: number;
 }
 
-export interface GeneticTest {
-  id: string;
-  gene: string;
-  result: 'positive' | 'negative' | 'vus' | 'pending' | 'unknown';
-  variant?: string;
-}
-
 export interface Annotation {
   label: string;
 }
@@ -91,7 +84,6 @@ export interface Individual {
   causeOfDeath?: string;
   conditionIds: string[];
   conditions: Condition[];
-  geneticTests: GeneticTest[];
 
   // Pedigree role
   isProband: boolean;
@@ -105,6 +97,7 @@ export interface Individual {
   generation?: number;
 
   // Annotations
+  investigations: string[];
   annotations: Annotation[];
   notes?: string;
 }

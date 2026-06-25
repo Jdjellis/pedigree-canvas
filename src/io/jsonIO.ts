@@ -118,6 +118,11 @@ export function deserializeDocument(json: string): PedigreeDocument {
       individual.conditionIds = [];
     }
 
+    // Ensure investigations exists (added after some documents were saved)
+    if (!individual.investigations) {
+      individual.investigations = [];
+    }
+
     // If old affectedStatus === 'affected', create a default legend entry and map
     if (individual.affectedStatus === 'affected') {
       if (!migrationEntryId) {
