@@ -1,0 +1,125 @@
+/* Dimmed backdrop — sits below the panel */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.32);
+  z-index: 900;
+  animation: fadeIn 120ms ease;
+}
+
+/* Floating panel — island chrome, upper third of the viewport */
+.panel {
+  position: fixed;
+  top: 18%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 901;
+  width: 560px;
+  max-width: min(92vw, 560px);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg, 14px);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: slideIn 140ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Search input — full-width at the top of the panel */
+.input {
+  width: 100%;
+  padding: 14px 16px;
+  font-size: 15px;
+  color: var(--color-text);
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--color-border);
+  outline: none;
+  caret-color: var(--color-primary);
+}
+
+.input::placeholder {
+  color: var(--color-text-secondary);
+}
+
+/* Scrollable command list */
+.list {
+  list-style: none;
+  overflow-y: auto;
+  max-height: 360px;
+  padding: 4px 0;
+  margin: 0;
+}
+
+/* Individual command row */
+.item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 16px;
+  cursor: pointer;
+  border-radius: 0;
+  gap: 12px;
+  user-select: none;
+}
+
+.item:hover,
+.itemHighlighted {
+  background: var(--color-primary-soft);
+}
+
+.itemTitle {
+  font-size: 14px;
+  color: var(--color-text);
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Keyboard shortcut hint */
+.shortcut {
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  background: var(--color-bg, #f7f7f9);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  padding: 1px 5px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Empty-state message */
+.empty {
+  padding: 12px 16px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
+/* Visually hidden element for accessible Dialog.Title */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Entrance animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(-8px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}

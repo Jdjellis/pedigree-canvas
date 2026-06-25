@@ -7,6 +7,7 @@ import { loadFromFile, saveToFile } from '../io/jsonIO';
  * Global keyboard shortcuts for the pedigree editor.
  *
  * Shortcuts:
+ * - Cmd/Ctrl+K: Toggle command palette (works even when an input is focused)
  * - Cmd/Ctrl+Z: Undo
  * - Cmd/Ctrl+Shift+Z: Redo
  * - Cmd/Ctrl+S: Save to JSON
@@ -21,6 +22,15 @@ export function useKeyboardShortcuts() {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const meta = e.metaKey || e.ctrlKey;
+
+      // ⌘K / Ctrl+K: toggle the command palette from anywhere — even inside
+      // an input field — so this check must precede the input-guard below.
+      if (meta && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        useUIStore.getState().toggleCommandPalette();
+        return;
+      }
+
       const target = e.target as HTMLElement;
 
       // Don't intercept shortcuts when typing in inputs
