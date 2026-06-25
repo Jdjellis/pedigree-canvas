@@ -16,14 +16,43 @@ import {
   VitalStatus,
 } from '../types/enums';
 import { generateId } from '../utils/idGenerator';
-import { respaceGeneration } from '../utils/respacing';
+import {
+  respaceGenerationWithSubtrees,
+  centerParentsOverChildren,
+  collectDescendants,
+  computeParentClearanceShift,
+  makeRoomForPartner,
+} from '../utils/respacing';
 import { MIN_GENERATION_NODE_SPACING } from '../utils/constants';
 
 /**
- * Return a new individuals map with the bounded respacing applied to the given
- * generation. Only nodes that actually overlap are shifted; their x is updated
- * immutably and every other individual is returned untouched. Vertical (y)
- * positions and all other generations are never changed.
+ * Return a new individuals map with `moved` (id -> new x) applied immutably.
+ * Vertical (y) positions and every individual not in `moved` are left
+ * untouched. Returns the original map when there is nothing to move.
+ */
+function applyMoves(
+  individuals: Record<string, Individual>,
+  moved: Record<string, number>,
+): Record<string, Individual> {
+  if (Object.keys(moved).length === 0) return individuals;
+
+  const next: Record<string, Individual> = { ...individuals };
+  for (const [id, newX] of Object.entries(moved)) {
+    const individual = next[id];
+    if (!individual) continue;
+    next[id] = {
+      ...individual,
+      position: { ...individual.position, x: newX },
+    };
+  }
+  return next;
+}
+
+/**
+ * Return a new individuals map with bounded, subtree-aware respacing applied to
+ * the given generation. Overlapping nodes in that generation are pushed apart
+ * and each shifted node carries its whole subtree along, so descendants stay
+ * aligned. Every other individual is returned untouched.
  *
  * Callers must invoke this on the already-inserted individuals map within the
  * SAME `set(...)` update as the insert, so the add and the nudge collapse into a
@@ -31,24 +60,39 @@ import { MIN_GENERATION_NODE_SPACING } from '../utils/constants';
  */
 function applyGenerationRespacing(
   individuals: Record<string, Individual>,
+  partnerships: Record<string, PartnershipRelationship>,
   generation: number,
 ): Record<string, Individual> {
-  const moved = respaceGeneration(
+  const moved = respaceGenerationWithSubtrees(
     individuals,
+    partnerships,
     generation,
     MIN_GENERATION_NODE_SPACING,
   );
-  if (Object.keys(moved).length === 0) return individuals;
+  return applyMoves(individuals, moved);
+}
 
-  const next: Record<string, Individual> = { ...individuals };
-  for (const [id, newX] of Object.entries(moved)) {
-    const individual = next[id];
-    next[id] = {
-      ...individual,
-      position: { ...individual.position, x: newX },
-    };
+/**
+ * Shift `rootId` and its whole subtree horizontally by `delta`, returning a new
+ * individuals map. Used to keep a node centred under newly added parents while
+ * carrying its descendants rigidly along.
+ */
+function shiftSubtree(
+  individuals: Record<string, Individual>,
+  partnerships: Record<string, PartnershipRelationship>,
+  rootId: string,
+  delta: number,
+): Record<string, Individual> {
+  if (delta === 0) return individuals;
+
+  const moved: Record<string, number> = {};
+  const root = individuals[rootId];
+  if (root) moved[rootId] = root.position.x + delta;
+  for (const descId of collectDescendants(rootId, partnerships)) {
+    const descendant = individuals[descId];
+    if (descendant) moved[descId] = descendant.position.x + delta;
   }
-  return next;
+  return applyMoves(individuals, moved);
 }
 
 /** Build an empty PedigreeDocument with sensible defaults. */
@@ -503,19 +547,49 @@ export const usePedigreeStore = create<PedigreeState>()(
         set((state) => {
           const existing = state.document.individuals[childId];
           if (!existing) return state;
-          // Insert the parents, then respace the parents' generation so the new
-          // nodes do not overlap existing ones. Insert + respace share this one
-          // `set` so a single undo reverts both.
-          const inserted: Record<string, Individual> = {
+          // Insert the parents (created centred over the child) and pin the
+          // child's generation. Everything below shares this one `set` so a
+          // single undo reverts the whole operation.
+          let individuals: Record<string, Individual> = {
             ...state.document.individuals,
             [parent1.id]: parent1,
             [parent2.id]: parent2,
             [childId]: { ...existing, generation: childGeneration },
           };
-          const respaced =
-            parent1.generation !== undefined
-              ? applyGenerationRespacing(inserted, parent1.generation)
-              : inserted;
+          const partnerships = {
+            ...state.document.partnerships,
+            [partnership.id]: partnership,
+          };
+
+          // Slide the new parents clear of the other partner's parents (the
+          // child's in-laws), then carry the child and its subtree by the same
+          // amount so the child stays centred under its new parents.
+          const shift = computeParentClearanceShift(
+            individuals,
+            state.document.partnerships,
+            state.document.parentChildLinks,
+            parent1.id,
+            parent2.id,
+            childId,
+            MIN_GENERATION_NODE_SPACING,
+          );
+          if (shift !== 0) {
+            individuals = applyMoves(individuals, {
+              [parent1.id]: parent1.position.x + shift,
+              [parent2.id]: parent2.position.x + shift,
+            });
+            individuals = shiftSubtree(individuals, partnerships, childId, shift);
+          }
+
+          // Resolve any remaining overlap in the parents' generation, carrying
+          // affected subtrees along.
+          if (parent1.generation !== undefined) {
+            individuals = applyGenerationRespacing(
+              individuals,
+              partnerships,
+              parent1.generation,
+            );
+          }
           return {
             document: {
               ...state.document,
@@ -523,11 +597,8 @@ export const usePedigreeStore = create<PedigreeState>()(
                 ...state.document.metadata,
                 updatedAt: new Date().toISOString(),
               },
-              individuals: respaced,
-              partnerships: {
-                ...state.document.partnerships,
-                [partnership.id]: partnership,
-              },
+              individuals,
+              partnerships,
               parentChildLinks: {
                 ...state.document.parentChildLinks,
                 [link.id]: link,
@@ -538,17 +609,29 @@ export const usePedigreeStore = create<PedigreeState>()(
 
       addPartnerToIndividual: (partner, partnership) =>
         set((state) => {
-          // Insert the partner, then respace the partner's generation so the new
-          // node does not overlap existing ones. Insert + respace share this one
-          // `set` so a single undo reverts both.
-          const inserted: Record<string, Individual> = {
+          // Insert the partner, then make room for the new union. When the
+          // individual already has siblings, the partner would land on top of
+          // them, so the siblings — and their subtrees — are swept aside while
+          // the target and partner stay anchored together. Insert + reflow share
+          // this one `set` so a single undo reverts both.
+          let individuals: Record<string, Individual> = {
             ...state.document.individuals,
             [partner.id]: partner,
           };
-          const respaced =
-            partner.generation !== undefined
-              ? applyGenerationRespacing(inserted, partner.generation)
-              : inserted;
+          const targetId =
+            partnership.partner1Id === partner.id
+              ? partnership.partner2Id
+              : partnership.partner1Id;
+          individuals = applyMoves(
+            individuals,
+            makeRoomForPartner(
+              individuals,
+              state.document.partnerships,
+              targetId,
+              partner.id,
+              MIN_GENERATION_NODE_SPACING,
+            ),
+          );
           return {
             document: {
               ...state.document,
@@ -556,7 +639,7 @@ export const usePedigreeStore = create<PedigreeState>()(
                 ...state.document.metadata,
                 updatedAt: new Date().toISOString(),
               },
-              individuals: respaced,
+              individuals,
               partnerships: {
                 ...state.document.partnerships,
                 [partnership.id]: partnership,
@@ -569,17 +652,34 @@ export const usePedigreeStore = create<PedigreeState>()(
         set((state) => {
           const partnership = state.document.partnerships[partnershipId];
           if (!partnership) return state;
+          const updatedPartnership = {
+            ...partnership,
+            childrenIds: [...partnership.childrenIds, child.id],
+          };
+          const partnerships = {
+            ...state.document.partnerships,
+            [partnershipId]: updatedPartnership,
+          };
           // Insert the child, then respace the child's generation so the new
-          // node does not overlap existing siblings/cousins. Insert + respace
-          // share this one `set` so a single undo reverts both.
-          const inserted: Record<string, Individual> = {
+          // node does not overlap existing siblings/cousins (subtrees carried
+          // along). Finally re-centre the parents over the full sibling row so
+          // the couple sits above the middle of their children, not off to one
+          // side. Everything shares this one `set` so a single undo reverts it.
+          let individuals: Record<string, Individual> = {
             ...state.document.individuals,
             [child.id]: child,
           };
-          const respaced =
-            child.generation !== undefined
-              ? applyGenerationRespacing(inserted, child.generation)
-              : inserted;
+          if (child.generation !== undefined) {
+            individuals = applyGenerationRespacing(
+              individuals,
+              partnerships,
+              child.generation,
+            );
+          }
+          individuals = applyMoves(
+            individuals,
+            centerParentsOverChildren(individuals, updatedPartnership),
+          );
           return {
             document: {
               ...state.document,
@@ -587,14 +687,8 @@ export const usePedigreeStore = create<PedigreeState>()(
                 ...state.document.metadata,
                 updatedAt: new Date().toISOString(),
               },
-              individuals: respaced,
-              partnerships: {
-                ...state.document.partnerships,
-                [partnershipId]: {
-                  ...partnership,
-                  childrenIds: [...partnership.childrenIds, child.id],
-                },
-              },
+              individuals,
+              partnerships,
               parentChildLinks: {
                 ...state.document.parentChildLinks,
                 [link.id]: link,
