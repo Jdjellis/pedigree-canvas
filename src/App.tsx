@@ -10,7 +10,9 @@ import { RadialMenu } from './components/ui/RadialMenu';
 import { ImportExportModal } from './components/ui/ImportExportModal';
 import { LegendEditor } from './components/ui/LegendEditor';
 import { LinkTypePopup } from './components/ui/LinkTypePopup';
+import { RelationshipPopup } from './components/ui/RelationshipPopup';
 import { LegendOverlay } from './components/ui/LegendOverlay';
+import { AnnotationEditor } from './components/ui/AnnotationEditor';
 import { useUIStore } from './stores/uiStore';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useAutoSave } from './hooks/useAutoSave';
@@ -36,12 +38,14 @@ function App() {
           <EmptyStateHint />
           <RadialMenu />
           <LegendOverlay />
+          <AnnotationEditor />
         </div>
         {propertiesPanelOpen && <PropertiesPanel />}
       </div>
       <ImportExportModal getStage={getStage} />
       <LegendEditor />
       <LinkTypePopup />
+      <RelationshipPopup />
     </div>
   );
 }

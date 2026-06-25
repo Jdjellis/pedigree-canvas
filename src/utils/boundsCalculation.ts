@@ -69,3 +69,58 @@ export function toRomanNumeral(num: number): string {
   }
   return result;
 }
+
+/** A generation's display label: its stored value, Roman numeral, and y. */
+export interface GenerationNumeral {
+  /** The raw, stored generation integer (may be negative or > 0). */
+  generation: number;
+  /** Roman numeral with the topmost (minimum) generation always ranked "I". */
+  roman: string;
+  /** Average y position of the individuals in this generation. */
+  y: number;
+}
+
+/**
+ * Derive the left-margin generation numerals for a set of individuals.
+ *
+ * Roman numerals are ranked *relative* to the topmost generation: the minimum
+ * generation present is always "I", the next is "II", and so on. This keeps the
+ * ranking correct when a parent generation is inserted above existing founders
+ * (which assigns the new parents a negative generation) without mutating any
+ * stored generation integers.
+ *
+ * Generations are 0-indexed in the data model; individuals missing an explicit
+ * generation are treated as generation 0. Results are ordered top-to-bottom by
+ * generation, and each numeral is positioned at the average y of that
+ * generation's individuals.
+ *
+ * @param individuals - The individuals to derive numerals for.
+ * @returns One {@link GenerationNumeral} per distinct generation, ordered
+ *   top-to-bottom; an empty array when there are no individuals.
+ */
+export function computeGenerationNumerals(
+  individuals: Individual[],
+): GenerationNumeral[] {
+  const genYMap = new Map<number, number[]>();
+  for (const ind of individuals) {
+    const gen = ind.generation ?? 0;
+    if (!genYMap.has(gen)) genYMap.set(gen, []);
+    genYMap.get(gen)!.push(ind.position.y);
+  }
+
+  if (genYMap.size === 0) return [];
+
+  const minGen = Math.min(...genYMap.keys());
+
+  const numerals: GenerationNumeral[] = [];
+  for (const [generation, ys] of genYMap) {
+    const avgY = ys.reduce((a, b) => a + b, 0) / ys.length;
+    numerals.push({
+      generation,
+      roman: toRomanNumeral(generation - minGen),
+      y: avgY,
+    });
+  }
+  numerals.sort((a, b) => a.generation - b.generation);
+  return numerals;
+}

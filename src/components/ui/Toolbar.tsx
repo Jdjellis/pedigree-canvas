@@ -3,7 +3,13 @@ import { usePedigreeStore, createDefaultIndividual } from '../../stores/pedigree
 import { useUIStore } from '../../stores/uiStore';
 import { useViewportStore } from '../../stores/viewportStore';
 import { loadFromFile } from '../../io/jsonIO';
-import { ZOOM_STEP } from '../../utils/constants';
+import { generateId } from '../../utils/idGenerator';
+import { computeAnnotationDropPosition } from '../../utils/annotationPlacement';
+import {
+  ZOOM_STEP,
+  ANNOTATION_DEFAULT_FONT_SIZE,
+  ANNOTATION_PLACEHOLDER_TEXT,
+} from '../../utils/constants';
 import { DocumentDetails } from './DocumentDetails';
 import styles from './Toolbar.module.css';
 import clsx from 'clsx';
@@ -38,7 +44,9 @@ export function Toolbar() {
   const resetDocument = usePedigreeStore((s) => s.resetDocument);
   const setDocument = usePedigreeStore((s) => s.setDocument);
   const addIndividual = usePedigreeStore((s) => s.addIndividual);
+  const addTextAnnotation = usePedigreeStore((s) => s.addTextAnnotation);
   const removeIndividual = usePedigreeStore((s) => s.removeIndividual);
+  const removeTextAnnotation = usePedigreeStore((s) => s.removeTextAnnotation);
   const updateMetadata = usePedigreeStore((s) => s.updateMetadata);
   const doc = usePedigreeStore((s) => s.document);
   const metadata = doc.metadata;
@@ -47,6 +55,7 @@ export function Toolbar() {
   const selectedIds = useUIStore((s) => s.selectedIds);
   const clearSelection = useUIStore((s) => s.clearSelection);
   const select = useUIStore((s) => s.select);
+  const startEditingAnnotation = useUIStore((s) => s.startEditingAnnotation);
   const openModal = useUIStore((s) => s.openModal);
   const activeTool = useUIStore((s) => s.activeTool);
   const setActiveTool = useUIStore((s) => s.setActiveTool);
@@ -72,6 +81,7 @@ export function Toolbar() {
   // while not actively editing.
   useEffect(() => {
     if (!isEditingTitle) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setTitleDraft(title);
     }
   }, [title, isEditingTitle]);
@@ -180,9 +190,44 @@ export function Toolbar() {
     select(individual.id);
   };
 
+  const handleAddText = () => {
+    // Drop the annotation in clear space below the existing pedigree so it does
+    // not land on top of a symbol. When the document is empty, fall back to the
+    // centre of the visible canvas area (same stage-local → canvas conversion
+    // as adding an individual).
+    const { screenToCanvas } = useViewportStore.getState();
+    const canvasEl = document.querySelector('.konvajs-content');
+    let stageCenter = { x: 300, y: 300 };
+    if (canvasEl) {
+      const rect = canvasEl.getBoundingClientRect();
+      stageCenter = { x: rect.width / 2, y: rect.height / 2 };
+    }
+    const fallback = screenToCanvas(stageCenter);
+    const position = computeAnnotationDropPosition(
+      Object.values(doc.individuals),
+      Object.values(doc.textAnnotations),
+      fallback,
+    );
+
+    const annotation = {
+      id: generateId(),
+      text: ANNOTATION_PLACEHOLDER_TEXT,
+      position,
+      fontSize: ANNOTATION_DEFAULT_FONT_SIZE,
+    };
+    addTextAnnotation(annotation);
+    // Open straight into inline edit mode (text pre-selected for replacement).
+    startEditingAnnotation(annotation.id);
+  };
+
   const handleDelete = () => {
+    const annotations = doc.textAnnotations;
     for (const id of selectedIds) {
-      removeIndividual(id);
+      if (annotations[id]) {
+        removeTextAnnotation(id);
+      } else {
+        removeIndividual(id);
+      }
     }
     clearSelection();
   };
@@ -359,6 +404,13 @@ export function Toolbar() {
           title="Add Individual"
         >
           + Person
+        </button>
+        <button
+          className={clsx(styles.button, styles.textButton)}
+          onClick={handleAddText}
+          title="Add a free-text annotation (title, caption, note)"
+        >
+          + Text
         </button>
       </div>
 

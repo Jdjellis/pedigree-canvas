@@ -11,6 +11,12 @@ export const GENERATION_SPACING = 150;
 export const SIBLING_SPACING = 80;
 export const PARTNER_SPACING = 120;
 export const PARENT_CHILD_OFFSET = 50;
+/**
+ * Minimum horizontal gap between two nodes in the same generation, used by the
+ * bounded auto-respacing on add. Sized to twice the symbol width (SYMBOL_SIZE)
+ * so symbols never visually overlap; matches SIBLING_SPACING as a reference.
+ */
+export const MIN_GENERATION_NODE_SPACING = SYMBOL_SIZE * 2;
 
 // Connection lines
 export const LINE_COLOR = '#1a1a1a';
@@ -45,6 +51,18 @@ export const LABEL_FONT_SIZE = 12;
 export const LABEL_FONT_FAMILY = 'Inter, system-ui, -apple-system, sans-serif';
 export const LABEL_COLOR = '#333333';
 export const LABEL_OFFSET_Y = 8;
+
+// Free-text annotations
+/** Default font size (canvas units) for a newly created text annotation. */
+export const ANNOTATION_DEFAULT_FONT_SIZE = 18;
+/** Placeholder text a new annotation opens with before the user types. */
+export const ANNOTATION_PLACEHOLDER_TEXT = 'Text';
+/**
+ * Vertical gap (canvas units) left between the lowest existing content and a
+ * newly dropped annotation, so it lands in clear space rather than on top of a
+ * symbol. See {@link computeAnnotationDropPosition}.
+ */
+export const ANNOTATION_DROP_GAP = SYMBOL_SIZE;
 
 // Proband arrow
 export const PROBAND_ARROW_SIZE = 10;
