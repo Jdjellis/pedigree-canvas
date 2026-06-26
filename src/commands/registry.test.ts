@@ -20,7 +20,13 @@ function makeNoopActions(): EditorActions {
     resetView: vi.fn(),
     selectTool: vi.fn(),
     handTool: vi.fn(),
-    addPersonTool: vi.fn(),
+    maleTool: vi.fn(),
+    femaleTool: vi.fn(),
+    unknownTool: vi.fn(),
+    partnershipTool: vi.fn(),
+    textTool: vi.fn(),
+    eraserTool: vi.fn(),
+    toggleToolLock: vi.fn(),
   };
 }
 

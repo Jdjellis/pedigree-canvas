@@ -91,12 +91,12 @@ export function useKeyboardShortcuts() {
         }
         case 'h': {
           e.preventDefault();
-          useUIStore.getState().setActiveTool('pan');
+          useUIStore.getState().setActiveTool('hand');
           return;
         }
         case 'p': {
           e.preventDefault();
-          useUIStore.getState().setActiveTool('addIndividual');
+          useUIStore.getState().setActiveTool('male');
           return;
         }
         case '?': {

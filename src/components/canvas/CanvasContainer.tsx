@@ -253,7 +253,7 @@ export const CanvasContainer = forwardRef<CanvasContainerHandle>(
         // subscriptions inside react-konva handlers).
         const currentTool = useUIStore.getState().activeTool;
 
-        if (currentTool === 'addIndividual') {
+        if (currentTool === 'male') {
           // Place a new individual at the click point in canvas space.
           const stage = stageRef.current;
           if (!stage) return;

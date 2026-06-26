@@ -17,7 +17,7 @@ test('renders three tool buttons — Select, Hand, Add Person', () => {
 
 test('clicking Select activates the select tool in the store', () => {
   // Start from a non-select state so the click is a real change.
-  useUIStore.getState().setActiveTool('pan');
+  useUIStore.getState().setActiveTool('hand');
 
   render(<ToolIsland />);
   fireEvent.click(screen.getByRole('button', { name: 'Select' }));
@@ -25,18 +25,18 @@ test('clicking Select activates the select tool in the store', () => {
   expect(useUIStore.getState().activeTool).toBe('select');
 });
 
-test('clicking Hand activates the pan tool in the store', () => {
+test('clicking Hand activates the hand tool in the store', () => {
   render(<ToolIsland />);
   fireEvent.click(screen.getByRole('button', { name: 'Hand' }));
 
-  expect(useUIStore.getState().activeTool).toBe('pan');
+  expect(useUIStore.getState().activeTool).toBe('hand');
 });
 
-test('clicking Add Person activates the addIndividual tool in the store', () => {
+test('clicking Add Person activates the male tool in the store', () => {
   render(<ToolIsland />);
   fireEvent.click(screen.getByRole('button', { name: 'Add Person' }));
 
-  expect(useUIStore.getState().activeTool).toBe('addIndividual');
+  expect(useUIStore.getState().activeTool).toBe('male');
 });
 
 test('Select button has buttonActive styling when activeTool is select', () => {
@@ -48,8 +48,8 @@ test('Select button has buttonActive styling when activeTool is select', () => {
   expect(selectBtn.className).toMatch(/buttonActive/);
 });
 
-test('Hand button has buttonActive styling when activeTool is pan', () => {
-  useUIStore.getState().setActiveTool('pan');
+test('Hand button has buttonActive styling when activeTool is hand', () => {
+  useUIStore.getState().setActiveTool('hand');
   render(<ToolIsland />);
   const handBtn = screen.getByRole('button', { name: 'Hand' });
   expect(handBtn.className).toMatch(/buttonActive/);

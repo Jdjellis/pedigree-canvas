@@ -67,8 +67,20 @@ export interface EditorActions {
   selectTool: () => void;
   /** Activate the pan (hand) tool. */
   handTool: () => void;
-  /** Activate the add-individual tool. */
-  addPersonTool: () => void;
+  /** Activate the add-male (square) placement tool. */
+  maleTool: () => void;
+  /** Activate the add-female (circle) placement tool. */
+  femaleTool: () => void;
+  /** Activate the add-unknown-sex (diamond) placement tool. */
+  unknownTool: () => void;
+  /** Activate the partnership-line tool. */
+  partnershipTool: () => void;
+  /** Activate the text placement tool. */
+  textTool: () => void;
+  /** Activate the eraser tool. */
+  eraserTool: () => void;
+  /** Toggle whether placement tools stay active after use. */
+  toggleToolLock: () => void;
 }
 
 /**
@@ -195,11 +207,35 @@ export function useEditorActions(): EditorActions {
   };
 
   const handTool = (): void => {
-    useUIStore.getState().setActiveTool('pan');
+    useUIStore.getState().setActiveTool('hand');
   };
 
-  const addPersonTool = (): void => {
-    useUIStore.getState().setActiveTool('addIndividual');
+  const maleTool = (): void => {
+    useUIStore.getState().setActiveTool('male');
+  };
+
+  const femaleTool = (): void => {
+    useUIStore.getState().setActiveTool('female');
+  };
+
+  const unknownTool = (): void => {
+    useUIStore.getState().setActiveTool('unknown');
+  };
+
+  const partnershipTool = (): void => {
+    useUIStore.getState().setActiveTool('partnership');
+  };
+
+  const textTool = (): void => {
+    useUIStore.getState().setActiveTool('text');
+  };
+
+  const eraserTool = (): void => {
+    useUIStore.getState().setActiveTool('eraser');
+  };
+
+  const toggleToolLock = (): void => {
+    useUIStore.getState().toggleToolLocked();
   };
 
   // Empty deps: every callback reads store state via getState() at call time,
@@ -223,7 +259,13 @@ export function useEditorActions(): EditorActions {
       resetView,
       selectTool,
       handTool,
-      addPersonTool,
+      maleTool,
+      femaleTool,
+      unknownTool,
+      partnershipTool,
+      textTool,
+      eraserTool,
+      toggleToolLock,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     []

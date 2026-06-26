@@ -47,20 +47,20 @@ describe('tool hotkeys (not in an input)', () => {
     expect(useUIStore.getState().activeTool).toBe('select');
   });
 
-  test('pressing h sets activeTool to pan', () => {
+  test('pressing h sets activeTool to hand', () => {
     render(<TestHarness />);
 
     fireEvent.keyDown(document.body, { key: 'h' });
 
-    expect(useUIStore.getState().activeTool).toBe('pan');
+    expect(useUIStore.getState().activeTool).toBe('hand');
   });
 
-  test('pressing p sets activeTool to addIndividual', () => {
+  test('pressing p sets activeTool to male', () => {
     render(<TestHarness />);
 
     fireEvent.keyDown(document.body, { key: 'p' });
 
-    expect(useUIStore.getState().activeTool).toBe('addIndividual');
+    expect(useUIStore.getState().activeTool).toBe('male');
   });
 
   test('pressing ? opens the shortcuts modal', () => {
@@ -77,12 +77,12 @@ describe('tool hotkeys (not in an input)', () => {
 // ---------------------------------------------------------------------------
 
 describe('input-guard (hotkeys silenced when typing)', () => {
-  test('pressing v inside an INPUT does not change the active tool away from pan', () => {
+  test('pressing v inside an INPUT does not change the active tool away from hand', () => {
     render(<TestHarness />);
 
     // Pre-condition: start on a different tool
     act(() => {
-      useUIStore.setState({ activeTool: 'pan' });
+      useUIStore.setState({ activeTool: 'hand' });
     });
 
     const input = document.createElement('input');
@@ -90,8 +90,8 @@ describe('input-guard (hotkeys silenced when typing)', () => {
 
     fireEvent.keyDown(input, { key: 'v' });
 
-    // Still 'pan' — the guard prevented the switch
-    expect(useUIStore.getState().activeTool).toBe('pan');
+    // Still 'hand' — the guard prevented the switch
+    expect(useUIStore.getState().activeTool).toBe('hand');
 
     document.body.removeChild(input);
   });

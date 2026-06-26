@@ -145,11 +145,11 @@ export function buildCommands(actions: EditorActions): Command[] {
     },
     {
       id: 'tools.addPerson',
-      title: 'Add person tool',
+      title: 'Add male tool',
       category: 'tools',
       shortcut: 'P',
-      keywords: ['add', 'person', 'individual', 'tool'],
-      run: () => actions.addPersonTool(),
+      keywords: ['add', 'male', 'individual', 'tool'],
+      run: () => actions.maleTool(),
     },
   ];
 }

@@ -18,7 +18,7 @@ import styles from './islands.module.css';
  */
 export function ToolIsland(): React.JSX.Element {
   const activeTool = useUIStore((s) => s.activeTool);
-  const { selectTool, handTool, addPersonTool, addText } = useEditorActions();
+  const { selectTool, handTool, maleTool, addText } = useEditorActions();
 
   return (
     <Island aria-label="Tools">
@@ -41,12 +41,12 @@ export function ToolIsland(): React.JSX.Element {
         type="button"
         className={clsx(
           styles.button,
-          activeTool === 'pan' && styles.buttonActive
+          activeTool === 'hand' && styles.buttonActive
         )}
         onClick={handTool}
         title="Hand tool — pan the canvas (H)"
         aria-label="Hand"
-        aria-pressed={activeTool === 'pan'}
+        aria-pressed={activeTool === 'hand'}
       >
         ✋
       </button>
@@ -56,12 +56,12 @@ export function ToolIsland(): React.JSX.Element {
         className={clsx(
           styles.button,
           styles.textButton,
-          activeTool === 'addIndividual' && styles.buttonActive
+          activeTool === 'male' && styles.buttonActive
         )}
-        onClick={addPersonTool}
-        title="Add individual (P)"
+        onClick={maleTool}
+        title="Add male individual (P)"
         aria-label="Add Person"
-        aria-pressed={activeTool === 'addIndividual'}
+        aria-pressed={activeTool === 'male'}
       >
         ＋ Person
       </button>
