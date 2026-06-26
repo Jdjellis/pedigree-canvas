@@ -20,7 +20,7 @@ import { openDocumentAction, deleteSelectedAction } from '../commands/editorActi
  * - Delete/Backspace: Delete selected individuals
  * - Escape: Clear selection, close modal, hide radial menu
  *
- * All plain-letter shortcuts (V/H/P/?) are guarded by an input-focus check
+ * All plain-letter shortcuts (V/H/1-7/?) are guarded by an input-focus check
  * so they do not fire while the user is typing in an INPUT, TEXTAREA, SELECT,
  * or contentEditable element.
  */

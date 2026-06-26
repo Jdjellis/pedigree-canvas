@@ -149,7 +149,7 @@ export function OnboardingHints(): ReactElement | null {
         </p>
 
         <p className={styles.cue}>
-          Click <strong>+ Person</strong> (top center) to add your first person.
+          Pick a person tool (top center) to add your first person.
         </p>
 
         {/* Quick links — pointer-events: auto so they're clickable */}
