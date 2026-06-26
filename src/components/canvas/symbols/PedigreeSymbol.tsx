@@ -28,6 +28,7 @@ import type { ActiveQuarter } from './ConditionOverlay';
 import { DeceasedSlash } from './DeceasedSlash';
 import { ProbandArrow } from './ProbandArrow';
 import { SymbolLabel } from './SymbolLabel';
+import { handlePartnershipClick } from '../partnershipTool';
 
 export interface PedigreeSymbolProps {
   individual: Individual;
@@ -251,7 +252,16 @@ export const PedigreeSymbol: React.FC<PedigreeSymbolProps> = React.memo(
     const handleClick = useCallback(
       (e: KonvaEventObject<MouseEvent | TouchEvent>) => {
         e.cancelBubble = true;
-        const { select, toggleSelection, hideRadialMenu } = useUIStore.getState();
+        const ui = useUIStore.getState();
+        const tool = ui.activeTool;
+
+        if (tool === 'partnership') {
+          ui.hideRadialMenu();
+          handlePartnershipClick(individual.id);
+          return;
+        }
+
+        const { select, toggleSelection, hideRadialMenu } = ui;
         hideRadialMenu();
         const evt = e.evt;
         if ('shiftKey' in evt && (evt.shiftKey || evt.metaKey || evt.ctrlKey)) {
@@ -260,7 +270,7 @@ export const PedigreeSymbol: React.FC<PedigreeSymbolProps> = React.memo(
           select(individual.id);
         }
       },
-      [individual.id]
+      [individual.id],
     );
 
     const handleMouseEnter = useCallback(() => {
