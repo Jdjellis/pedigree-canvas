@@ -1,9 +1,16 @@
 import { MousePointer2, Minus, Type, Eraser } from 'lucide-react';
 import type { ActiveTool } from '../../../stores/uiStore';
 
+/**
+ * The subset of tools that get a top-level button + number badge in the tool
+ * island. Excludes `hand`, which is a modal helper rendered separately with no
+ * badge. Used to type the badge row and its activator lookup exhaustively.
+ */
+export type PlacementToolId = Exclude<ActiveTool, 'hand'>;
+
 /** A single placeable tool's display metadata. */
 export interface ToolDef {
-  id: ActiveTool;
+  id: PlacementToolId;
   label: string;
   shortcut: string;
   icon: React.ReactNode;

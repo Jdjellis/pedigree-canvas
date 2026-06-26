@@ -3,7 +3,7 @@ import { useUIStore } from '../../../stores/uiStore';
 import { useEditorActions } from '../../../commands/useEditorActions';
 import { Island } from './Island';
 import { ToolButton } from './ToolButton';
-import { PLACEMENT_TOOLS } from './toolDefs';
+import { PLACEMENT_TOOLS, type PlacementToolId } from './toolDefs';
 import styles from './islands.module.css';
 
 /**
@@ -17,7 +17,7 @@ export function ToolIsland(): React.JSX.Element {
   const toolLocked = useUIStore((s) => s.toolLocked);
   const actions = useEditorActions();
 
-  const activators: Record<string, () => void> = {
+  const activators: Record<PlacementToolId, () => void> = {
     select: actions.selectTool,
     male: actions.maleTool,
     female: actions.femaleTool,

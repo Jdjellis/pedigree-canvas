@@ -1,5 +1,11 @@
 import { create } from 'zustand';
 
+/**
+ * The currently active canvas tool. `select` and `hand` are modal helpers
+ * (pointer/marquee and pan); `male`/`female`/`unknown` and `text` place a node
+ * at the click point; `partnership` draws a union between two clicked nodes;
+ * `eraser` deletes nodes/connections under the pointer.
+ */
 export type ActiveTool =
   | 'select'
   | 'hand'
@@ -9,6 +15,7 @@ export type ActiveTool =
   | 'partnership'
   | 'text'
   | 'eraser';
+/** The modal dialog currently open, or `null` when no modal is shown. */
 export type ActiveModal = 'import' | 'export' | 'settings' | 'legendEditor' | 'shortcuts' | null;
 
 interface UIState {
