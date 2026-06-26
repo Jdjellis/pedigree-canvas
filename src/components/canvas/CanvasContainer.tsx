@@ -59,6 +59,12 @@ export const CanvasContainer = forwardRef<CanvasContainerHandle>(
     const [marquee, setMarquee] = useState<
       { start: { x: number; y: number }; current: { x: number; y: number } } | null
     >(null);
+    // Mirror of the marquee in a ref so marquee-up can read the final rect and
+    // run the selection mutation OUTSIDE any setState updater (mutating a store
+    // inside setMarquee's updater is a setState-in-render violation).
+    const marqueeRef = useRef<
+      { start: { x: number; y: number }; current: { x: number; y: number } } | null
+    >(null);
     // True while the eraser is held down for a drag-erase swath.
     const [isErasing, setIsErasing] = useState(false);
 
@@ -323,46 +329,45 @@ export const CanvasContainer = forwardRef<CanvasContainerHandle>(
         const pointer = stage.getPointerPosition();
         if (!pointer) return;
         const pos = useViewportStore.getState().screenToCanvas(pointer);
-        setMarquee({ start: pos, current: pos });
+        marqueeRef.current = { start: pos, current: pos };
+        setMarquee(marqueeRef.current);
       },
       [],
     );
 
     const handleMarqueeMove = useCallback(() => {
-      setMarquee((prev) => {
-        if (!prev) return prev;
-        const stage = stageRef.current;
-        if (!stage) return prev;
-        const pointer = stage.getPointerPosition();
-        if (!pointer) return prev;
-        const pos = useViewportStore.getState().screenToCanvas(pointer);
-        return { ...prev, current: pos };
-      });
+      if (!marqueeRef.current) return;
+      const stage = stageRef.current;
+      if (!stage) return;
+      const pointer = stage.getPointerPosition();
+      if (!pointer) return;
+      const pos = useViewportStore.getState().screenToCanvas(pointer);
+      marqueeRef.current = { start: marqueeRef.current.start, current: pos };
+      setMarquee(marqueeRef.current);
     }, []);
 
     const handleMarqueeUp = useCallback(() => {
-      setMarquee((prev) => {
-        if (!prev) return null;
-        const rect = marqueeRect(prev.start, prev.current);
-        // Build node boxes in canvas space. Individual `position` is the symbol
-        // CENTRE, so expand by half SYMBOL_SIZE. (Verify against PedigreeSymbol's
-        // Group offset if selections feel misaligned.)
-        const half = SYMBOL_SIZE / 2;
-        const boxes: NodeBox[] = Object.values(
-          usePedigreeStore.getState().document.individuals,
-        ).map((ind) => ({
-          id: ind.id,
-          x: ind.position.x - half,
-          y: ind.position.y - half,
-          width: SYMBOL_SIZE,
-          height: SYMBOL_SIZE,
-        }));
-        const ids = idsIntersectingMarquee(rect, boxes);
-        const ui = useUIStore.getState();
-        if (ids.length > 0) ui.selectMultiple(ids);
-        else ui.clearSelection();
-        return null;
-      });
+      const prev = marqueeRef.current;
+      marqueeRef.current = null;
+      setMarquee(null);
+      if (!prev) return;
+      const rect = marqueeRect(prev.start, prev.current);
+      // Build node boxes in canvas space. Individual `position` is the symbol
+      // CENTRE, so expand by half SYMBOL_SIZE.
+      const half = SYMBOL_SIZE / 2;
+      const boxes: NodeBox[] = Object.values(
+        usePedigreeStore.getState().document.individuals,
+      ).map((ind) => ({
+        id: ind.id,
+        x: ind.position.x - half,
+        y: ind.position.y - half,
+        width: SYMBOL_SIZE,
+        height: SYMBOL_SIZE,
+      }));
+      const ids = idsIntersectingMarquee(rect, boxes);
+      const ui = useUIStore.getState();
+      if (ids.length > 0) ui.selectMultiple(ids);
+      else ui.clearSelection();
     }, []);
 
     // Pan by dragging only when the hand tool is active or space is held. In
