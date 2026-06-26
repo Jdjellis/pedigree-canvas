@@ -23,3 +23,7 @@
 .container[data-tool='eraser'] {
   cursor: cell;
 }
+
+.container[data-tool='partnership'] {
+  cursor: crosshair;
+}

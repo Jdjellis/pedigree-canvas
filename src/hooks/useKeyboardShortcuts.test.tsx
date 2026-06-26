@@ -229,3 +229,18 @@ describe('Delete / Backspace key removes selected individuals', () => {
     expect(individuals).toHaveLength(1);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Escape key — closes modals, hides radial menu, clears anchor, clears selection
+// ---------------------------------------------------------------------------
+
+describe('Escape key handling', () => {
+  test('Escape clears a pending partnership anchor', () => {
+    render(<TestHarness />);
+    act(() => {
+      useUIStore.setState({ partnershipAnchorId: 'a' });
+    });
+    fireEvent.keyDown(document.body, { key: 'Escape' });
+    expect(useUIStore.getState().partnershipAnchorId).toBeNull();
+  });
+});

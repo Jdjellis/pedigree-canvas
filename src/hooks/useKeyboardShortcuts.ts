@@ -144,6 +144,8 @@ export function useKeyboardShortcuts() {
           const ui = useUIStore.getState();
           if (ui.activeModal) {
             ui.closeModal();
+          } else if (ui.partnershipAnchorId) {
+            ui.setPartnershipAnchor(null);
           } else if (ui.radialMenu.visible) {
             ui.hideRadialMenu();
           } else {
