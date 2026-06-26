@@ -65,6 +65,10 @@ export const CanvasContainer = forwardRef<CanvasContainerHandle>(
     const marqueeRef = useRef<
       { start: { x: number; y: number }; current: { x: number; y: number } } | null
     >(null);
+    // Set true when a marquee drag (not a zero-distance click) just committed,
+    // so the Stage `click` Konva synthesizes on pointerup does not immediately
+    // clearSelection() the marquee's result. Consumed (reset) by handleStageClick.
+    const didMarqueeRef = useRef(false);
     // True while the eraser is held down for a drag-erase swath.
     const [isErasing, setIsErasing] = useState(false);
 
@@ -271,6 +275,10 @@ export const CanvasContainer = forwardRef<CanvasContainerHandle>(
     // --------------- Click on Empty Canvas ---------------
     const handleStageClick = useCallback(
       (e: KonvaEventObject<MouseEvent | TouchEvent>) => {
+        if (didMarqueeRef.current) {
+          didMarqueeRef.current = false;
+          return;
+        }
         const clickedOnEmpty = e.target === e.target.getStage();
         if (!clickedOnEmpty) return;
 
@@ -322,6 +330,7 @@ export const CanvasContainer = forwardRef<CanvasContainerHandle>(
 
     const handleMarqueeDown = useCallback(
       (e: KonvaEventObject<MouseEvent>) => {
+        didMarqueeRef.current = false;
         if (useUIStore.getState().activeTool !== 'select') return;
         if (e.target !== e.target.getStage()) return; // only on empty canvas
         const stage = stageRef.current;
@@ -351,6 +360,8 @@ export const CanvasContainer = forwardRef<CanvasContainerHandle>(
       marqueeRef.current = null;
       setMarquee(null);
       if (!prev) return;
+      didMarqueeRef.current =
+        prev.start.x !== prev.current.x || prev.start.y !== prev.current.y;
       const rect = marqueeRect(prev.start, prev.current);
       // Build node boxes in canvas space. Individual `position` is the symbol
       // CENTRE, so expand by half SYMBOL_SIZE.
