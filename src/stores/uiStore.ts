@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import type { DefaultSex } from '../utils/sex';
 
 /**
  * The currently active canvas tool. `select` and `hand` are modal helpers
@@ -51,6 +52,8 @@ interface UIState {
   propertiesPanelOpen: boolean;
   activeModal: ActiveModal;
   activeTool: ActiveTool;
+  /** The sex applied to singly-added people (seed + radial +Partner/+Child/+Sibling). */
+  defaultSex: DefaultSex;
 
   /** Whether placement tools stay active after one use (Excalidraw "lock"). */
   toolLocked: boolean;
@@ -99,6 +102,8 @@ interface UIState {
   ) => void;
   hideRelationshipPopup: () => void;
   setActiveTool: (tool: ActiveTool) => void;
+  /** Set the default sex used for singly-added people. */
+  setDefaultSex: (sex: DefaultSex) => void;
   /** Toggle whether placement tools stay active after use. */
   toggleToolLocked: () => void;
   /** Set or clear the pending partnership anchor individual. */
@@ -152,6 +157,7 @@ export const useUIStore = create<UIState>()((set) => ({
   propertiesPanelOpen: false,
   activeModal: null,
   activeTool: 'select',
+  defaultSex: 'unknown',
   toolLocked: false,
   partnershipAnchorId: null,
   commandPaletteOpen: false,
@@ -257,6 +263,8 @@ export const useUIStore = create<UIState>()((set) => ({
     }),
 
   setActiveTool: (activeTool) => set({ activeTool }),
+
+  setDefaultSex: (defaultSex) => set({ defaultSex }),
 
   toggleToolLocked: () =>
     set((state) => ({ toolLocked: !state.toolLocked })),
