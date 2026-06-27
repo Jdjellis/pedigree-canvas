@@ -4,6 +4,7 @@ import { useEditorActions } from '../../../commands/useEditorActions';
 import { Island } from './Island';
 import { ToolButton } from './ToolButton';
 import { PLACEMENT_TOOLS, type PlacementToolId } from './toolDefs';
+import { DefaultSexControl } from './DefaultSexControl';
 import styles from './islands.module.css';
 
 /**
@@ -56,6 +57,8 @@ export function ToolIsland(): React.JSX.Element {
           />
         </span>
       ))}
+      <span className={styles.toolDivider} aria-hidden="true" />
+      <DefaultSexControl />
     </Island>
   );
 }
