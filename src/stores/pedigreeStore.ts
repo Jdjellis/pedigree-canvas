@@ -717,7 +717,7 @@ export const usePedigreeStore = create<PedigreeState>()(
           };
         }),
 
-      addSiblingViaNewUnion: (target, sibling, partnership, targetLink, siblingLink) =>
+      addSiblingViaNewUnion: (_target, sibling, partnership, targetLink, siblingLink) =>
         set((state) => {
           let individuals: Record<string, Individual> = {
             ...state.document.individuals,
