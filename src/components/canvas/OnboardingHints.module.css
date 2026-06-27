@@ -155,26 +155,6 @@
   text-align: right;
 }
 
-/* Top-center → ToolIsland */
-.arrowTopCenter {
-  top: 72px;
-  left: 50%;
-  transform: translateX(-50%);
-  flex-direction: column;
-  align-items: center;
-}
-
-.arrowTopCenter .arrowSvg {
-  width: 60px;
-  height: 70px;
-}
-
-.arrowTopCenter .arrowLabel {
-  max-width: 200px;
-  white-space: normal;
-  text-align: center;
-}
-
 /* Bottom-left → ZoomIsland + HistoryIsland */
 .arrowBottomLeft {
   bottom: 72px;
