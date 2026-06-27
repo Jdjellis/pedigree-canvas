@@ -5,10 +5,27 @@ import { hasParents, hasPartnership, findPartnerships } from '../../utils/graphT
 import { generateId } from '../../utils/idGenerator';
 import { RelationshipType, GenderIdentity } from '../../types/enums';
 import { PARTNER_SPACING, GENERATION_SPACING, SIBLING_SPACING } from '../../utils/constants';
-import type { PartnershipRelationship, ParentChildRelationship } from '../../types/pedigree';
+import type { PartnershipRelationship, ParentChildRelationship, Individual } from '../../types/pedigree';
 import { RADIAL_MENU_DISMISS_DISTANCE } from '../../utils/constants';
+import { genderForSex, type DefaultSex } from '../../utils/sex';
 import styles from './RadialMenu.module.css';
 import clsx from 'clsx';
+
+/**
+ * Build a new singly-added relative (partner / child / sibling) whose sex is the
+ * current default. +Parents does NOT use this — it always creates a fixed
+ * father+mother pair.
+ *
+ * @param sex - The active default sex.
+ * @param overrides - Position/generation (and any other) overrides.
+ * @returns A new individual with the mapped gender identity.
+ */
+export function createRelativeIndividual(
+  sex: DefaultSex,
+  overrides: Partial<Individual>,
+): Individual {
+  return createDefaultIndividual({ genderIdentity: genderForSex(sex), ...overrides });
+}
 
 export function RadialMenu() {
   const { visible, targetId, screenPosition } = useUIStore(
@@ -16,6 +33,7 @@ export function RadialMenu() {
   );
   const hideRadialMenu = useUIStore((s) => s.hideRadialMenu);
   const select = useUIStore((s) => s.select);
+  const defaultSex = useUIStore((s) => s.defaultSex);
 
   const doc = usePedigreeStore((s) => s.document);
   const addParentsForChild = usePedigreeStore((s) => s.addParentsForChild);
@@ -104,7 +122,7 @@ export function RadialMenu() {
   const handleAddPartner = useCallback(() => {
     if (!target) return;
 
-    const partner = createDefaultIndividual({
+    const partner = createRelativeIndividual(defaultSex, {
       generation: target.generation,
       position: {
         x: target.position.x + PARTNER_SPACING,
@@ -123,7 +141,7 @@ export function RadialMenu() {
     addPartnerToIndividual(partner, partnership);
     hideRadialMenu();
     select(partner.id);
-  }, [target, addPartnerToIndividual, hideRadialMenu, select]);
+  }, [target, defaultSex, addPartnerToIndividual, hideRadialMenu, select]);
 
   const handleAddChild = useCallback(() => {
     if (!target || !targetId) return;
@@ -142,7 +160,7 @@ export function RadialMenu() {
     const midX = (p1.position.x + p2.position.x) / 2;
     const existingChildren = partnership.childrenIds.length;
 
-    const child = createDefaultIndividual({
+    const child = createRelativeIndividual(defaultSex, {
       generation: (target.generation ?? 0) + 1,
       position: {
         x: midX + existingChildren * SIBLING_SPACING,
@@ -165,6 +183,7 @@ export function RadialMenu() {
     target,
     targetId,
     doc,
+    defaultSex,
     addChildToFamily,
     hideRadialMenu,
     select,
@@ -188,7 +207,7 @@ export function RadialMenu() {
       .filter(Boolean);
     const maxX = Math.max(...siblings.map((s) => s.position.x));
 
-    const sibling = createDefaultIndividual({
+    const sibling = createRelativeIndividual(defaultSex, {
       generation: target.generation,
       position: {
         x: maxX + SIBLING_SPACING,
@@ -211,6 +230,7 @@ export function RadialMenu() {
     target,
     targetId,
     doc,
+    defaultSex,
     addChildToFamily,
     hideRadialMenu,
     select,
