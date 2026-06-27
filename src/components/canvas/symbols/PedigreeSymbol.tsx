@@ -278,7 +278,7 @@ export const PedigreeSymbol: React.FC<PedigreeSymbolProps> = React.memo(
           toggleSelection(individual.id);
         } else {
           select(individual.id);
-          if (!ui.editingLocked) {
+          if (tool === 'select' && !ui.editingLocked) {
             const { canvasToScreen } = useViewportStore.getState();
             ui.showRadialMenu(individual.id, canvasToScreen(individual.position));
             ui.pinRadialMenu();

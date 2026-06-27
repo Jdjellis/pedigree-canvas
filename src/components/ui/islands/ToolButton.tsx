@@ -13,6 +13,12 @@ export interface ToolButtonProps {
   active: boolean;
   /** Click handler. */
   onClick: () => void;
+  /**
+   * When true the button is visually greyed out and non-interactive.
+   * Sets the native `disabled` attribute so clicks are blocked by the browser.
+   * @default false
+   */
+  disabled?: boolean;
 }
 
 /**
@@ -26,15 +32,22 @@ export function ToolButton({
   icon,
   active,
   onClick,
+  disabled = false,
 }: ToolButtonProps): React.JSX.Element {
   return (
     <button
       type="button"
-      className={clsx(styles.toolButton, active && styles.buttonActive)}
+      className={clsx(
+        styles.toolButton,
+        active && styles.buttonActive,
+        disabled && styles.toolButtonDisabled,
+      )}
       onClick={onClick}
       title={shortcut ? `${label} (${shortcut})` : label}
       aria-label={label}
       aria-pressed={active}
+      aria-disabled={disabled}
+      disabled={disabled}
     >
       <span className={styles.toolIcon} aria-hidden="true">
         {icon}

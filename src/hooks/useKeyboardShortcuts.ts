@@ -96,12 +96,14 @@ export function useKeyboardShortcuts() {
         case '2':
         case 't': {
           e.preventDefault();
+          if (useUIStore.getState().editingLocked) return;
           useUIStore.getState().setActiveTool('text');
           return;
         }
         case '3':
         case 'e': {
           e.preventDefault();
+          if (useUIStore.getState().editingLocked) return;
           useUIStore.getState().setActiveTool('eraser');
           return;
         }

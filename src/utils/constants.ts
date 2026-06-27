@@ -43,7 +43,6 @@ export const WHEEL_LINE_HEIGHT = 16;
 
 // Radial menu
 export const RADIAL_MENU_RADIUS = 60;
-export const RADIAL_MENU_HOVER_DELAY = 300;
 export const RADIAL_MENU_DISMISS_DISTANCE = 120;
 
 // Label

@@ -164,6 +164,84 @@ describe('number + letter tool shortcuts', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Edit-lock gate — t/2 and e/3 must NOT switch tools when editingLocked
+// ---------------------------------------------------------------------------
+
+describe('edit-lock gate on text and eraser shortcuts', () => {
+  test('pressing t while editingLocked leaves activeTool unchanged', () => {
+    render(<TestHarness />);
+
+    act(() => {
+      useUIStore.setState({ activeTool: 'select', editingLocked: true });
+    });
+
+    fireEvent.keyDown(document.body, { key: 't' });
+
+    expect(useUIStore.getState().activeTool).toBe('select');
+  });
+
+  test('pressing 2 while editingLocked leaves activeTool unchanged', () => {
+    render(<TestHarness />);
+
+    act(() => {
+      useUIStore.setState({ activeTool: 'select', editingLocked: true });
+    });
+
+    fireEvent.keyDown(document.body, { key: '2' });
+
+    expect(useUIStore.getState().activeTool).toBe('select');
+  });
+
+  test('pressing e while editingLocked leaves activeTool unchanged', () => {
+    render(<TestHarness />);
+
+    act(() => {
+      useUIStore.setState({ activeTool: 'select', editingLocked: true });
+    });
+
+    fireEvent.keyDown(document.body, { key: 'e' });
+
+    expect(useUIStore.getState().activeTool).toBe('select');
+  });
+
+  test('pressing 3 while editingLocked leaves activeTool unchanged', () => {
+    render(<TestHarness />);
+
+    act(() => {
+      useUIStore.setState({ activeTool: 'select', editingLocked: true });
+    });
+
+    fireEvent.keyDown(document.body, { key: '3' });
+
+    expect(useUIStore.getState().activeTool).toBe('select');
+  });
+
+  test('pressing t while NOT locked switches to text', () => {
+    render(<TestHarness />);
+
+    act(() => {
+      useUIStore.setState({ activeTool: 'select', editingLocked: false });
+    });
+
+    fireEvent.keyDown(document.body, { key: 't' });
+
+    expect(useUIStore.getState().activeTool).toBe('text');
+  });
+
+  test('pressing e while NOT locked switches to eraser', () => {
+    render(<TestHarness />);
+
+    act(() => {
+      useUIStore.setState({ activeTool: 'select', editingLocked: false });
+    });
+
+    fireEvent.keyDown(document.body, { key: 'e' });
+
+    expect(useUIStore.getState().activeTool).toBe('eraser');
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Delete / Backspace — removes selected individuals via deleteSelectedAction
 // ---------------------------------------------------------------------------
 

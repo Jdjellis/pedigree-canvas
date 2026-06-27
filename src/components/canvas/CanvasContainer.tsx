@@ -497,6 +497,7 @@ export const CanvasContainer = forwardRef<CanvasContainerHandle>(
                 annotations={textAnnotations}
                 selectedIds={selectedIds}
                 editingId={editingAnnotationId}
+                editingLocked={editingLocked}
               />
             </Layer>
 
@@ -526,6 +527,7 @@ export const CanvasContainer = forwardRef<CanvasContainerHandle>(
                 investigations={investigations}
                 onMove={moveLegend}
                 bounds={bounds}
+                editingLocked={editingLocked}
               />
             </Layer>
           </Stage>

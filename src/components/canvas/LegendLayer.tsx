@@ -19,6 +19,11 @@ interface LegendLayerProps {
   investigations: Investigation[];
   onMove: (position: Position) => void;
   bounds?: CanvasBounds | null;
+  /**
+   * When true the document is locked against editing: legend dragging is
+   * blocked (same pattern as {@link PedigreeSymbol}).
+   */
+  editingLocked?: boolean;
 }
 
 const SWATCH_SIZE = 20;
@@ -93,7 +98,7 @@ function SwatchShape({
 }
 
 export const LegendLayer: React.FC<LegendLayerProps> = React.memo(
-  ({ legendConfig, investigations, onMove, bounds }) => {
+  ({ legendConfig, investigations, onMove, bounds, editingLocked = false }) => {
     if (legendConfig.entries.length === 0 && investigations.length === 0) return null;
 
     // Calculate width: entries with "both" genders need wider rows
@@ -118,8 +123,8 @@ export const LegendLayer: React.FC<LegendLayerProps> = React.memo(
       <Group
         x={legendX}
         y={legendY}
-        draggable={!bounds}
-        onDragEnd={!bounds ? handleDragEnd : undefined}
+        draggable={!bounds && !editingLocked}
+        onDragEnd={!bounds && !editingLocked ? handleDragEnd : undefined}
       >
         {/* Background */}
         <Rect

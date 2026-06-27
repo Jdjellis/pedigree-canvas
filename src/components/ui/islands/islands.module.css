@@ -113,6 +113,12 @@
   color: var(--color-primary);
 }
 
+/** Greyed-out state for tools that are unavailable while editing is locked. */
+.toolButtonDisabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 /** Thin vertical divider between tool groups. */
 .toolDivider {
   width: 1px;

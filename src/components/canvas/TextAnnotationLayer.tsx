@@ -21,12 +21,19 @@ export interface TextAnnotationLayerProps {
   selectedIds: Set<string>;
   /** Id of the annotation currently being edited inline, or null. */
   editingId: string | null;
+  /**
+   * When true the document is locked against editing: dragging and
+   * double-click-to-edit are both blocked.
+   */
+  editingLocked: boolean;
 }
 
 interface AnnotationTextProps {
   annotation: TextAnnotation;
   isSelected: boolean;
   isEditing: boolean;
+  /** Mirrors {@link TextAnnotationLayerProps.editingLocked}. */
+  editingLocked: boolean;
 }
 
 /**
@@ -35,7 +42,7 @@ interface AnnotationTextProps {
  * never sees a duplicate.
  */
 const AnnotationText: React.FC<AnnotationTextProps> = React.memo(
-  ({ annotation, isSelected, isEditing }) => {
+  ({ annotation, isSelected, isEditing, editingLocked }) => {
     const handleClick = useCallback(
       (e: KonvaEventObject<MouseEvent | TouchEvent>) => {
         e.cancelBubble = true;
@@ -47,9 +54,10 @@ const AnnotationText: React.FC<AnnotationTextProps> = React.memo(
     const handleDoubleClick = useCallback(
       (e: KonvaEventObject<MouseEvent | TouchEvent>) => {
         e.cancelBubble = true;
+        if (editingLocked) return;
         useUIStore.getState().startEditingAnnotation(annotation.id);
       },
-      [annotation.id],
+      [annotation.id, editingLocked],
     );
 
     const handleDragEnd = useCallback(
@@ -76,7 +84,7 @@ const AnnotationText: React.FC<AnnotationTextProps> = React.memo(
       <Group
         x={annotation.position.x}
         y={annotation.position.y}
-        draggable
+        draggable={!editingLocked}
         onClick={handleClick}
         onTap={handleClick}
         onDblClick={handleDoubleClick}
@@ -120,7 +128,7 @@ AnnotationText.displayName = 'AnnotationText';
  * `getState()` inside event handlers only.
  */
 export const TextAnnotationLayer: React.FC<TextAnnotationLayerProps> =
-  React.memo(({ annotations, selectedIds, editingId }) => {
+  React.memo(({ annotations, selectedIds, editingId, editingLocked }) => {
     return (
       <>
         {Object.values(annotations).map((annotation) => (
@@ -129,6 +137,7 @@ export const TextAnnotationLayer: React.FC<TextAnnotationLayerProps> =
             annotation={annotation}
             isSelected={selectedIds.has(annotation.id)}
             isEditing={editingId === annotation.id}
+            editingLocked={editingLocked}
           />
         ))}
       </>

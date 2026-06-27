@@ -46,14 +46,16 @@ export function ToolIsland(): React.JSX.Element {
         shortcut="2"
         icon={<Type size={19} />}
         active={activeTool === 'text'}
-        onClick={editingLocked ? () => {} : actions.textTool}
+        onClick={actions.textTool}
+        disabled={editingLocked}
       />
       <ToolButton
         label="Eraser"
         shortcut="3"
         icon={<Eraser size={19} />}
         active={activeTool === 'eraser'}
-        onClick={editingLocked ? () => {} : actions.eraserTool}
+        onClick={actions.eraserTool}
+        disabled={editingLocked}
       />
     </Island>
   );

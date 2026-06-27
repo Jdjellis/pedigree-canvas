@@ -32,7 +32,6 @@ export function RadialMenu() {
     (s) => s.radialMenu
   );
   const hideRadialMenu = useUIStore((s) => s.hideRadialMenu);
-  const unpinRadialMenu = useUIStore((s) => s.unpinRadialMenu);
   const select = useUIStore((s) => s.select);
   const defaultSex = useUIStore((s) => s.defaultSex);
   const editingLocked = useUIStore((s) => s.editingLocked);
@@ -66,20 +65,19 @@ export function RadialMenu() {
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, [visible, screenPosition, hideRadialMenu]);
 
-  // Dismiss on Escape (also unpins if pinned)
+  // Dismiss on Escape (also clears the pinned flag via hideRadialMenu)
   useEffect(() => {
     if (!visible) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        unpinRadialMenu();
         hideRadialMenu();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [visible, hideRadialMenu, unpinRadialMenu]);
+  }, [visible, hideRadialMenu]);
 
   const handleAddParent = useCallback(() => {
     if (!target) return;
