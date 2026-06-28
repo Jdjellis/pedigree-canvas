@@ -38,6 +38,7 @@ const QUARTER_LABELS: Record<QuarterPosition, string> = {
 export function PropertiesPanel() {
   const selectedIds = useUIStore((s) => s.selectedIds);
   const propertiesPanelOpen = useUIStore((s) => s.propertiesPanelOpen);
+  const editingLocked = useUIStore((s) => s.editingLocked);
   const individuals = usePedigreeStore((s) => s.document.individuals);
   const updateIndividual = usePedigreeStore((s) => s.updateIndividual);
   const updateLegendEntry = usePedigreeStore((s) => s.updateLegendEntry);
@@ -206,6 +207,10 @@ export function PropertiesPanel() {
 
   return (
     <div className={styles.panel}>
+      <fieldset
+        disabled={editingLocked}
+        style={{ border: 'none', margin: 0, padding: 0, minInlineSize: 0 }}
+      >
       {/* Identity Section */}
       <div className={styles.section}>
         <div className={styles.sectionTitle}>Identity</div>
@@ -668,6 +673,7 @@ export function PropertiesPanel() {
           />
         </div>
       </div>
+      </fieldset>
     </div>
   );
 }

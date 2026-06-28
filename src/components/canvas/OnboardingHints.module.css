@@ -15,33 +15,37 @@
   opacity: 0.72;
 }
 
-/* ─── Centered content block ─────────────────────────────────────── */
-.center {
+/* ─── Caption block, anchored just below the seed person (top-third) ── */
+.caption {
   position: absolute;
-  top: 50%;
+  /* Anchor just below the dashed bounds box.
+     Person sits at 33% of canvas height (CanvasContainer centering).
+     computeBounds enforces min 400×300 then snaps to Letter aspect ratio,
+     producing a ~309px-tall box centred on the person — half = 154.5px
+     below centre at scale 1.0. Adding a 20px visual gap gives 175px. */
+  top: calc(33% + 175px);
   left: 50%;
-  transform: translate(-50%, -50%);
+  transform: translateX(-50%);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
   text-align: center;
-  /* Re-enable pointer events for buttons inside */
-  pointer-events: auto;
+  /* Block itself never intercepts pointer events; quick-link buttons opt in. */
+  pointer-events: none;
+  max-width: 360px;
 }
 
-/* Wordmark — clean, not hand-drawn */
+/* Wordmark */
 .wordmark {
   font-size: 28px;
   font-weight: 700;
   letter-spacing: -0.5px;
-  color: var(--color-text);
-  margin: 0;
+  margin: 0 0 2px;
   line-height: 1.1;
-  /* Subtle purple tint matching the accent palette */
   background: linear-gradient(
     135deg,
-    var(--color-text) 0%,
+    var(--color-text) 55%,
     var(--color-accent, #7c3aed) 100%
   );
   -webkit-background-clip: text;
@@ -52,12 +56,12 @@
 .reassurance {
   font-size: 12px;
   color: var(--color-text-secondary);
-  margin: 0;
+  margin: 0 0 4px;
   opacity: 0.75;
 }
 
 .cue {
-  font-size: 14px;
+  font-size: 13px;
   color: var(--color-text-secondary);
   margin: 0;
 }
@@ -153,26 +157,6 @@
   max-width: 160px;
   white-space: normal;
   text-align: right;
-}
-
-/* Top-center → ToolIsland */
-.arrowTopCenter {
-  top: 72px;
-  left: 50%;
-  transform: translateX(-50%);
-  flex-direction: column;
-  align-items: center;
-}
-
-.arrowTopCenter .arrowSvg {
-  width: 60px;
-  height: 70px;
-}
-
-.arrowTopCenter .arrowLabel {
-  max-width: 200px;
-  white-space: normal;
-  text-align: center;
 }
 
 /* Bottom-left → ZoomIsland + HistoryIsland */

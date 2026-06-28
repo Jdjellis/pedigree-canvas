@@ -1,17 +1,24 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { usePedigreeStore, createDefaultIndividual } from '../../stores/pedigreeStore';
 import { useUIStore } from '../../stores/uiStore';
+import { ONBOARDED_STORAGE_KEY } from './onboarding';
 import { OnboardingHints } from './OnboardingHints';
 
 beforeEach(() => {
   usePedigreeStore.getState().resetDocument();
   useUIStore.setState({ activeModal: null });
+  localStorage.removeItem(ONBOARDED_STORAGE_KEY);
 });
 
 describe('OnboardingHints with 0 individuals', () => {
   test('renders the Pedigree wordmark', () => {
     render(<OnboardingHints />);
     expect(screen.getByText('Pedigree')).toBeInTheDocument();
+  });
+
+  test('renders the browser-local save reassurance', () => {
+    render(<OnboardingHints />);
+    expect(screen.getByText(/saved only in this browser/i)).toBeInTheDocument();
   });
 
   test('renders an Open button by accessible name', () => {
@@ -29,28 +36,55 @@ describe('OnboardingHints with 0 individuals', () => {
     expect(screen.getByRole('button', { name: 'Help' })).toBeInTheDocument();
   });
 
-  test('renders browser-local save reassurance text', () => {
+  test('renders the ⌘K shortcut hint', () => {
     render(<OnboardingHints />);
-    expect(
-      screen.getByText(/saved only in this browser/i)
-    ).toBeInTheDocument();
+    expect(screen.getByText('⌘K')).toBeInTheDocument();
   });
 });
 
-describe('OnboardingHints with ≥1 individual', () => {
-  test('renders nothing when one individual exists', () => {
+describe('OnboardingHints with 1 individual (seed)', () => {
+  test('still renders onboarding when exactly one (seed) individual exists', () => {
     const individual = createDefaultIndividual({ position: { x: 0, y: 0 } });
     usePedigreeStore.getState().addIndividual(individual);
 
-    const { container } = render(<OnboardingHints />);
-    expect(container.firstChild).toBeNull();
+    render(<OnboardingHints />);
+    expect(screen.getByText('Pedigree')).toBeInTheDocument();
   });
 
-  test('renders nothing when multiple individuals exist', () => {
+  test('renders the hover-to-add-relatives cue', () => {
+    const individual = createDefaultIndividual({ position: { x: 0, y: 0 } });
+    usePedigreeStore.getState().addIndividual(individual);
+
+    render(<OnboardingHints />);
+    expect(
+      screen.getByText(/hover to add relatives/i)
+    ).toBeInTheDocument();
+  });
+
+  test('renders the default-sex tip referencing the ▢ ● ◇ control', () => {
+    const individual = createDefaultIndividual({ position: { x: 0, y: 0 } });
+    usePedigreeStore.getState().addIndividual(individual);
+
+    render(<OnboardingHints />);
+    expect(screen.getByText(/▢ ● ◇/)).toBeInTheDocument();
+  });
+});
+
+describe('OnboardingHints with ≥2 individuals', () => {
+  test('renders nothing when two or more individuals exist', () => {
     const a = createDefaultIndividual({ position: { x: 0, y: 0 } });
     const b = createDefaultIndividual({ position: { x: 100, y: 0 } });
     usePedigreeStore.getState().addIndividual(a);
     usePedigreeStore.getState().addIndividual(b);
+
+    const { container } = render(<OnboardingHints />);
+    expect(container.firstChild).toBeNull();
+  });
+});
+
+describe('OnboardingHints with onboarded flag set', () => {
+  test('renders nothing when onboarded flag is already set in localStorage', () => {
+    localStorage.setItem(ONBOARDED_STORAGE_KEY, '1');
 
     const { container } = render(<OnboardingHints />);
     expect(container.firstChild).toBeNull();

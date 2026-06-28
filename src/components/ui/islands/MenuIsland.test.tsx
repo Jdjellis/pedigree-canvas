@@ -2,11 +2,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { afterEach, beforeEach, vi } from 'vitest';
 import { usePedigreeStore } from '../../../stores/pedigreeStore';
 import { useUIStore } from '../../../stores/uiStore';
-import { createDefaultIndividual } from '../../../stores/pedigreeStore';
 import { MenuIsland } from './MenuIsland';
-
-/** localStorage key mirrored from MenuIsland for test assertions. */
-const LOCAL_NOTICE_DISMISSED_KEY = 'pedigree-editor-local-notice-dismissed';
 
 beforeEach(() => {
   // Reset stores to clean state before each test.
@@ -15,8 +11,6 @@ beforeEach(() => {
   useUIStore.getState().closeModal();
   useUIStore.getState().clearSelection();
   useUIStore.getState().setCommandPaletteOpen(false);
-  // Clear localStorage so the one-time notice is not considered dismissed.
-  localStorage.removeItem(LOCAL_NOTICE_DISMISSED_KEY);
 });
 
 afterEach(() => {
@@ -223,24 +217,10 @@ test('ArrowUp from the first item wraps to the last item', () => {
   expect(document.activeElement).toBe(items[items.length - 1]);
 });
 
-test('local-notice is NOT rendered when individual count is 0', () => {
+test('local-data notice is never rendered (notice removed)', () => {
+  // The one-time local-data notice has been removed from MenuIsland.
   render(<MenuIsland />);
-  // Store starts empty; notice should be suppressed regardless of dismissal state.
-  expect(
-    screen.queryByRole('status', { name: undefined })
-  ).not.toBeInTheDocument();
-  // More specific: the notice text itself must not be present.
   expect(
     screen.queryByText(/saved only in this browser/i)
   ).not.toBeInTheDocument();
-});
-
-test('local-notice IS rendered when at least one individual exists and notice is not dismissed', () => {
-  // Add a person directly to the store so the component sees count > 0.
-  usePedigreeStore.getState().addIndividual(createDefaultIndividual());
-
-  render(<MenuIsland />);
-
-  expect(screen.getByRole('status')).toBeInTheDocument();
-  expect(screen.getByText(/saved only in this browser/i)).toBeInTheDocument();
 });

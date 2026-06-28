@@ -113,10 +113,46 @@
   color: var(--color-primary);
 }
 
+/** Greyed-out state for tools that are unavailable while editing is locked. */
+.toolButtonDisabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 /** Thin vertical divider between tool groups. */
 .toolDivider {
   width: 1px;
   align-self: stretch;
   margin: 6px 2px;
   background: var(--color-border, rgba(0, 0, 0, 0.1));
+}
+
+/* Default-sex segmented control (sits beside the Select tool). */
+.sexControl {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 10px;
+  background: rgba(120, 120, 140, 0.08);
+}
+.sexSegment {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 38px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: #6b6e7a;
+  cursor: pointer;
+}
+.sexSegment:hover {
+  background: rgba(120, 120, 140, 0.12);
+}
+.sexSegmentActive {
+  background: #ffffff;
+  color: var(--accent, #6b73e1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
 }

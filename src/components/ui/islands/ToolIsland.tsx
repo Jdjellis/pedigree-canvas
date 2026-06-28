@@ -1,39 +1,28 @@
-import { Lock, Hand } from 'lucide-react';
+import { Lock, Hand, MousePointer2, Type, Eraser } from 'lucide-react';
 import { useUIStore } from '../../../stores/uiStore';
 import { useEditorActions } from '../../../commands/useEditorActions';
 import { Island } from './Island';
 import { ToolButton } from './ToolButton';
-import { PLACEMENT_TOOLS, type PlacementToolId } from './toolDefs';
+import { DefaultSexControl } from './DefaultSexControl';
 import styles from './islands.module.css';
 
 /**
- * Floating tool-selection island: lock and hand helpers, then the placeable
- * tools (select, male, female, unknown, partnership, text, eraser) with number
- * shortcut badges. Reads `activeTool`/`toolLocked` reactively — safe here
- * because this component lives in the react-dom tree (not inside react-konva).
+ * Floating tool island: edit-lock and hand helpers, then Select with its
+ * default-sex control, then Text and Eraser. Reads `activeTool`/`editingLocked`
+ * reactively — safe here because this lives in the react-dom tree.
  */
 export function ToolIsland(): React.JSX.Element {
   const activeTool = useUIStore((s) => s.activeTool);
-  const toolLocked = useUIStore((s) => s.toolLocked);
+  const editingLocked = useUIStore((s) => s.editingLocked);
   const actions = useEditorActions();
-
-  const activators: Record<PlacementToolId, () => void> = {
-    select: actions.selectTool,
-    male: actions.maleTool,
-    female: actions.femaleTool,
-    unknown: actions.unknownTool,
-    partnership: actions.partnershipTool,
-    text: actions.textTool,
-    eraser: actions.eraserTool,
-  };
 
   return (
     <Island aria-label="Tools">
       <ToolButton
-        label="Lock"
+        label="Lock editing"
         icon={<Lock size={18} />}
-        active={toolLocked}
-        onClick={actions.toggleToolLock}
+        active={editingLocked}
+        onClick={actions.toggleEditingLock}
       />
       <span className={styles.toolDivider} aria-hidden="true" />
       <ToolButton
@@ -42,20 +31,32 @@ export function ToolIsland(): React.JSX.Element {
         active={activeTool === 'hand'}
         onClick={actions.handTool}
       />
-      {PLACEMENT_TOOLS.map((tool) => (
-        <span key={tool.id} style={{ display: 'contents' }}>
-          {(tool.id === 'male' || tool.id === 'partnership' || tool.id === 'text') && (
-            <span className={styles.toolDivider} aria-hidden="true" />
-          )}
-          <ToolButton
-            label={tool.label}
-            shortcut={tool.shortcut}
-            icon={tool.icon}
-            active={activeTool === tool.id}
-            onClick={activators[tool.id]}
-          />
-        </span>
-      ))}
+      <span className={styles.toolDivider} aria-hidden="true" />
+      <ToolButton
+        label="Select"
+        shortcut="1"
+        icon={<MousePointer2 size={19} />}
+        active={activeTool === 'select'}
+        onClick={actions.selectTool}
+      />
+      <DefaultSexControl />
+      <span className={styles.toolDivider} aria-hidden="true" />
+      <ToolButton
+        label="Text"
+        shortcut="2"
+        icon={<Type size={19} />}
+        active={activeTool === 'text'}
+        onClick={actions.textTool}
+        disabled={editingLocked}
+      />
+      <ToolButton
+        label="Eraser"
+        shortcut="3"
+        icon={<Eraser size={19} />}
+        active={activeTool === 'eraser'}
+        onClick={actions.eraserTool}
+        disabled={editingLocked}
+      />
     </Island>
   );
 }

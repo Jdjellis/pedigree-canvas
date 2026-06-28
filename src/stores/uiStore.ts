@@ -1,20 +1,13 @@
 import { create } from 'zustand';
+import type { DefaultSex } from '../utils/sex';
 
 /**
- * The currently active canvas tool. `select` and `hand` are modal helpers
- * (pointer/marquee and pan); `male`/`female`/`unknown` and `text` place a node
- * at the click point; `partnership` draws a union between two clicked nodes;
- * `eraser` deletes nodes/connections under the pointer.
+ * The currently active canvas tool. `select`/`hand` are modal helpers
+ * (pointer/marquee and pan); `text` places a text annotation at the click point;
+ * `eraser` deletes nodes/connections under the pointer. People are added only
+ * via the radial menu, so there are no person-placement tools.
  */
-export type ActiveTool =
-  | 'select'
-  | 'hand'
-  | 'male'
-  | 'female'
-  | 'unknown'
-  | 'partnership'
-  | 'text'
-  | 'eraser';
+export type ActiveTool = 'select' | 'hand' | 'text' | 'eraser';
 /** The modal dialog currently open, or `null` when no modal is shown. */
 export type ActiveModal = 'import' | 'export' | 'settings' | 'legendEditor' | 'shortcuts' | null;
 
@@ -26,6 +19,7 @@ interface UIState {
     visible: boolean;
     targetId: string | null;
     screenPosition: { x: number; y: number };
+    pinned: boolean;
   };
 
   dragLink: {
@@ -51,14 +45,11 @@ interface UIState {
   propertiesPanelOpen: boolean;
   activeModal: ActiveModal;
   activeTool: ActiveTool;
+  /** The sex applied to singly-added people (seed + radial +Partner/+Child/+Sibling). */
+  defaultSex: DefaultSex;
 
-  /** Whether placement tools stay active after one use (Excalidraw "lock"). */
-  toolLocked: boolean;
-  /**
-   * The first individual clicked while the partnership tool is active, awaiting
-   * a second click to complete the union. `null` when no anchor is pending.
-   */
-  partnershipAnchorId: string | null;
+  /** When true, the pedigree is read-only: no structural or property edits. */
+  editingLocked: boolean;
 
   /** Whether the ⌘K command palette is open. */
   commandPaletteOpen: boolean;
@@ -87,6 +78,10 @@ interface UIState {
     screenPos: { x: number; y: number }
   ) => void;
   hideRadialMenu: () => void;
+  /** Pin the radial menu open so it survives the pointer leaving the hot-zone. */
+  pinRadialMenu: () => void;
+  /** Release a pinned radial menu (it then follows hover rules again). */
+  unpinRadialMenu: () => void;
   startDragLink: (sourceId: string) => void;
   updateDragLinkCursor: (pos: { x: number; y: number }) => void;
   setDragLinkTarget: (targetId: string | null) => void;
@@ -99,10 +94,10 @@ interface UIState {
   ) => void;
   hideRelationshipPopup: () => void;
   setActiveTool: (tool: ActiveTool) => void;
-  /** Toggle whether placement tools stay active after use. */
-  toggleToolLocked: () => void;
-  /** Set or clear the pending partnership anchor individual. */
-  setPartnershipAnchor: (id: string | null) => void;
+  /** Set the default sex used for singly-added people. */
+  setDefaultSex: (sex: DefaultSex) => void;
+  /** Toggle whether the pedigree is locked against editing. */
+  toggleEditingLocked: () => void;
   openModal: (modal: ActiveModal) => void;
   closeModal: () => void;
   setPropertiesPanelOpen: (open: boolean) => void;
@@ -127,6 +122,7 @@ export const useUIStore = create<UIState>()((set) => ({
     visible: false,
     targetId: null,
     screenPosition: { x: 0, y: 0 },
+    pinned: false,
   },
 
   dragLink: {
@@ -152,8 +148,8 @@ export const useUIStore = create<UIState>()((set) => ({
   propertiesPanelOpen: false,
   activeModal: null,
   activeTool: 'select',
-  toolLocked: false,
-  partnershipAnchorId: null,
+  defaultSex: 'unknown',
+  editingLocked: false,
   commandPaletteOpen: false,
   editingAnnotationId: null,
   lastSavedAt: null,
@@ -199,7 +195,7 @@ export const useUIStore = create<UIState>()((set) => ({
 
   showRadialMenu: (targetId, screenPosition) =>
     set({
-      radialMenu: { visible: true, targetId, screenPosition },
+      radialMenu: { visible: true, targetId, screenPosition, pinned: false },
     }),
 
   hideRadialMenu: () =>
@@ -208,8 +204,15 @@ export const useUIStore = create<UIState>()((set) => ({
         visible: false,
         targetId: null,
         screenPosition: { x: 0, y: 0 },
+        pinned: false,
       },
     }),
+
+  pinRadialMenu: () =>
+    set((state) => ({ radialMenu: { ...state.radialMenu, pinned: true } })),
+
+  unpinRadialMenu: () =>
+    set((state) => ({ radialMenu: { ...state.radialMenu, pinned: false } })),
 
   startDragLink: (sourceId) =>
     set({
@@ -258,10 +261,10 @@ export const useUIStore = create<UIState>()((set) => ({
 
   setActiveTool: (activeTool) => set({ activeTool }),
 
-  toggleToolLocked: () =>
-    set((state) => ({ toolLocked: !state.toolLocked })),
+  setDefaultSex: (defaultSex) => set({ defaultSex }),
 
-  setPartnershipAnchor: (id) => set({ partnershipAnchorId: id }),
+  toggleEditingLocked: () =>
+    set((state) => ({ editingLocked: !state.editingLocked })),
 
   openModal: (activeModal) => set({ activeModal }),
 

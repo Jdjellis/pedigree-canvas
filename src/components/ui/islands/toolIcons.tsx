@@ -1,8 +1,7 @@
 /**
- * Inline SVG glyphs for the pedigree-shape placement tools. Kept in their own
- * module so {@link ./toolDefs} can export only data/types — satisfying the
- * `react-refresh/only-export-components` rule (a file may export components or
- * non-components, not both).
+ * Inline SVG glyphs for the pedigree-shape sex icons used by {@link DefaultSexControl}.
+ * Kept in their own module to satisfy the `react-refresh/only-export-components`
+ * rule (a file may export components or non-components, not both).
  */
 
 /** Outlined square — the pedigree symbol for a male individual. */

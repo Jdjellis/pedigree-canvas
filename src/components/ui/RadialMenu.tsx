@@ -6,7 +6,7 @@ import { generateId } from '../../utils/idGenerator';
 import { RelationshipType, GenderIdentity } from '../../types/enums';
 import { PARTNER_SPACING, GENERATION_SPACING, SIBLING_SPACING } from '../../utils/constants';
 import type { PartnershipRelationship, ParentChildRelationship } from '../../types/pedigree';
-import { RADIAL_MENU_DISMISS_DISTANCE } from '../../utils/constants';
+import { createRelativeIndividual } from './radialActions';
 import styles from './RadialMenu.module.css';
 import clsx from 'clsx';
 
@@ -16,6 +16,8 @@ export function RadialMenu() {
   );
   const hideRadialMenu = useUIStore((s) => s.hideRadialMenu);
   const select = useUIStore((s) => s.select);
+  const defaultSex = useUIStore((s) => s.defaultSex);
+  const editingLocked = useUIStore((s) => s.editingLocked);
 
   const doc = usePedigreeStore((s) => s.document);
   const addParentsForChild = usePedigreeStore((s) => s.addParentsForChild);
@@ -40,28 +42,18 @@ export function RadialMenu() {
     return getPresentPartners(doc.individuals, union).length < 2;
   })();
 
-  // Dismiss when mouse moves too far
-  useEffect(() => {
-    if (!visible) return;
+  // Hover-driven open/close (with hysteresis) is owned by the proximity
+  // controller, useRadialHover. This component only handles Escape-to-dismiss
+  // and the click actions; empty-canvas clicks dismiss via the Stage handler.
 
-    const handleMouseMove = (e: MouseEvent) => {
-      const dx = e.clientX - screenPosition.x;
-      const dy = e.clientY - screenPosition.y;
-      if (Math.sqrt(dx * dx + dy * dy) > RADIAL_MENU_DISMISS_DISTANCE) {
-        hideRadialMenu();
-      }
-    };
-
-    window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
-  }, [visible, screenPosition, hideRadialMenu]);
-
-  // Dismiss on Escape
+  // Dismiss on Escape (also clears the pinned flag via hideRadialMenu)
   useEffect(() => {
     if (!visible) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') hideRadialMenu();
+      if (e.key === 'Escape') {
+        hideRadialMenu();
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
@@ -159,7 +151,7 @@ export function RadialMenu() {
       return;
     }
 
-    const partner = createDefaultIndividual({
+    const partner = createRelativeIndividual(defaultSex, {
       generation: target.generation,
       position: {
         x: target.position.x + PARTNER_SPACING,
@@ -173,7 +165,7 @@ export function RadialMenu() {
     addPartnerToIndividual(partner, partnership);
     hideRadialMenu();
     select(partner.id);
-  }, [target, targetId, doc, fillUnionPartner, addPartnerToIndividual, hideRadialMenu, select]);
+  }, [target, targetId, doc, defaultSex, fillUnionPartner, addPartnerToIndividual, hideRadialMenu, select]);
 
   const handleAddChild = useCallback(() => {
     if (!target || !targetId) return;
@@ -211,7 +203,7 @@ export function RadialMenu() {
       : target.position.x;
     const existingChildren = partnership.childrenIds.length;
 
-    const child = createDefaultIndividual({
+    const child = createRelativeIndividual(defaultSex, {
       generation: (target.generation ?? 0) + 1,
       position: { x: midX + existingChildren * SIBLING_SPACING, y: target.position.y + GENERATION_SPACING },
     });
@@ -222,7 +214,7 @@ export function RadialMenu() {
     addChildToFamily(child, partnership.id, link);
     hideRadialMenu();
     select(child.id);
-  }, [target, targetId, doc, addChildToFamily, addChildViaNewUnion, hideRadialMenu, select]);
+  }, [target, targetId, doc, defaultSex, addChildToFamily, addChildViaNewUnion, hideRadialMenu, select]);
 
   const handleAddSibling = useCallback(() => {
     if (!target || !targetId) return;
@@ -253,7 +245,7 @@ export function RadialMenu() {
 
     // No parents: create a 0-partner sibship holding the target and the new sibling.
     const partnershipId = generateId();
-    const sibling = createDefaultIndividual({
+    const sibling = createRelativeIndividual(defaultSex, {
       generation: target.generation,
       position: { x: target.position.x + SIBLING_SPACING, y: target.position.y },
     });
@@ -272,9 +264,9 @@ export function RadialMenu() {
     addSiblingViaNewUnion(target, sibling, partnership, targetLink, siblingLink);
     hideRadialMenu();
     select(sibling.id);
-  }, [target, targetId, doc, addChildToFamily, addSiblingViaNewUnion, hideRadialMenu, select]);
+  }, [target, targetId, doc, defaultSex, addChildToFamily, addSiblingViaNewUnion, hideRadialMenu, select]);
 
-  if (!visible || !target) return null;
+  if (!visible || !target || editingLocked) return null;
 
   return (
     <div

@@ -27,7 +27,7 @@ describe('ToolHint', () => {
   });
 
   test('renders nothing for tools without a hint', () => {
-    setTool('male');
+    setTool('text');
     const { container } = render(<ToolHint />);
 
     expect(screen.queryByRole('note')).not.toBeInTheDocument();

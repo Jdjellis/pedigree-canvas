@@ -1,4 +1,5 @@
 import { usePedigreeStore } from '../../stores/pedigreeStore';
+import { useUIStore } from '../../stores/uiStore';
 
 /**
  * Delete the document element with the given id, routing to the correct remover
@@ -7,6 +8,7 @@ import { usePedigreeStore } from '../../stores/pedigreeStore';
  * membership (handled inside the store). A no-op if `id` matches nothing.
  */
 export function eraseElementById(id: string): void {
+  if (useUIStore.getState().editingLocked) return;
   const store = usePedigreeStore.getState();
   const { textAnnotations, partnerships } = store.document;
   if (textAnnotations[id]) {

@@ -43,15 +43,11 @@ const SHORTCUT_GROUPS: ShortcutGroup[] = [
   {
     label: 'Tools',
     rows: [
-      { description: 'Select', keys: ['V'] },
-      { description: 'Hand (pan)', keys: ['H'] },
-      { description: 'Add male', keys: ['M'] },
-      { description: 'Add female', keys: ['F'] },
-      { description: 'Add unknown sex', keys: ['U'] },
-      { description: 'Partnership', keys: ['R'] },
-      { description: 'Text', keys: ['T'] },
-      { description: 'Eraser', keys: ['E'] },
-      { description: 'Lock active tool', keys: ['L'] },
+      { description: 'Select tool', keys: ['1', 'V'] },
+      { description: 'Text tool', keys: ['2', 'T'] },
+      { description: 'Eraser tool', keys: ['3', 'E'] },
+      { description: 'Hand (pan) tool', keys: ['H'] },
+      { description: 'Toggle edit lock', keys: ['L'] },
     ],
   },
   {

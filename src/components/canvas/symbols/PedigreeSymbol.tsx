@@ -10,7 +10,6 @@ import {
   SYMBOL_STROKE_WIDTH,
   SYMBOL_COLOR,
   SYMBOL_FILL,
-  RADIAL_MENU_HOVER_DELAY,
 } from '../../../utils/constants';
 
 import {
@@ -28,7 +27,6 @@ import type { ActiveQuarter } from './ConditionOverlay';
 import { DeceasedSlash } from './DeceasedSlash';
 import { ProbandArrow } from './ProbandArrow';
 import { SymbolLabel } from './SymbolLabel';
-import { handlePartnershipClick } from '../partnershipTool';
 import { eraseElementById } from '../eraserTool';
 
 export interface PedigreeSymbolProps {
@@ -48,6 +46,11 @@ export interface PedigreeSymbolProps {
    * immediately, enabling swath deletion by holding and dragging.
    */
   eraseOnHover?: boolean;
+  /**
+   * When true the document is locked for editing: dragging is disabled and
+   * mutation interactions (erase, radial menu) are blocked.
+   */
+  editingLocked?: boolean;
 }
 
 const SELECTION_COLOR = '#6965db';
@@ -240,8 +243,8 @@ export const PedigreeSymbol: React.FC<PedigreeSymbolProps> = React.memo(
     individualNumber,
     panMode = false,
     eraseOnHover = false,
+    editingLocked = false,
   }) => {
-    const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     // Position of the symbol when a drag began. Captured so the whole drag can
     // be committed as a single undo step on drag end (see handleDragEnd).
     const dragStartPosRef = useRef<{ x: number; y: number } | null>(null);
@@ -262,12 +265,6 @@ export const PedigreeSymbol: React.FC<PedigreeSymbolProps> = React.memo(
         const ui = useUIStore.getState();
         const tool = ui.activeTool;
 
-        if (tool === 'partnership') {
-          ui.hideRadialMenu();
-          handlePartnershipClick(individual.id);
-          return;
-        }
-
         if (tool === 'eraser') {
           ui.hideRadialMenu();
           eraseElementById(individual.id);
@@ -275,15 +272,20 @@ export const PedigreeSymbol: React.FC<PedigreeSymbolProps> = React.memo(
         }
 
         const { select, toggleSelection, hideRadialMenu } = ui;
-        hideRadialMenu();
         const evt = e.evt;
         if ('shiftKey' in evt && (evt.shiftKey || evt.metaKey || evt.ctrlKey)) {
+          hideRadialMenu();
           toggleSelection(individual.id);
         } else {
           select(individual.id);
+          if (tool === 'select' && !ui.editingLocked) {
+            const { canvasToScreen } = useViewportStore.getState();
+            ui.showRadialMenu(individual.id, canvasToScreen(individual.position));
+            ui.pinRadialMenu();
+          }
         }
       },
-      [individual.id],
+      [individual.id, individual.position],
     );
 
     const handleMouseEnter = useCallback(() => {
@@ -294,24 +296,15 @@ export const PedigreeSymbol: React.FC<PedigreeSymbolProps> = React.memo(
         return;
       }
       const uiState = useUIStore.getState();
+      if (uiState.editingLocked) return;
       uiState.setHovered(individual.id);
-      if (uiState.dragLink.active) {
-        uiState.setDragLinkTarget(individual.id);
-      }
-      const stage = document.querySelector('canvas');
-      if (stage) stage.style.cursor = 'pointer';
-
-      // Start hover timer for radial menu
-      if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
-      hoverTimerRef.current = setTimeout(() => {
-        const { canvasToScreen } = useViewportStore.getState();
-        // canvasToScreen gives stage-local coordinates; the RadialMenu overlay
-        // is position:absolute inside .canvasArea which wraps the stage,
-        // so stage-local coords position it correctly.
-        const screenPos = canvasToScreen(individual.position);
-        useUIStore.getState().showRadialMenu(individual.id, screenPos);
-      }, RADIAL_MENU_HOVER_DELAY);
-    }, [individual.id, individual.position, panMode, eraseOnHover]);
+      if (uiState.dragLink.active) uiState.setDragLinkTarget(individual.id);
+      const stageEl = document.querySelector('canvas');
+      if (stageEl) stageEl.style.cursor = 'pointer';
+      // Opening the radial add-menu is handled by the proximity controller
+      // (useRadialHover), which uses a generous enter radius + hysteresis so the
+      // menu does not vanish the moment the cursor leaves this 40px hit area.
+    }, [individual.id, panMode, eraseOnHover]);
 
     const handleMouseLeave = useCallback(() => {
       const uiState = useUIStore.getState();
@@ -319,10 +312,9 @@ export const PedigreeSymbol: React.FC<PedigreeSymbolProps> = React.memo(
       if (uiState.dragLink.active) {
         uiState.setDragLinkTarget(null);
       }
-      if (hoverTimerRef.current) {
-        clearTimeout(hoverTimerRef.current);
-        hoverTimerRef.current = null;
-      }
+      // Note: the radial menu is NOT dismissed here. Closing is owned by the
+      // proximity controller (useRadialHover), which keeps the menu open until
+      // the pointer leaves a radius wide enough to reach the option buttons.
       const stage = document.querySelector('canvas');
       if (stage) stage.style.cursor = 'default';
     }, []);
@@ -401,7 +393,7 @@ export const PedigreeSymbol: React.FC<PedigreeSymbolProps> = React.memo(
       <Group
         x={individual.position.x}
         y={individual.position.y}
-        draggable={!panMode}
+        draggable={!panMode && !editingLocked}
         dragBoundFunc={dragBoundFunc}
         onClick={handleClick}
         onTap={handleClick}

@@ -49,8 +49,15 @@ export const WHEEL_LINE_HEIGHT = 16;
 
 // Radial menu
 export const RADIAL_MENU_RADIUS = 60;
-export const RADIAL_MENU_HOVER_DELAY = 300;
-export const RADIAL_MENU_DISMISS_DISTANCE = 120;
+
+// Hover-to-open hysteresis for the radial add-menu (screen pixels, measured
+// from a person's screen centre). ENTER is a generous target so the menu opens
+// when the pointer comes *near* a person, not only when directly over the 40px
+// symbol. EXIT is deliberately larger than ENTER — and larger than the orbiting
+// option buttons (~56–87px out) — so the pointer can travel from the symbol out
+// to an option without the menu vanishing first.
+export const RADIAL_HOVER_ENTER_RADIUS = 46;
+export const RADIAL_HOVER_EXIT_RADIUS = 170;
 
 // Label
 export const LABEL_FONT_SIZE = 12;

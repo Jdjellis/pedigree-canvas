@@ -80,14 +80,6 @@ export function buildCommands(actions: EditorActions): Command[] {
       isAvailable: (ctx: CommandContext) => ctx.selectedIds.size > 0,
       run: () => actions.deleteSelected(),
     },
-    {
-      id: 'edit.addPerson',
-      title: 'Add person',
-      category: 'edit',
-      keywords: ['add', 'new', 'person', 'individual', 'member'],
-      run: () => actions.addPerson(),
-    },
-
     // ── View ──────────────────────────────────────────────────────────────
     {
       id: 'view.zoomIn',
@@ -149,14 +141,6 @@ export function buildCommands(actions: EditorActions): Command[] {
       shortcut: 'H',
       keywords: ['hand', 'pan', 'drag', 'tool'],
       run: () => actions.handTool(),
-    },
-    {
-      id: 'tools.addMale',
-      title: 'Add male tool',
-      category: 'tools',
-      shortcut: '2',
-      keywords: ['add', 'male', 'individual', 'tool'],
-      run: () => actions.maleTool(),
     },
   ];
 }

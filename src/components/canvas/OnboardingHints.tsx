@@ -1,14 +1,21 @@
+import { useEffect, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
 import { usePedigreeStore } from '../../stores/pedigreeStore';
 import { useEditorActions } from '../../commands/useEditorActions';
 import { useUIStore } from '../../stores/uiStore';
+import { useViewportStore } from '../../stores/viewportStore';
+import { shouldShowOnboarding, ONBOARDED_STORAGE_KEY } from './onboarding';
 import styles from './OnboardingHints.module.css';
 
 /**
  * Excalidraw-style first-run onboarding layer.
  *
- * Rendered ONLY when the pedigree contains zero individuals. Once the first
- * person is added, this component returns `null` and the canvas is clear.
+ * Rendered while the document has zero or one individual (the seeded person)
+ * and the user has not yet added a relative. Once a second person is added the
+ * `pedigree-onboarded` localStorage flag is set and onboarding never returns.
+ *
+ * A one-time radial auto-preview fires ~600 ms after mount so new users
+ * immediately discover the hover-to-add-relatives mechanism.
  *
  * The root element is `pointer-events: none` so it never blocks canvas
  * interaction. Only the quick-link buttons carry `pointer-events: auto`.
@@ -16,12 +23,49 @@ import styles from './OnboardingHints.module.css';
  * Hand-drawn / whimsical styling is scoped to `OnboardingHints.module.css`
  * and does NOT bleed into any other component.
  *
- * @returns The onboarding overlay, or `null` when at least one individual exists.
+ * @returns The onboarding overlay, or `null` when onboarding is complete.
  */
 export function OnboardingHints(): ReactElement | null {
   const individualCount = usePedigreeStore(
     (s) => Object.keys(s.document.individuals).length
   );
+
+  const [onboarded] = useState(() => localStorage.getItem(ONBOARDED_STORAGE_KEY) === '1');
+
+  // Mark onboarded once the first relative is added, so it never returns.
+  useEffect(() => {
+    if (individualCount >= 2) localStorage.setItem(ONBOARDED_STORAGE_KEY, '1');
+  }, [individualCount]);
+
+  // One-time radial auto-preview: open the radial menu on the seed person
+  // ~600 ms after mount so new users discover the hover-to-add-relatives flow.
+  const previewedRef = useRef(false);
+  useEffect(() => {
+    if (previewedRef.current) return;
+    const ids = Object.keys(usePedigreeStore.getState().document.individuals);
+    if (ids.length !== 1) return;
+    const seedId = ids[0];
+    const t = setTimeout(() => {
+      const ui = useUIStore.getState();
+      // Don't clobber a menu the user is already interacting with, or when locked.
+      if (ui.radialMenu.visible || ui.editingLocked) return;
+      const seed = usePedigreeStore.getState().document.individuals[seedId];
+      if (!seed) return;
+      // Compute the screen position at fire time — by now CanvasContainer has
+      // centred the viewport on the seed, so this lands on the (centred) person
+      // rather than the pre-centre origin.
+      const screen = useViewportStore.getState().canvasToScreen(seed.position);
+      ui.showRadialMenu(seedId, screen);
+      // Pin so the proximity controller doesn't dismiss it when the pointer
+      // drifts away — the radial stays until the user adds a relative (which
+      // calls hideRadialMenu), presses Escape, or clicks empty canvas.
+      ui.pinRadialMenu();
+      // Mark only after actually firing, so StrictMode's mount→cleanup→remount
+      // (which clears the first timer) still leaves the second timer to run.
+      previewedRef.current = true;
+    }, 600);
+    return () => clearTimeout(t);
+  }, [individualCount]);
 
   const { openDocument, importPed } = useEditorActions();
 
@@ -29,7 +73,7 @@ export function OnboardingHints(): ReactElement | null {
     useUIStore.getState().openModal('shortcuts');
   };
 
-  if (individualCount > 0) {
+  if (!shouldShowOnboarding(individualCount, onboarded)) {
     return null;
   }
 
@@ -60,32 +104,6 @@ export function OnboardingHints(): ReactElement | null {
           />
         </svg>
         <span className={styles.arrowLabel}>Menu, export, settings</span>
-      </div>
-
-      {/* Top-center arrow → ToolIsland */}
-      <div className={`${styles.arrowHint} ${styles.arrowTopCenter}`} aria-hidden="true">
-        <svg
-          className={styles.arrowSvg}
-          viewBox="0 0 60 70"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M30 62 C28 45, 26 25, 28 8"
-            stroke="currentColor"
-            strokeWidth="1.8"
-            strokeLinecap="round"
-            fill="none"
-            strokeDasharray="4 2"
-          />
-          <path
-            d="M28 8 L20 16 M28 8 L36 16"
-            stroke="currentColor"
-            strokeWidth="1.8"
-            strokeLinecap="round"
-          />
-        </svg>
-        <span className={styles.arrowLabel}>Pick a tool &amp; add your first person</span>
       </div>
 
       {/* Bottom-left arrow → ZoomIsland + HistoryIsland */}
@@ -140,16 +158,12 @@ export function OnboardingHints(): ReactElement | null {
         <span className={styles.arrowLabel}>Shortcuts &amp; help</span>
       </div>
 
-      {/* ── Centered content block ── */}
-      <div className={styles.center}>
+      {/* ── Caption anchored just below the seed person ── */}
+      <div className={styles.caption}>
         <h1 className={styles.wordmark}>Pedigree</h1>
-
-        <p className={styles.reassurance}>
-          Your work is saved only in this browser.
-        </p>
-
+        <p className={styles.reassurance}>Your work is saved only in this browser.</p>
         <p className={styles.cue}>
-          Pick a person tool (top center) to add your first person.
+          Hover to add relatives — use ▢ ● ◇ to set their sex.
         </p>
 
         {/* Quick links — pointer-events: auto so they're clickable */}

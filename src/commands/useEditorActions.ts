@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { usePedigreeStore, createDefaultIndividual } from '../stores/pedigreeStore';
+import { usePedigreeStore, createSeededDocument } from '../stores/pedigreeStore';
 import { useUIStore } from '../stores/uiStore';
 import { useViewportStore } from '../stores/viewportStore';
 import { generateId } from '../utils/idGenerator';
@@ -11,6 +11,7 @@ import {
   ANNOTATION_PLACEHOLDER_TEXT,
 } from '../utils/constants';
 import { openDocumentAction, deleteSelectedAction } from './editorActions';
+import { getVisibleCanvasCenter } from '../utils/canvasCenter';
 
 /**
  * All imperative editor actions available to any surface (islands, ⌘K palette,
@@ -28,24 +29,6 @@ export interface EditorActions {
   exportDocument: () => void;
   /** Open the legend editor modal. */
   openLegend: () => void;
-  /**
-   * Add a new individual placed at the visible-canvas centre and select it.
-   * Placement uses `screenToCanvas` with stage-local coordinates (0,0 = top-left
-   * of the `.konvajs-content` element), matching the project's Konva/Zustand
-   * coordinate convention.
-   *
-   * Delegates to `addPersonAt` using the computed canvas centre.
-   */
-  addPerson: () => void;
-  /**
-   * Add a new individual at the given CANVAS-space position, select it, and
-   * revert the active tool to `'select'`. Coordinates are rounded to integers
-   * before placement.
-   *
-   * @param position - Canvas-space {x, y} coordinates (already converted from
-   *   screen/stage-local space by the caller, e.g. via `screenToCanvas`).
-   */
-  addPersonAt: (position: { x: number; y: number }) => void;
   /**
    * Add a free-text annotation in clear space below the existing pedigree
    * (falling back to the visible-canvas centre when empty) and open it
@@ -74,20 +57,12 @@ export interface EditorActions {
   selectTool: () => void;
   /** Activate the pan (hand) tool. */
   handTool: () => void;
-  /** Activate the add-male (square) placement tool. */
-  maleTool: () => void;
-  /** Activate the add-female (circle) placement tool. */
-  femaleTool: () => void;
-  /** Activate the add-unknown-sex (diamond) placement tool. */
-  unknownTool: () => void;
-  /** Activate the partnership-line tool. */
-  partnershipTool: () => void;
   /** Activate the text placement tool. */
   textTool: () => void;
   /** Activate the eraser tool. */
   eraserTool: () => void;
-  /** Toggle whether placement tools stay active after use. */
-  toggleToolLock: () => void;
+  /** Toggle whether the pedigree is locked against editing. */
+  toggleEditingLock: () => void;
 }
 
 /**
@@ -103,12 +78,13 @@ export interface EditorActions {
  */
 export function useEditorActions(): EditorActions {
   const newDocument = (): void => {
-    if (
-      window.confirm('Create a new pedigree? Unsaved changes will be lost.')
-    ) {
-      usePedigreeStore.getState().resetDocument();
-      useUIStore.getState().clearSelection();
+    if (window.confirm('Create a new pedigree? Unsaved changes will be lost.')) {
       useViewportStore.getState().resetView();
+      const sex = useUIStore.getState().defaultSex;
+      usePedigreeStore.getState().setDocument(
+        createSeededDocument(sex, getVisibleCanvasCenter()),
+      );
+      useUIStore.getState().clearSelection();
     }
   };
 
@@ -126,46 +102,12 @@ export function useEditorActions(): EditorActions {
     useUIStore.getState().openModal('legendEditor');
   };
 
-  const addPersonAt = (position: { x: number; y: number }): void => {
-    const individual = createDefaultIndividual({
-      position: {
-        x: Math.round(position.x),
-        y: Math.round(position.y),
-      },
-    });
-    usePedigreeStore.getState().addIndividual(individual);
-    useUIStore.getState().select(individual.id);
-    useUIStore.getState().setActiveTool('select');
-  };
-
-  const addPerson = (): void => {
-    // Place new individual at center of visible canvas area.
-    // screenToCanvas expects stage-local coords (0,0 = top-left of stage element).
-    const { screenToCanvas } = useViewportStore.getState();
-    const canvasEl = document.querySelector('.konvajs-content');
-    let stageCenter = { x: 300, y: 300 };
-    if (canvasEl) {
-      const rect = canvasEl.getBoundingClientRect();
-      stageCenter = { x: rect.width / 2, y: rect.height / 2 };
-    }
-    const canvasCenter = screenToCanvas(stageCenter);
-    addPersonAt(canvasCenter);
-  };
-
   const addText = (): void => {
     // Drop the annotation in clear space below the existing pedigree so it does
     // not land on top of a symbol. When the document is empty, fall back to the
-    // centre of the visible canvas area (same stage-local → canvas conversion
-    // as adding an individual).
-    const { screenToCanvas } = useViewportStore.getState();
+    // centre of the visible canvas area.
     const { document: doc } = usePedigreeStore.getState();
-    const canvasEl = document.querySelector('.konvajs-content');
-    let stageCenter = { x: 300, y: 300 };
-    if (canvasEl) {
-      const rect = canvasEl.getBoundingClientRect();
-      stageCenter = { x: rect.width / 2, y: rect.height / 2 };
-    }
-    const fallback = screenToCanvas(stageCenter);
+    const fallback = getVisibleCanvasCenter();
     const position = computeAnnotationDropPosition(
       Object.values(doc.individuals),
       Object.values(doc.textAnnotations),
@@ -234,22 +176,6 @@ export function useEditorActions(): EditorActions {
     useUIStore.getState().setActiveTool('hand');
   };
 
-  const maleTool = (): void => {
-    useUIStore.getState().setActiveTool('male');
-  };
-
-  const femaleTool = (): void => {
-    useUIStore.getState().setActiveTool('female');
-  };
-
-  const unknownTool = (): void => {
-    useUIStore.getState().setActiveTool('unknown');
-  };
-
-  const partnershipTool = (): void => {
-    useUIStore.getState().setActiveTool('partnership');
-  };
-
   const textTool = (): void => {
     useUIStore.getState().setActiveTool('text');
   };
@@ -258,8 +184,8 @@ export function useEditorActions(): EditorActions {
     useUIStore.getState().setActiveTool('eraser');
   };
 
-  const toggleToolLock = (): void => {
-    useUIStore.getState().toggleToolLocked();
+  const toggleEditingLock = (): void => {
+    useUIStore.getState().toggleEditingLocked();
   };
 
   // Empty deps: every callback reads store state via getState() at call time,
@@ -272,8 +198,6 @@ export function useEditorActions(): EditorActions {
       importPed,
       exportDocument,
       openLegend,
-      addPerson,
-      addPersonAt,
       addText,
       deleteSelected,
       undo,
@@ -284,15 +208,10 @@ export function useEditorActions(): EditorActions {
       fitView,
       selectTool,
       handTool,
-      maleTool,
-      femaleTool,
-      unknownTool,
-      partnershipTool,
       textTool,
       eraserTool,
-      toggleToolLock,
+      toggleEditingLock,
     }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     []
   );
 }

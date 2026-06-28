@@ -7,6 +7,7 @@ import {
   createDefaultIndividual,
 } from '../stores/pedigreeStore';
 import { useUIStore } from '../stores/uiStore';
+import { GenderIdentity } from '../types/enums';
 
 const STORAGE_KEY = 'pedigree-editor-autosave';
 
@@ -65,22 +66,30 @@ describe('useAutoSave', () => {
       ).toEqual([]);
     });
 
-    it('ignores corrupt JSON and keeps the current document', () => {
+    it('seeds a fresh person when localStorage contains corrupt JSON', () => {
+      // Corrupt JSON is unparseable — no valid document to restore, so the hook
+      // seeds a single starting person instead of leaving the canvas empty.
       localStorage.setItem(STORAGE_KEY, '{not valid json');
-      const before = usePedigreeStore.getState().document;
 
       renderHook(() => useAutoSave());
 
-      expect(usePedigreeStore.getState().document).toBe(before);
+      const people = Object.values(usePedigreeStore.getState().document.individuals);
+      expect(people).toHaveLength(1);
+      expect(people[0].isProband).toBe(false);
+      expect(people[0].genderIdentity).toBe(GenderIdentity.Unknown); // defaultSex is 'unknown'
     });
 
-    it('ignores a payload that is not a document', () => {
+    it('seeds a fresh person when the stored payload is not a document', () => {
+      // A valid JSON object that lacks the `individuals` key is not a document —
+      // the hook seeds a single starting person rather than leaving the canvas empty.
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ foo: 'bar' }));
-      const before = usePedigreeStore.getState().document;
 
       renderHook(() => useAutoSave());
 
-      expect(usePedigreeStore.getState().document).toBe(before);
+      const people = Object.values(usePedigreeStore.getState().document.individuals);
+      expect(people).toHaveLength(1);
+      expect(people[0].isProband).toBe(false);
+      expect(people[0].genderIdentity).toBe(GenderIdentity.Unknown); // defaultSex is 'unknown'
     });
   });
 

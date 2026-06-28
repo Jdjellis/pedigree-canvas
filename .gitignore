@@ -28,3 +28,10 @@ coverage
 .playwright-mcp/
 .claude/settings.local.json
 .vercel
+
+# Superpowers brainstorming scratch (visual companion mockups)
+.superpowers/
+
+# SDD subagent scratch (reports accidentally written to repo root)
+/sdd/
+/docs/sdd/

@@ -13,7 +13,7 @@ import type { KonvaEventObject } from 'konva/lib/Node';
 import { useViewportStore } from '../../stores/viewportStore';
 import { useUIStore } from '../../stores/uiStore';
 import { usePedigreeStore } from '../../stores/pedigreeStore';
-import { placePersonAt, genderForTool, placeTextAt } from './toolPlacement';
+import { placeTextAt } from './toolPlacement';
 import { GridLayer } from './GridLayer';
 import { ConnectionsLayer } from '../connections/ConnectionsLayer';
 import { PedigreeSymbol } from './symbols/PedigreeSymbol';
@@ -37,6 +37,7 @@ import {
   idsIntersectingMarquee,
   type NodeBox,
 } from './marqueeSelection';
+import { useRadialHover } from '../../hooks/useRadialHover';
 import styles from './CanvasContainer.module.css';
 
 export interface CanvasContainerHandle {
@@ -47,6 +48,8 @@ export const CanvasContainer = forwardRef<CanvasContainerHandle>(
   (_props, ref) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const stageRef = useRef<Konva.Stage>(null);
+    // Guards the one-time "centre the view on content" pass (see effect below).
+    const didInitialCenterRef = useRef(false);
 
     const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
     const [isDragging, setIsDragging] = useState(false);
@@ -84,6 +87,7 @@ export const CanvasContainer = forwardRef<CanvasContainerHandle>(
     const dragLink = useUIStore((s) => s.dragLink);
     const updateDragLinkCursor = useUIStore((s) => s.updateDragLinkCursor);
     const endDragLink = useUIStore((s) => s.endDragLink);
+    const editingLocked = useUIStore((s) => s.editingLocked);
 
     // Lift store subscriptions to react-dom context so Konva layers re-render
     const individuals = usePedigreeStore((s) => s.document.individuals);
@@ -119,6 +123,37 @@ export const CanvasContainer = forwardRef<CanvasContainerHandle>(
         observer.disconnect();
       };
     }, []);
+
+    // --------------- Proximity-driven radial add-menu (hover with hysteresis) ---------------
+    useRadialHover(isSpaceHeld || activeTool === 'hand');
+
+    // --------------- Centre the view on content once the stage is measured ---------------
+    // The seed document places its first person at canvas origin (0,0). The
+    // viewport can't be centred on it until the stage has real dimensions, which
+    // happens after the ResizeObserver fires — so do it here, once, when both
+    // dimensions and content are available. Also frames a restored document on
+    // load (the viewport itself is not persisted).
+    useEffect(() => {
+      if (didInitialCenterRef.current) return;
+      if (dimensions.width === 0 || dimensions.height === 0) return;
+      const people = Object.values(individuals);
+      if (people.length === 0) return;
+
+      const xs = people.map((p) => p.position.x);
+      const ys = people.map((p) => p.position.y);
+      const centerX = (Math.min(...xs) + Math.max(...xs)) / 2;
+      const centerY = (Math.min(...ys) + Math.max(...ys)) / 2;
+
+      const { scale: currentScale, setPosition: setViewportPosition } =
+        useViewportStore.getState();
+      setViewportPosition({
+        x: dimensions.width / 2 - centerX * currentScale,
+        // Place content at the top third of the canvas so the onboarding caption
+        // has comfortable space to read beneath the person.
+        y: dimensions.height * 0.33 - centerY * currentScale,
+      });
+      didInitialCenterRef.current = true;
+    }, [dimensions.width, dimensions.height, individuals]);
 
     // --------------- Spacebar: hold to pan from anywhere ---------------
     useEffect(() => {
@@ -287,14 +322,8 @@ export const CanvasContainer = forwardRef<CanvasContainerHandle>(
         // subscriptions inside react-konva handlers).
         const currentTool = useUIStore.getState().activeTool;
 
-        if (genderForTool(currentTool) !== null) {
-          const stage = stageRef.current;
-          if (!stage) return;
-          const pointer = stage.getPointerPosition();
-          if (!pointer) return;
-          const canvasPos = useViewportStore.getState().screenToCanvas(pointer);
-          placePersonAt(currentTool, canvasPos);
-        } else if (currentTool === 'text') {
+        if (currentTool === 'text') {
+          if (useUIStore.getState().editingLocked) return;
           const stage = stageRef.current;
           if (!stage) return;
           const pointer = stage.getPointerPosition();
@@ -302,6 +331,7 @@ export const CanvasContainer = forwardRef<CanvasContainerHandle>(
           const canvasPos = useViewportStore.getState().screenToCanvas(pointer);
           placeTextAt(canvasPos);
         } else if (currentTool === 'select') {
+          useUIStore.getState().hideRadialMenu();
           clearSelection();
         }
       },
@@ -491,6 +521,7 @@ export const CanvasContainer = forwardRef<CanvasContainerHandle>(
                   individualNumber={individualNumbers.get(individual.id)}
                   panMode={isSpaceHeld || activeTool === 'hand'}
                   eraseOnHover={isErasing}
+                  editingLocked={editingLocked}
                 />
               ))}
             </Layer>
@@ -500,6 +531,7 @@ export const CanvasContainer = forwardRef<CanvasContainerHandle>(
                 annotations={textAnnotations}
                 selectedIds={selectedIds}
                 editingId={editingAnnotationId}
+                editingLocked={editingLocked}
               />
             </Layer>
 
@@ -529,6 +561,7 @@ export const CanvasContainer = forwardRef<CanvasContainerHandle>(
                 investigations={investigations}
                 onMove={moveLegend}
                 bounds={bounds}
+                editingLocked={editingLocked}
               />
             </Layer>
           </Stage>

@@ -9,8 +9,6 @@ function makeNoopActions(): EditorActions {
     importPed: vi.fn(),
     exportDocument: vi.fn(),
     openLegend: vi.fn(),
-    addPerson: vi.fn(),
-    addPersonAt: vi.fn(),
     addText: vi.fn(),
     deleteSelected: vi.fn(),
     undo: vi.fn(),
@@ -21,13 +19,9 @@ function makeNoopActions(): EditorActions {
     fitView: vi.fn(),
     selectTool: vi.fn(),
     handTool: vi.fn(),
-    maleTool: vi.fn(),
-    femaleTool: vi.fn(),
-    unknownTool: vi.fn(),
-    partnershipTool: vi.fn(),
     textTool: vi.fn(),
     eraserTool: vi.fn(),
-    toggleToolLock: vi.fn(),
+    toggleEditingLock: vi.fn(),
   };
 }
 

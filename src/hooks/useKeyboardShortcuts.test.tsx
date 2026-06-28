@@ -30,6 +30,7 @@ beforeEach(() => {
       activeModal: null,
       commandPaletteOpen: false,
       selectedIds: new Set<string>(),
+      editingLocked: false,
     });
   });
 });
@@ -105,7 +106,7 @@ describe('input-guard (hotkeys silenced when typing)', () => {
     document.body.removeChild(textarea);
   });
 
-  test('pressing m inside a SELECT does not change the active tool', () => {
+  test('pressing t inside a SELECT does not change the active tool', () => {
     render(<TestHarness />);
 
     act(() => {
@@ -115,7 +116,7 @@ describe('input-guard (hotkeys silenced when typing)', () => {
     const select = document.createElement('select');
     document.body.appendChild(select);
 
-    fireEvent.keyDown(select, { key: 'm' });
+    fireEvent.keyDown(select, { key: 't' });
 
     expect(useUIStore.getState().activeTool).toBe('select');
 
@@ -130,16 +131,8 @@ describe('input-guard (hotkeys silenced when typing)', () => {
 describe('number + letter tool shortcuts', () => {
   test.each([
     ['1', 'select'],
-    ['2', 'male'],
-    ['3', 'female'],
-    ['4', 'unknown'],
-    ['5', 'partnership'],
-    ['6', 'text'],
-    ['7', 'eraser'],
-    ['m', 'male'],
-    ['f', 'female'],
-    ['u', 'unknown'],
-    ['r', 'partnership'],
+    ['2', 'text'],
+    ['3', 'eraser'],
     ['t', 'text'],
     ['e', 'eraser'],
     ['h', 'hand'],
@@ -157,16 +150,94 @@ describe('number + letter tool shortcuts', () => {
     expect(useUIStore.getState().activeTool).toBe(tool);
   });
 
-  test('pressing l toggles toolLocked to true', () => {
+  test('pressing l toggles editingLocked to true', () => {
     render(<TestHarness />);
 
     act(() => {
-      useUIStore.setState({ toolLocked: false });
+      useUIStore.setState({ editingLocked: false });
     });
 
     fireEvent.keyDown(document.body, { key: 'l' });
 
-    expect(useUIStore.getState().toolLocked).toBe(true);
+    expect(useUIStore.getState().editingLocked).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Edit-lock gate — t/2 and e/3 must NOT switch tools when editingLocked
+// ---------------------------------------------------------------------------
+
+describe('edit-lock gate on text and eraser shortcuts', () => {
+  test('pressing t while editingLocked leaves activeTool unchanged', () => {
+    render(<TestHarness />);
+
+    act(() => {
+      useUIStore.setState({ activeTool: 'select', editingLocked: true });
+    });
+
+    fireEvent.keyDown(document.body, { key: 't' });
+
+    expect(useUIStore.getState().activeTool).toBe('select');
+  });
+
+  test('pressing 2 while editingLocked leaves activeTool unchanged', () => {
+    render(<TestHarness />);
+
+    act(() => {
+      useUIStore.setState({ activeTool: 'select', editingLocked: true });
+    });
+
+    fireEvent.keyDown(document.body, { key: '2' });
+
+    expect(useUIStore.getState().activeTool).toBe('select');
+  });
+
+  test('pressing e while editingLocked leaves activeTool unchanged', () => {
+    render(<TestHarness />);
+
+    act(() => {
+      useUIStore.setState({ activeTool: 'select', editingLocked: true });
+    });
+
+    fireEvent.keyDown(document.body, { key: 'e' });
+
+    expect(useUIStore.getState().activeTool).toBe('select');
+  });
+
+  test('pressing 3 while editingLocked leaves activeTool unchanged', () => {
+    render(<TestHarness />);
+
+    act(() => {
+      useUIStore.setState({ activeTool: 'select', editingLocked: true });
+    });
+
+    fireEvent.keyDown(document.body, { key: '3' });
+
+    expect(useUIStore.getState().activeTool).toBe('select');
+  });
+
+  test('pressing t while NOT locked switches to text', () => {
+    render(<TestHarness />);
+
+    act(() => {
+      useUIStore.setState({ activeTool: 'select', editingLocked: false });
+    });
+
+    fireEvent.keyDown(document.body, { key: 't' });
+
+    expect(useUIStore.getState().activeTool).toBe('text');
+  });
+
+  test('pressing e while NOT locked switches to eraser', () => {
+    render(<TestHarness />);
+
+    act(() => {
+      useUIStore.setState({ activeTool: 'select', editingLocked: false });
+    });
+
+    fireEvent.keyDown(document.body, { key: 'e' });
+
+    expect(useUIStore.getState().activeTool).toBe('eraser');
   });
 });
 
@@ -230,17 +301,3 @@ describe('Delete / Backspace key removes selected individuals', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Escape key — closes modals, hides radial menu, clears anchor, clears selection
-// ---------------------------------------------------------------------------
-
-describe('Escape key handling', () => {
-  test('Escape clears a pending partnership anchor', () => {
-    render(<TestHarness />);
-    act(() => {
-      useUIStore.setState({ partnershipAnchorId: 'a' });
-    });
-    fireEvent.keyDown(document.body, { key: 'Escape' });
-    expect(useUIStore.getState().partnershipAnchorId).toBeNull();
-  });
-});

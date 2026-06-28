@@ -41,6 +41,7 @@ export async function openDocumentAction(): Promise<void> {
  * annotations, so route each id to the matching remover.
  */
 export function deleteSelectedAction(): void {
+  if (useUIStore.getState().editingLocked) return;
   const { selectedIds } = useUIStore.getState();
   const { textAnnotations } = usePedigreeStore.getState().document;
   for (const id of selectedIds) {
