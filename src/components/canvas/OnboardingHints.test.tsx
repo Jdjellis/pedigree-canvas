@@ -6,7 +6,7 @@ import { OnboardingHints } from './OnboardingHints';
 
 beforeEach(() => {
   usePedigreeStore.getState().resetDocument();
-  useUIStore.setState({ activeModal: null });
+  useUIStore.setState({ activeModal: null, onboarded: false });
   localStorage.removeItem(ONBOARDED_STORAGE_KEY);
 });
 
@@ -83,8 +83,8 @@ describe('OnboardingHints with ≥2 individuals', () => {
 });
 
 describe('OnboardingHints with onboarded flag set', () => {
-  test('renders nothing when onboarded flag is already set in localStorage', () => {
-    localStorage.setItem(ONBOARDED_STORAGE_KEY, '1');
+  test('renders nothing when onboarded flag is set', () => {
+    useUIStore.getState().setOnboarded();
 
     const { container } = render(<OnboardingHints />);
     expect(container.firstChild).toBeNull();

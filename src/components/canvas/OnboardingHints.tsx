@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import type { ReactElement } from 'react';
 import { usePedigreeStore } from '../../stores/pedigreeStore';
 import { useEditorActions } from '../../commands/useEditorActions';
 import { useUIStore } from '../../stores/uiStore';
-import { shouldShowOnboarding, ONBOARDED_STORAGE_KEY } from './onboarding';
+import { shouldShowOnboarding } from './onboarding';
 import styles from './OnboardingHints.module.css';
 
 /**
@@ -29,11 +29,11 @@ export function OnboardingHints(): ReactElement | null {
     (s) => Object.keys(s.document.individuals).length
   );
 
-  const [onboarded] = useState(() => localStorage.getItem(ONBOARDED_STORAGE_KEY) === '1');
+  const onboarded = useUIStore((s) => s.onboarded);
 
   // Mark onboarded once the first relative is added, so it never returns.
   useEffect(() => {
-    if (individualCount >= 2) localStorage.setItem(ONBOARDED_STORAGE_KEY, '1');
+    if (individualCount >= 2) useUIStore.getState().setOnboarded();
   }, [individualCount]);
 
   // One-time radial auto-preview: open the radial menu on the seed person

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { DefaultSex } from '../utils/sex';
+import { ONBOARDED_STORAGE_KEY } from '../components/canvas/onboarding';
 
 /**
  * The currently active canvas tool. `select`/`hand` are modal helpers
@@ -113,6 +114,10 @@ interface UIState {
   startEditingAnnotation: (id: string) => void;
   /** Leave inline annotation edit mode. */
   stopEditingAnnotation: () => void;
+  /** Whether first-run onboarding has been completed (persisted in localStorage). */
+  onboarded: boolean;
+  /** Mark onboarding as complete — updates store and persists to localStorage. */
+  setOnboarded: () => void;
 }
 
 export const useUIStore = create<UIState>()((set) => ({
@@ -291,4 +296,11 @@ export const useUIStore = create<UIState>()((set) => ({
     }),
 
   stopEditingAnnotation: () => set({ editingAnnotationId: null }),
+
+  onboarded: localStorage.getItem(ONBOARDED_STORAGE_KEY) === '1',
+
+  setOnboarded: () => {
+    localStorage.setItem(ONBOARDED_STORAGE_KEY, '1');
+    set({ onboarded: true });
+  },
 }));
