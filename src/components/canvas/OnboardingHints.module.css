@@ -15,31 +15,46 @@
   opacity: 0.72;
 }
 
-/* ─── Caption block, anchored just below the centered seed person ──── */
+/* ─── Caption block, anchored just below the seed person (top-third) ── */
 .caption {
   position: absolute;
-  /* Sit below the centered person: clears the ~40px symbol, its number label,
-     and the radial menu's lower option buttons (which reach ~87px out). */
-  top: calc(50% + 104px);
+  /* Mirrors the 33% viewport placement in CanvasContainer. Clears the ~40px
+     symbol, its number label, and the radial option buttons (~87px out). */
+  top: calc(33% + 104px);
   left: 50%;
   transform: translateX(-50%);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 7px;
+  gap: 6px;
   text-align: center;
-  /* The block itself never intercepts pointer events (so it can't block hover
-     near the person); only the quick-link buttons opt back in. */
+  /* Block itself never intercepts pointer events; quick-link buttons opt in. */
   pointer-events: none;
   max-width: 360px;
 }
 
-/* Lead line — names what the centered symbol above it is. */
-.cueLead {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--color-text);
-  margin: 0;
+/* Wordmark */
+.wordmark {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  margin: 0 0 2px;
+  line-height: 1.1;
+  background: linear-gradient(
+    135deg,
+    var(--color-text) 0%,
+    var(--color-accent, #7c3aed) 100%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.reassurance {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin: 0 0 4px;
+  opacity: 0.75;
 }
 
 .cue {

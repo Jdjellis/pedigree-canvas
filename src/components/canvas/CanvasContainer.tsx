@@ -148,7 +148,9 @@ export const CanvasContainer = forwardRef<CanvasContainerHandle>(
         useViewportStore.getState();
       setViewportPosition({
         x: dimensions.width / 2 - centerX * currentScale,
-        y: dimensions.height / 2 - centerY * currentScale,
+        // Place content at the top third of the canvas so the onboarding caption
+        // has comfortable space to read beneath the person.
+        y: dimensions.height * 0.33 - centerY * currentScale,
       });
       didInitialCenterRef.current = true;
     }, [dimensions.width, dimensions.height, individuals]);

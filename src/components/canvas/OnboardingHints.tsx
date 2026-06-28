@@ -154,14 +154,12 @@ export function OnboardingHints(): ReactElement | null {
         <span className={styles.arrowLabel}>Shortcuts &amp; help</span>
       </div>
 
-      {/* ── Caption anchored just below the centered seed person ── */}
+      {/* ── Caption anchored just below the seed person ── */}
       <div className={styles.caption}>
-        <p className={styles.cueLead}>This is your first person</p>
+        <h1 className={styles.wordmark}>Pedigree</h1>
+        <p className={styles.reassurance}>Your work is saved only in this browser.</p>
         <p className={styles.cue}>
-          Hover it to add relatives — parent, partner, child, or sibling.
-        </p>
-        <p className={styles.cue}>
-          Set the sex of new people with the ▢ ● ◇ control next to Select.
+          Hover to add relatives — use ▢ ● ◇ to set their sex.
         </p>
 
         {/* Quick links — pointer-events: auto so they're clickable */}
