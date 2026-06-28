@@ -56,6 +56,10 @@ export function OnboardingHints(): ReactElement | null {
       // rather than the pre-centre origin.
       const screen = useViewportStore.getState().canvasToScreen(seed.position);
       ui.showRadialMenu(seedId, screen);
+      // Pin so the proximity controller doesn't dismiss it when the pointer
+      // drifts away — the radial stays until the user adds a relative (which
+      // calls hideRadialMenu), presses Escape, or clicks empty canvas.
+      ui.pinRadialMenu();
       // Mark only after actually firing, so StrictMode's mount→cleanup→remount
       // (which clears the first timer) still leaves the second timer to run.
       previewedRef.current = true;
