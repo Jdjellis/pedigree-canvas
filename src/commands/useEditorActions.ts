@@ -4,6 +4,7 @@ import { useUIStore } from '../stores/uiStore';
 import { useViewportStore } from '../stores/viewportStore';
 import { generateId } from '../utils/idGenerator';
 import { computeAnnotationDropPosition } from '../utils/annotationPlacement';
+import { computeContentExtent } from '../utils/boundsCalculation';
 import {
   ZOOM_STEP,
   ANNOTATION_DEFAULT_FONT_SIZE,
@@ -46,6 +47,12 @@ export interface EditorActions {
   zoomOut: () => void;
   /** Reset scale to 100% and pan to origin. */
   resetView: () => void;
+  /**
+   * Zoom and pan so the whole pedigree (symbols, labels, and text annotations)
+   * fits centred in the viewport. Falls back to {@link resetView} when the
+   * document is empty or the canvas has not been measured yet.
+   */
+  fitView: () => void;
   /** Activate the select pointer tool. */
   selectTool: () => void;
   /** Activate the pan (hand) tool. */
@@ -144,6 +151,23 @@ export function useEditorActions(): EditorActions {
     useViewportStore.getState().resetView();
   };
 
+  const fitView = (): void => {
+    const { document: doc } = usePedigreeStore.getState();
+    const extent = computeContentExtent(
+      Object.values(doc.individuals),
+      Object.values(doc.textAnnotations),
+    );
+    // Measure the actual stage element (same stage-local convention as the
+    // placement actions) so the content is centred in the visible canvas.
+    const canvasEl = document.querySelector('.konvajs-content');
+    const rect = canvasEl?.getBoundingClientRect();
+    if (!extent || !rect || rect.width === 0 || rect.height === 0) {
+      useViewportStore.getState().resetView();
+      return;
+    }
+    useViewportStore.getState().fitToContent(extent, rect.width, rect.height);
+  };
+
   const selectTool = (): void => {
     useUIStore.getState().setActiveTool('select');
   };
@@ -181,6 +205,7 @@ export function useEditorActions(): EditorActions {
       zoomIn,
       zoomOut,
       resetView,
+      fitView,
       selectTool,
       handTool,
       textTool,

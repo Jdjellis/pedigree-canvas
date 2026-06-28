@@ -96,10 +96,17 @@ export function buildCommands(actions: EditorActions): Command[] {
       run: () => actions.zoomOut(),
     },
     {
-      id: 'view.resetView',
-      title: 'Fit / reset view',
+      id: 'view.fit',
+      title: 'Fit pedigree to screen',
       category: 'view',
-      keywords: ['fit', 'reset', 'view', 'zoom', 'center', 'origin'],
+      keywords: ['fit', 'view', 'zoom', 'center', 'screen', 'content'],
+      run: () => actions.fitView(),
+    },
+    {
+      id: 'view.resetView',
+      title: 'Reset view to 100%',
+      category: 'view',
+      keywords: ['reset', 'view', 'zoom', 'origin', '100'],
       run: () => actions.resetView(),
     },
     {

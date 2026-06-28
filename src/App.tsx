@@ -16,6 +16,7 @@ import { CommandPalette } from './components/ui/CommandPalette';
 import { ShortcutsOverlay } from './components/ui/ShortcutsOverlay';
 import { MenuIsland } from './components/ui/islands/MenuIsland';
 import { ToolIsland } from './components/ui/islands/ToolIsland';
+import { ToolHint } from './components/ui/islands/ToolHint';
 import { ActionsIsland } from './components/ui/islands/ActionsIsland';
 import { ZoomIsland } from './components/ui/islands/ZoomIsland';
 import { HistoryIsland } from './components/ui/islands/HistoryIsland';
@@ -54,6 +55,7 @@ function App() {
 
       <div className={styles.slotTopCenter}>
         <ToolIsland />
+        <ToolHint />
       </div>
 
       <div className={styles.slotTopRight}>

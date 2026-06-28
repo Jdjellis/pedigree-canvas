@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useUIStore } from '../../stores/uiStore';
 import { usePedigreeStore, createDefaultIndividual } from '../../stores/pedigreeStore';
-import { hasParents, hasPartnership, findPartnerships } from '../../utils/graphTraversal';
+import { getPresentPartners, findPartnerships } from '../../utils/graphTraversal';
 import { generateId } from '../../utils/idGenerator';
 import { RelationshipType, GenderIdentity } from '../../types/enums';
 import { PARTNER_SPACING, GENERATION_SPACING, SIBLING_SPACING } from '../../utils/constants';
@@ -23,13 +23,24 @@ export function RadialMenu() {
   const addParentsForChild = usePedigreeStore((s) => s.addParentsForChild);
   const addPartnerToIndividual = usePedigreeStore((s) => s.addPartnerToIndividual);
   const addChildToFamily = usePedigreeStore((s) => s.addChildToFamily);
+  const addSiblingViaNewUnion = usePedigreeStore((s) => s.addSiblingViaNewUnion);
+  const addChildViaNewUnion = usePedigreeStore((s) => s.addChildViaNewUnion);
+  const fillUnionPartner = usePedigreeStore((s) => s.fillUnionPartner);
+  const addParentsToParentlessUnion = usePedigreeStore((s) => s.addParentsToParentlessUnion);
 
   const menuRef = useRef<HTMLDivElement>(null);
 
   const target = targetId ? doc.individuals[targetId] : null;
 
-  const canAddSibling = targetId ? hasParents(doc, targetId) : false;
-  const canAddChild = targetId ? hasPartnership(doc, targetId) : false;
+  // Add Parents is disabled only when the target already has two present parents.
+  const canAddParents = (() => {
+    if (!targetId) return false;
+    const link = Object.values(doc.parentChildLinks).find((l) => l.childId === targetId);
+    if (!link) return true;
+    const union = doc.partnerships[link.parentPartnershipId];
+    if (!union) return true;
+    return getPresentPartners(doc.individuals, union).length < 2;
+  })();
 
   // Hover-driven open/close (with hysteresis) is owned by the proximity
   // controller, useRadialHover. This component only handles Escape-to-dismiss
@@ -50,51 +61,95 @@ export function RadialMenu() {
   }, [visible, hideRadialMenu]);
 
   const handleAddParent = useCallback(() => {
-    if (!target) return;
+    if (!target || !targetId) return;
 
     const childGeneration = target.generation ?? 1;
     const parentGeneration = childGeneration - 1;
+    const parentY = target.position.y - GENERATION_SPACING;
 
+    const existingLink = Object.values(doc.parentChildLinks).find((l) => l.childId === targetId);
+    const union = existingLink ? doc.partnerships[existingLink.parentPartnershipId] : undefined;
+    const partners = union ? getPresentPartners(doc.individuals, union) : [];
+
+    // Case A — a 0-partner sibship: add a couple as parents of the whole sibship.
+    if (union && partners.length === 0) {
+      const childXs = union.childrenIds
+        .map((id) => doc.individuals[id])
+        .filter(Boolean)
+        .map((c) => c.position.x);
+      const midX = (Math.min(...childXs) + Math.max(...childXs)) / 2;
+      const parent1 = createDefaultIndividual({
+        genderIdentity: GenderIdentity.Man, generation: parentGeneration,
+        position: { x: midX - PARTNER_SPACING / 2, y: parentY },
+      });
+      const parent2 = createDefaultIndividual({
+        genderIdentity: GenderIdentity.Woman, generation: parentGeneration,
+        position: { x: midX + PARTNER_SPACING / 2, y: parentY },
+      });
+      addParentsToParentlessUnion(parent1, parent2, union.id);
+      hideRadialMenu();
+      select(parent1.id);
+      return;
+    }
+
+    // Case B — a 1-partner union: add the missing second parent.
+    if (union && partners.length === 1) {
+      const existing = partners[0];
+      const secondParent = createDefaultIndividual({
+        genderIdentity:
+          existing.genderIdentity === GenderIdentity.Man ? GenderIdentity.Woman : GenderIdentity.Man,
+        generation: existing.generation,
+        position: { x: existing.position.x + PARTNER_SPACING, y: existing.position.y },
+      });
+      fillUnionPartner(secondParent, union.id);
+      hideRadialMenu();
+      select(secondParent.id);
+      return;
+    }
+
+    // Two parents already present — nothing to add (also gated in the UI).
+    if (union && partners.length >= 2) return;
+
+    // Case C — no parent union: create a fresh couple above the target.
     const parent1 = createDefaultIndividual({
-      genderIdentity: GenderIdentity.Man,
-      generation: parentGeneration,
-      position: {
-        x: target.position.x - PARTNER_SPACING / 2,
-        y: target.position.y - GENERATION_SPACING,
-      },
+      genderIdentity: GenderIdentity.Man, generation: parentGeneration,
+      position: { x: target.position.x - PARTNER_SPACING / 2, y: parentY },
     });
     const parent2 = createDefaultIndividual({
-      genderIdentity: GenderIdentity.Woman,
-      generation: parentGeneration,
-      position: {
-        x: target.position.x + PARTNER_SPACING / 2,
-        y: target.position.y - GENERATION_SPACING,
-      },
+      genderIdentity: GenderIdentity.Woman, generation: parentGeneration,
+      position: { x: target.position.x + PARTNER_SPACING / 2, y: parentY },
     });
-
     const partnership: PartnershipRelationship = {
-      id: generateId(),
-      type: RelationshipType.Partnership,
-      partner1Id: parent1.id,
-      partner2Id: parent2.id,
-      childrenIds: [target.id],
+      id: generateId(), type: RelationshipType.Partnership,
+      partner1Id: parent1.id, partner2Id: parent2.id, childrenIds: [target.id],
     };
-
     const link: ParentChildRelationship = {
-      id: generateId(),
-      type: RelationshipType.ParentChild,
-      parentPartnershipId: partnership.id,
-      childId: target.id,
-      isAdopted: false,
+      id: generateId(), type: RelationshipType.ParentChild,
+      parentPartnershipId: partnership.id, childId: target.id, isAdopted: false,
     };
-
     addParentsForChild(parent1, parent2, partnership, link, target.id, childGeneration);
     hideRadialMenu();
     select(parent1.id);
-  }, [target, addParentsForChild, hideRadialMenu, select]);
+  }, [target, targetId, doc, addParentsForChild, addParentsToParentlessUnion, fillUnionPartner, hideRadialMenu, select]);
 
   const handleAddPartner = useCallback(() => {
-    if (!target) return;
+    if (!target || !targetId) return;
+
+    // If the target is the sole partner of a 1-partner union, the new partner
+    // becomes the co-parent of its existing children.
+    const soleUnionId = findPartnerships(doc, targetId).find(
+      (id) => getPresentPartners(doc.individuals, doc.partnerships[id]).length === 1,
+    );
+    if (soleUnionId) {
+      const partner = createDefaultIndividual({
+        generation: target.generation,
+        position: { x: target.position.x + PARTNER_SPACING, y: target.position.y },
+      });
+      fillUnionPartner(partner, soleUnionId);
+      hideRadialMenu();
+      select(partner.id);
+      return;
+    }
 
     const partner = createRelativeIndividual(defaultSex, {
       generation: target.generation,
@@ -103,112 +158,113 @@ export function RadialMenu() {
         y: target.position.y,
       },
     });
-
     const partnership: PartnershipRelationship = {
-      id: generateId(),
-      type: RelationshipType.Partnership,
-      partner1Id: target.id,
-      partner2Id: partner.id,
-      childrenIds: [],
+      id: generateId(), type: RelationshipType.Partnership,
+      partner1Id: target.id, partner2Id: partner.id, childrenIds: [],
     };
-
     addPartnerToIndividual(partner, partnership);
     hideRadialMenu();
     select(partner.id);
-  }, [target, defaultSex, addPartnerToIndividual, hideRadialMenu, select]);
+  }, [target, targetId, doc, defaultSex, fillUnionPartner, addPartnerToIndividual, hideRadialMenu, select]);
 
   const handleAddChild = useCallback(() => {
     if (!target || !targetId) return;
 
-    // Find the first partnership this individual is in
     const partnershipIds = findPartnerships(doc, targetId);
-    if (partnershipIds.length === 0) return;
+
+    // No union yet: create a 1-partner union with the target as sole parent.
+    if (partnershipIds.length === 0) {
+      const partnershipId = generateId();
+      const child = createDefaultIndividual({
+        generation: (target.generation ?? 0) + 1,
+        position: { x: target.position.x, y: target.position.y + GENERATION_SPACING },
+      });
+      const partnership: PartnershipRelationship = {
+        id: partnershipId, type: RelationshipType.Partnership,
+        partner1Id: target.id, childrenIds: [child.id],
+      };
+      const link: ParentChildRelationship = {
+        id: generateId(), type: RelationshipType.ParentChild,
+        parentPartnershipId: partnershipId, childId: child.id, isAdopted: false,
+      };
+      addChildViaNewUnion(child, partnership, link);
+      hideRadialMenu();
+      select(child.id);
+      return;
+    }
 
     const partnership = doc.partnerships[partnershipIds[0]];
     if (!partnership) return;
 
-    const p1 = doc.individuals[partnership.partner1Id];
-    const p2 = doc.individuals[partnership.partner2Id];
-    if (!p1 || !p2) return;
-
-    const midX = (p1.position.x + p2.position.x) / 2;
+    // Anchor under the average of whichever partners are present (1 or 2).
+    const partners = getPresentPartners(doc.individuals, partnership);
+    const midX = partners.length
+      ? partners.reduce((s, p) => s + p.position.x, 0) / partners.length
+      : target.position.x;
     const existingChildren = partnership.childrenIds.length;
 
     const child = createRelativeIndividual(defaultSex, {
       generation: (target.generation ?? 0) + 1,
-      position: {
-        x: midX + existingChildren * SIBLING_SPACING,
-        y: target.position.y + GENERATION_SPACING,
-      },
+      position: { x: midX + existingChildren * SIBLING_SPACING, y: target.position.y + GENERATION_SPACING },
     });
-
     const link: ParentChildRelationship = {
-      id: generateId(),
-      type: RelationshipType.ParentChild,
-      parentPartnershipId: partnership.id,
-      childId: child.id,
-      isAdopted: false,
+      id: generateId(), type: RelationshipType.ParentChild,
+      parentPartnershipId: partnership.id, childId: child.id, isAdopted: false,
     };
-
     addChildToFamily(child, partnership.id, link);
     hideRadialMenu();
     select(child.id);
-  }, [
-    target,
-    targetId,
-    doc,
-    defaultSex,
-    addChildToFamily,
-    hideRadialMenu,
-    select,
-  ]);
+  }, [target, targetId, doc, defaultSex, addChildToFamily, addChildViaNewUnion, hideRadialMenu, select]);
 
   const handleAddSibling = useCallback(() => {
     if (!target || !targetId) return;
 
-    // Find parent partnership
-    const parentLink = Object.values(doc.parentChildLinks).find(
-      (l) => l.childId === targetId
-    );
-    if (!parentLink) return;
+    const parentLink = Object.values(doc.parentChildLinks).find((l) => l.childId === targetId);
 
-    const partnership = doc.partnerships[parentLink.parentPartnershipId];
-    if (!partnership) return;
+    // Has real parents (or a single parent): add another child to that union.
+    if (parentLink) {
+      const partnership = doc.partnerships[parentLink.parentPartnershipId];
+      if (!partnership) return;
+      const siblings = partnership.childrenIds
+        .map((id) => doc.individuals[id])
+        .filter(Boolean);
+      const maxX = Math.max(...siblings.map((s) => s.position.x));
+      const sibling = createDefaultIndividual({
+        generation: target.generation,
+        position: { x: maxX + SIBLING_SPACING, y: target.position.y },
+      });
+      const link: ParentChildRelationship = {
+        id: generateId(), type: RelationshipType.ParentChild,
+        parentPartnershipId: partnership.id, childId: sibling.id, isAdopted: false,
+      };
+      addChildToFamily(sibling, partnership.id, link);
+      hideRadialMenu();
+      select(sibling.id);
+      return;
+    }
 
-    // Position to the right of the rightmost sibling
-    const siblings = partnership.childrenIds
-      .map((id) => doc.individuals[id])
-      .filter(Boolean);
-    const maxX = Math.max(...siblings.map((s) => s.position.x));
-
+    // No parents: create a 0-partner sibship holding the target and the new sibling.
+    const partnershipId = generateId();
     const sibling = createRelativeIndividual(defaultSex, {
       generation: target.generation,
-      position: {
-        x: maxX + SIBLING_SPACING,
-        y: target.position.y,
-      },
+      position: { x: target.position.x + SIBLING_SPACING, y: target.position.y },
     });
-
-    const link: ParentChildRelationship = {
-      id: generateId(),
-      type: RelationshipType.ParentChild,
-      parentPartnershipId: partnership.id,
-      childId: sibling.id,
-      isAdopted: false,
+    const partnership: PartnershipRelationship = {
+      id: partnershipId, type: RelationshipType.Partnership,
+      childrenIds: [target.id, sibling.id],
     };
-
-    addChildToFamily(sibling, partnership.id, link);
+    const targetLink: ParentChildRelationship = {
+      id: generateId(), type: RelationshipType.ParentChild,
+      parentPartnershipId: partnershipId, childId: target.id, isAdopted: false,
+    };
+    const siblingLink: ParentChildRelationship = {
+      id: generateId(), type: RelationshipType.ParentChild,
+      parentPartnershipId: partnershipId, childId: sibling.id, isAdopted: false,
+    };
+    addSiblingViaNewUnion(target, sibling, partnership, targetLink, siblingLink);
     hideRadialMenu();
     select(sibling.id);
-  }, [
-    target,
-    targetId,
-    doc,
-    defaultSex,
-    addChildToFamily,
-    hideRadialMenu,
-    select,
-  ]);
+  }, [target, targetId, doc, defaultSex, addChildToFamily, addSiblingViaNewUnion, hideRadialMenu, select]);
 
   if (!visible || !target || editingLocked) return null;
 
@@ -223,9 +279,9 @@ export function RadialMenu() {
     >
       <div className={styles.menu}>
         <button
-          className={clsx(styles.option, styles.top)}
-          onClick={handleAddParent}
-          title="Add Parents"
+          className={clsx(styles.option, styles.top, !canAddParents && styles.disabled)}
+          onClick={canAddParents ? handleAddParent : undefined}
+          title={canAddParents ? 'Add Parents' : 'Both parents already added'}
         >
           Parent
         </button>
@@ -237,32 +293,16 @@ export function RadialMenu() {
           Partner
         </button>
         <button
-          className={clsx(
-            styles.option,
-            styles.bottom,
-            !canAddChild && styles.disabled
-          )}
-          onClick={canAddChild ? handleAddChild : undefined}
-          title={
-            canAddChild
-              ? 'Add Child'
-              : 'Add a partner first to add children'
-          }
+          className={clsx(styles.option, styles.bottom)}
+          onClick={handleAddChild}
+          title="Add Child"
         >
           Child
         </button>
         <button
-          className={clsx(
-            styles.option,
-            styles.left,
-            !canAddSibling && styles.disabled
-          )}
-          onClick={canAddSibling ? handleAddSibling : undefined}
-          title={
-            canAddSibling
-              ? 'Add Sibling'
-              : 'Individual needs parents to add siblings'
-          }
+          className={clsx(styles.option, styles.left)}
+          onClick={handleAddSibling}
+          title="Add Sibling"
         >
           Sibling
         </button>

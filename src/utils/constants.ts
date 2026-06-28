@@ -8,6 +8,12 @@ export const DEFAULT_CONDITION_COLORS = ['#1a1a1a', '#e63946', '#457b9d', '#2a9d
 
 // Layout spacing
 export const GENERATION_SPACING = 150;
+/**
+ * Vertical gap between a parentless sibship's horizontal bar and the top of its
+ * children. Half a generation reads as "these are siblings" without implying a
+ * parent couple sits above.
+ */
+export const PARENTLESS_SIBSHIP_RISE = GENERATION_SPACING / 2;
 export const SIBLING_SPACING = 80;
 export const PARTNER_SPACING = 120;
 export const PARENT_CHILD_OFFSET = 50;
@@ -61,9 +67,15 @@ export const LABEL_OFFSET_Y = 8;
 
 // Free-text annotations
 /** Default font size (canvas units) for a newly created text annotation. */
-export const ANNOTATION_DEFAULT_FONT_SIZE = 18;
+export const ANNOTATION_DEFAULT_FONT_SIZE = 10;
 /** Placeholder text a new annotation opens with before the user types. */
 export const ANNOTATION_PLACEHOLDER_TEXT = 'Text';
+/**
+ * Rough average glyph width as a fraction of the font size, used to estimate a
+ * text block's width without measuring it on a canvas. Shared by the on-canvas
+ * selection box, viewport fit, and smart text placement so they all agree.
+ */
+export const ANNOTATION_GLYPH_WIDTH_RATIO = 0.6;
 /**
  * Vertical gap (canvas units) left between the lowest existing content and a
  * newly dropped annotation, so it lands in clear space rather than on top of a

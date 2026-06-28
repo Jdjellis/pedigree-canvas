@@ -6,6 +6,7 @@ import {
   VitalStatus,
   RelationshipType,
 } from '../types/enums';
+import { PARENTLESS_SIBSHIP_RISE } from '../utils/constants';
 
 /**
  * Build a small but representative fixture pedigree:
@@ -281,5 +282,67 @@ describe('buildPedigreeSvg', () => {
   it('does not render an "Investigations" heading in the key', () => {
     const svg = buildPedigreeSvg(makeFixture(), 'Test Pedigree');
     expect(svg).not.toContain('>Investigations</text>');
+  });
+});
+
+function minimalDoc(
+  individuals: Record<string, Individual>,
+  partnerships: PedigreeDocument['partnerships'],
+  parentChildLinks: PedigreeDocument['parentChildLinks'],
+): PedigreeDocument {
+  return {
+    metadata: { id: 'd', title: 'T', createdAt: '2026-06-27T00:00:00.000Z', updatedAt: '2026-06-27T00:00:00.000Z', version: '1.0.0' },
+    individuals, partnerships, parentChildLinks,
+    twinGroups: {}, textAnnotations: {},
+    generationOrder: [], legendConfig: { entries: [], position: { x: 0, y: 0 } },
+  };
+}
+
+function person(id: string, x: number, y: number): Individual {
+  return {
+    id, genderIdentity: GenderIdentity.Unknown, vitalStatus: VitalStatus.Alive,
+    conditionIds: [], conditions: [], investigations: [],
+    isProband: false, isPregnancy: false, position: { x, y }, annotations: [],
+  };
+}
+
+describe('parentless sibship rendering', () => {
+  it('draws a bar above the siblings and a drop to each, with no parent descent', () => {
+    const a = person('a', 100, 300);
+    const b = person('b', 200, 300);
+    const doc = minimalDoc(
+      { a, b },
+      { u1: { id: 'u1', type: RelationshipType.Partnership, childrenIds: ['a', 'b'] } },
+      {
+        l1: { id: 'l1', type: RelationshipType.ParentChild, parentPartnershipId: 'u1', childId: 'a', isAdopted: false },
+        l2: { id: 'l2', type: RelationshipType.ParentChild, parentPartnershipId: 'u1', childId: 'b', isAdopted: false },
+      },
+    );
+    const svg = buildPedigreeSvg(doc);
+    const barY = 300 - PARENTLESS_SIBSHIP_RISE; // 225
+
+    expect(svg).toContain(`<line x1="100" y1="${barY}" x2="200" y2="${barY}"`); // bar
+    expect(svg).toContain(`<line x1="100" y1="${barY}" x2="100" y2="300"`); // drop to a
+    expect(svg).toContain(`<line x1="200" y1="${barY}" x2="200" y2="300"`); // drop to b
+    // No descent line rises above the bar.
+    expect(svg).not.toContain(`y2="${barY - 1}"`);
+  });
+});
+
+describe('single-parent union rendering', () => {
+  it('drops a straight vertical line from the lone parent to the child', () => {
+    const parent = person('p', 100, 100);
+    const child = person('c', 100, 250);
+    const doc = minimalDoc(
+      { p: parent, c: child },
+      { u1: { id: 'u1', type: RelationshipType.Partnership, partner1Id: 'p', childrenIds: ['c'] } },
+      { l1: { id: 'l1', type: RelationshipType.ParentChild, parentPartnershipId: 'u1', childId: 'c', isAdopted: false } },
+    );
+    const svg = buildPedigreeSvg(doc);
+    const midY = 100 + (250 - 100) / 2; // 175
+
+    // Two collinear segments at x=100 forming one straight descent.
+    expect(svg).toContain(`<line x1="100" y1="100" x2="100" y2="${midY}"`);
+    expect(svg).toContain(`<line x1="100" y1="${midY}" x2="100" y2="250"`);
   });
 });

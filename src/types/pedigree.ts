@@ -123,8 +123,8 @@ export interface PartnershipRelationship {
     | RelationshipType.Partnership
     | RelationshipType.Consanguinity
     | RelationshipType.Separation;
-  partner1Id: string;
-  partner2Id: string;
+  partner1Id?: string;
+  partner2Id?: string;
   childrenIds: string[];
   isAdoptive?: boolean;
 }

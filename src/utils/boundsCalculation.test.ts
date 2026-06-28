@@ -1,7 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { toRomanNumeral, computeGenerationNumerals } from './boundsCalculation';
-import type { Individual } from '../types/pedigree';
+import {
+  toRomanNumeral,
+  computeGenerationNumerals,
+  computeContentExtent,
+} from './boundsCalculation';
+import type { Individual, TextAnnotation } from '../types/pedigree';
 import { GenderIdentity, VitalStatus } from '../types/enums';
+import { SYMBOL_SIZE } from './constants';
 
 /**
  * Build a minimal individual at a given generation and y position. Only the
@@ -95,5 +100,53 @@ describe('computeGenerationNumerals', () => {
     const result = computeGenerationNumerals([withGen, missingGen]);
 
     expect(result).toEqual([{ generation: 0, roman: 'I', y: 150 }]);
+  });
+});
+
+describe('computeContentExtent', () => {
+  const HALF = SYMBOL_SIZE / 2; // 20
+  const LABEL = SYMBOL_SIZE; // 40
+
+  /** Individual at an explicit (x, y); makeIndividual pins x to 0 otherwise. */
+  function indAt(x: number, y: number): Individual {
+    return { ...makeIndividual('i', 0, y), position: { x, y } };
+  }
+
+  function annoAt(
+    x: number,
+    y: number,
+    text: string,
+    fontSize: number,
+  ): TextAnnotation {
+    return { id: 'a', text, position: { x, y }, fontSize };
+  }
+
+  it('returns null when there is no content', () => {
+    expect(computeContentExtent([])).toBeNull();
+    expect(computeContentExtent([], [])).toBeNull();
+  });
+
+  it('expands a single symbol by its half-size, with label room below', () => {
+    expect(computeContentExtent([indAt(0, 200)])).toEqual({
+      minX: -HALF,
+      minY: 200 - HALF,
+      maxX: HALF,
+      maxY: 200 + HALF + LABEL,
+    });
+  });
+
+  it('spans the extreme symbols on every side', () => {
+    expect(computeContentExtent([indAt(0, 0), indAt(100, 100)])).toEqual({
+      minX: -HALF,
+      minY: -HALF,
+      maxX: 100 + HALF,
+      maxY: 100 + HALF + LABEL,
+    });
+  });
+
+  it('grows the box to include an annotation beyond the symbols', () => {
+    // 'AB' at fontSize 10: width = max(10, 2*10*0.6) = 12 → half 6.
+    const extent = computeContentExtent([indAt(0, 0)], [annoAt(200, 0, 'AB', 10)]);
+    expect(extent?.maxX).toBe(206);
   });
 });

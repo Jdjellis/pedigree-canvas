@@ -551,3 +551,179 @@ describe('pedigreeStore layout reflow on add (issue #30)', () => {
     expect(individuals.child.position.x).toBe(0);
   });
 });
+
+function parentChildLink(partnershipId: string, childId: string): ParentChildRelationship {
+  return { id: generateId(), type: RelationshipType.ParentChild, parentPartnershipId: partnershipId, childId, isAdopted: false };
+}
+
+describe('addSiblingViaNewUnion', () => {
+  it('creates a 0-partner union holding the target and the new sibling', () => {
+    const store = usePedigreeStore.getState();
+    const target = createDefaultIndividual({ generation: 1, position: { x: 0, y: 0 } });
+    store.addIndividual(target);
+
+    const sibling = createDefaultIndividual({ generation: 1, position: { x: 80, y: 0 } });
+    const partnership: PartnershipRelationship = {
+      id: 'u1', type: RelationshipType.Partnership, childrenIds: [target.id, sibling.id],
+    };
+    store.addSiblingViaNewUnion(
+      target, sibling, partnership,
+      parentChildLink('u1', target.id), parentChildLink('u1', sibling.id),
+    );
+
+    const doc = usePedigreeStore.getState().document;
+    expect(doc.individuals[sibling.id]).toBeDefined();
+    expect(doc.partnerships['u1'].partner1Id).toBeUndefined();
+    expect(doc.partnerships['u1'].partner2Id).toBeUndefined();
+    expect(doc.partnerships['u1'].childrenIds).toEqual([target.id, sibling.id]);
+    expect(Object.values(doc.parentChildLinks).filter((l) => l.parentPartnershipId === 'u1')).toHaveLength(2);
+  });
+
+  it('is a single undo step', () => {
+    const store = usePedigreeStore.getState();
+    const target = createDefaultIndividual({ generation: 1 });
+    store.addIndividual(target);
+    usePedigreeStore.temporal.getState().clear();
+
+    const sibling = createDefaultIndividual({ generation: 1 });
+    store.addSiblingViaNewUnion(
+      target, sibling,
+      { id: 'u1', type: RelationshipType.Partnership, childrenIds: [target.id, sibling.id] },
+      parentChildLink('u1', target.id), parentChildLink('u1', sibling.id),
+    );
+    usePedigreeStore.temporal.getState().undo();
+
+    const doc = usePedigreeStore.getState().document;
+    expect(doc.individuals[sibling.id]).toBeUndefined();
+    expect(doc.partnerships['u1']).toBeUndefined();
+  });
+});
+
+describe('addChildViaNewUnion', () => {
+  it('creates a 1-partner union with the target as sole parent', () => {
+    const store = usePedigreeStore.getState();
+    const parent = createDefaultIndividual({ generation: 0, position: { x: 0, y: 0 } });
+    store.addIndividual(parent);
+
+    const child = createDefaultIndividual({ generation: 1, position: { x: 0, y: 150 } });
+    store.addChildViaNewUnion(
+      child,
+      { id: 'u1', type: RelationshipType.Partnership, partner1Id: parent.id, childrenIds: [child.id] },
+      parentChildLink('u1', child.id),
+    );
+
+    const doc = usePedigreeStore.getState().document;
+    expect(doc.individuals[child.id]).toBeDefined();
+    expect(doc.partnerships['u1'].partner1Id).toBe(parent.id);
+    expect(doc.partnerships['u1'].partner2Id).toBeUndefined();
+    expect(doc.partnerships['u1'].childrenIds).toEqual([child.id]);
+  });
+
+  it('addChildViaNewUnion is a single undo step', () => {
+    const store = usePedigreeStore.getState();
+    const parent = createDefaultIndividual({ generation: 0, position: { x: 0, y: 0 } });
+    store.addIndividual(parent);
+    usePedigreeStore.temporal.getState().clear();
+
+    const child = createDefaultIndividual({ generation: 1, position: { x: 0, y: 150 } });
+    store.addChildViaNewUnion(
+      child,
+      { id: 'u1', type: RelationshipType.Partnership, partner1Id: parent.id, childrenIds: [child.id] },
+      parentChildLink('u1', child.id),
+    );
+    usePedigreeStore.temporal.getState().undo();
+
+    const doc = usePedigreeStore.getState().document;
+    expect(doc.individuals[child.id]).toBeUndefined();
+    expect(doc.partnerships['u1']).toBeUndefined();
+  });
+});
+
+describe('fillUnionPartner', () => {
+  it('fills the empty slot of a 1-partner union', () => {
+    const store = usePedigreeStore.getState();
+    const parent = createDefaultIndividual({ generation: 0, position: { x: 0, y: 0 } });
+    const child = createDefaultIndividual({ generation: 1, position: { x: 0, y: 150 } });
+    store.addIndividual(parent);
+    store.addChildViaNewUnion(
+      child,
+      { id: 'u1', type: RelationshipType.Partnership, partner1Id: parent.id, childrenIds: [child.id] },
+      parentChildLink('u1', child.id),
+    );
+
+    const partner = createDefaultIndividual({ generation: 0, position: { x: 120, y: 0 } });
+    store.fillUnionPartner(partner, 'u1');
+
+    const doc = usePedigreeStore.getState().document;
+    expect(doc.individuals[partner.id]).toBeDefined();
+    expect(doc.partnerships['u1'].partner2Id).toBe(partner.id);
+  });
+
+  it('fillUnionPartner is a single undo step', () => {
+    const store = usePedigreeStore.getState();
+    const parent = createDefaultIndividual({ generation: 0, position: { x: 0, y: 0 } });
+    const child = createDefaultIndividual({ generation: 1, position: { x: 0, y: 150 } });
+    store.addIndividual(parent);
+    store.addChildViaNewUnion(
+      child,
+      { id: 'u1', type: RelationshipType.Partnership, partner1Id: parent.id, childrenIds: [child.id] },
+      parentChildLink('u1', child.id),
+    );
+    usePedigreeStore.temporal.getState().clear();
+
+    const partner = createDefaultIndividual({ generation: 0, position: { x: 120, y: 0 } });
+    store.fillUnionPartner(partner, 'u1');
+    usePedigreeStore.temporal.getState().undo();
+
+    const doc = usePedigreeStore.getState().document;
+    expect(doc.individuals[partner.id]).toBeUndefined();
+    expect(doc.partnerships['u1'].partner2Id).toBeUndefined();
+  });
+});
+
+describe('addParentsToParentlessUnion', () => {
+  it('fills both slots of a 0-partner sibship without adding a child link', () => {
+    const store = usePedigreeStore.getState();
+    const a = createDefaultIndividual({ generation: 1, position: { x: 0, y: 0 } });
+    const b = createDefaultIndividual({ generation: 1, position: { x: 80, y: 0 } });
+    store.addIndividual(a);
+    store.addSiblingViaNewUnion(
+      a, b,
+      { id: 'u1', type: RelationshipType.Partnership, childrenIds: [a.id, b.id] },
+      parentChildLink('u1', a.id), parentChildLink('u1', b.id),
+    );
+    const linksBefore = Object.keys(usePedigreeStore.getState().document.parentChildLinks).length;
+
+    const dad = createDefaultIndividual({ generation: 0, position: { x: -60, y: -150 } });
+    const mom = createDefaultIndividual({ generation: 0, position: { x: 60, y: -150 } });
+    store.addParentsToParentlessUnion(dad, mom, 'u1');
+
+    const doc = usePedigreeStore.getState().document;
+    expect(doc.partnerships['u1'].partner1Id).toBe(dad.id);
+    expect(doc.partnerships['u1'].partner2Id).toBe(mom.id);
+    expect(Object.keys(doc.parentChildLinks)).toHaveLength(linksBefore);
+  });
+
+  it('addParentsToParentlessUnion is a single undo step', () => {
+    const store = usePedigreeStore.getState();
+    const a = createDefaultIndividual({ generation: 1, position: { x: 0, y: 0 } });
+    const b = createDefaultIndividual({ generation: 1, position: { x: 80, y: 0 } });
+    store.addIndividual(a);
+    store.addSiblingViaNewUnion(
+      a, b,
+      { id: 'u1', type: RelationshipType.Partnership, childrenIds: [a.id, b.id] },
+      parentChildLink('u1', a.id), parentChildLink('u1', b.id),
+    );
+    usePedigreeStore.temporal.getState().clear();
+
+    const dad = createDefaultIndividual({ generation: 0, position: { x: -60, y: -150 } });
+    const mom = createDefaultIndividual({ generation: 0, position: { x: 60, y: -150 } });
+    store.addParentsToParentlessUnion(dad, mom, 'u1');
+    usePedigreeStore.temporal.getState().undo();
+
+    const doc = usePedigreeStore.getState().document;
+    expect(doc.individuals[dad.id]).toBeUndefined();
+    expect(doc.partnerships['u1'].partner1Id).toBeUndefined();
+    expect(doc.partnerships['u1'].partner2Id).toBeUndefined();
+  });
+});

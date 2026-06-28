@@ -1,4 +1,4 @@
-import type { PedigreeDocument, Individual } from '../types/pedigree';
+import type { PedigreeDocument, Individual, PartnershipRelationship } from '../types/pedigree';
 
 export function findParents(
   doc: PedigreeDocument,
@@ -9,8 +9,8 @@ export function findParents(
       const partnership = doc.partnerships[link.parentPartnershipId];
       if (!partnership) continue;
 
-      const p1 = doc.individuals[partnership.partner1Id];
-      const p2 = doc.individuals[partnership.partner2Id];
+      const p1 = partnership.partner1Id ? doc.individuals[partnership.partner1Id] : undefined;
+      const p2 = partnership.partner2Id ? doc.individuals[partnership.partner2Id] : undefined;
 
       // Return by biological role if possible, otherwise by order
       return {
@@ -72,13 +72,30 @@ export function findPartnerships(
     .map((p) => p.id);
 }
 
+/** The partner individuals that actually exist for a union (0, 1, or 2). */
+export function getPresentPartners(
+  individuals: Record<string, Individual>,
+  partnership: PartnershipRelationship,
+): Individual[] {
+  const result: Individual[] = [];
+  const p1 = partnership.partner1Id ? individuals[partnership.partner1Id] : undefined;
+  const p2 = partnership.partner2Id ? individuals[partnership.partner2Id] : undefined;
+  if (p1) result.push(p1);
+  if (p2) result.push(p2);
+  return result;
+}
+
+/** True only when the individual's parent union has at least one present partner. */
 export function hasParents(
   doc: PedigreeDocument,
-  individualId: string
+  individualId: string,
 ): boolean {
-  return Object.values(doc.parentChildLinks).some(
-    (link) => link.childId === individualId
-  );
+  for (const link of Object.values(doc.parentChildLinks)) {
+    if (link.childId !== individualId) continue;
+    const p = doc.partnerships[link.parentPartnershipId];
+    if (p && (p.partner1Id || p.partner2Id)) return true;
+  }
+  return false;
 }
 
 export function hasPartnership(

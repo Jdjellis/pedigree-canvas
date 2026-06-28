@@ -1,0 +1,32 @@
+/**
+ * Hint strip shown under the toolbar (see ToolHint.tsx). Non-interactive: it
+ * sits in the click-through top-centre slot so canvas drags pass straight
+ * through it.
+ */
+.hint {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: 460px;
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: center;
+  color: var(--color-text-secondary);
+  user-select: none;
+  pointer-events: none;
+}
+
+.hint kbd {
+  font-family: inherit;
+  font-size: 12px;
+  padding: 1px 6px;
+  border: 1px solid var(--color-border, rgba(0, 0, 0, 0.18));
+  border-radius: 4px;
+  background: var(--color-surface, #ffffff);
+  color: var(--color-text);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.05);
+  white-space: nowrap;
+}

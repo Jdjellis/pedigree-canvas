@@ -6,10 +6,11 @@ import {
   findPartnerships,
   hasParents,
   hasPartnership,
+  getPresentPartners,
 } from './graphTraversal';
 import { RelationshipType } from '../types/enums';
 import { createDefaultDocument, createDefaultIndividual } from '../stores/pedigreeStore';
-import type { PedigreeDocument } from '../types/pedigree';
+import type { PedigreeDocument, PartnershipRelationship } from '../types/pedigree';
 
 /**
  * Builds a small nuclear family:
@@ -158,5 +159,49 @@ describe('hasPartnership', () => {
     const { doc, fatherId, lonerId } = makeFamily();
     expect(hasPartnership(doc, fatherId)).toBe(true);
     expect(hasPartnership(doc, lonerId)).toBe(false);
+  });
+});
+
+describe('getPresentPartners', () => {
+  it('returns only the partner individuals that exist', () => {
+    const doc = createDefaultDocument();
+    const dad = createDefaultIndividual();
+    doc.individuals[dad.id] = dad;
+
+    const oneParent: PartnershipRelationship = {
+      id: 'u1', type: RelationshipType.Partnership,
+      partner1Id: dad.id, childrenIds: [],
+    };
+    expect(getPresentPartners(doc.individuals, oneParent).map((p) => p.id)).toEqual([dad.id]);
+
+    const sibship: PartnershipRelationship = { id: 'u2', type: RelationshipType.Partnership, childrenIds: [] };
+    expect(getPresentPartners(doc.individuals, sibship)).toEqual([]);
+  });
+});
+
+describe('hasParents with partnerless unions', () => {
+  function sibshipDoc() {
+    const doc = createDefaultDocument();
+    const a = createDefaultIndividual();
+    const b = createDefaultIndividual();
+    doc.individuals[a.id] = a;
+    doc.individuals[b.id] = b;
+    doc.partnerships['s1'] = { id: 's1', type: RelationshipType.Partnership, childrenIds: [a.id, b.id] };
+    doc.parentChildLinks['l1'] = { id: 'l1', type: RelationshipType.ParentChild, parentPartnershipId: 's1', childId: a.id, isAdopted: false };
+    doc.parentChildLinks['l2'] = { id: 'l2', type: RelationshipType.ParentChild, parentPartnershipId: 's1', childId: b.id, isAdopted: false };
+    return { doc, aId: a.id };
+  }
+
+  it('reports no parents for a member of a 0-partner sibship', () => {
+    const { doc, aId } = sibshipDoc();
+    expect(hasParents(doc, aId)).toBe(false);
+  });
+
+  it('reports parents once a partner is filled into the union', () => {
+    const { doc, aId } = sibshipDoc();
+    const parent = createDefaultIndividual();
+    doc.individuals[parent.id] = parent;
+    doc.partnerships['s1'].partner1Id = parent.id;
+    expect(hasParents(doc, aId)).toBe(true);
   });
 });

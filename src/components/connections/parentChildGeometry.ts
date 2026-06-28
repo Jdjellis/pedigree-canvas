@@ -1,3 +1,5 @@
+import { PARENTLESS_SIBSHIP_RISE } from '../../utils/constants';
+
 /**
  * Pure geometry for the parent -> child connector ("sibship") routing.
  *
@@ -69,6 +71,29 @@ export function computeParentChildSegments(
       spanMinX === spanMaxX
         ? null
         : [spanMinX, sibshipY, spanMaxX, sibshipY],
+    childDrops: children.map((c) => [c.x, sibshipY, c.x, c.y]),
+  };
+}
+
+/**
+ * Segments for a sibship that has NO parents: a horizontal bar a fixed rise
+ * above the children, a vertical drop to each child, and no parent drop.
+ *
+ * @param children Anchor points of the children (must be non-empty).
+ */
+export function computeParentlessSibshipSegments(
+  children: ChildAnchor[],
+): { sibshipY: number; sibship: LineSegment | null; childDrops: LineSegment[] } {
+  const childTopY = Math.min(...children.map((c) => c.y));
+  const sibshipY = childTopY - PARENTLESS_SIBSHIP_RISE;
+
+  const childXs = children.map((c) => c.x);
+  const spanMinX = Math.min(...childXs);
+  const spanMaxX = Math.max(...childXs);
+
+  return {
+    sibshipY,
+    sibship: spanMinX === spanMaxX ? null : [spanMinX, sibshipY, spanMaxX, sibshipY],
     childDrops: children.map((c) => [c.x, sibshipY, c.x, c.y]),
   };
 }

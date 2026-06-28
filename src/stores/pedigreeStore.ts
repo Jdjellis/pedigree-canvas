@@ -212,6 +212,24 @@ interface PedigreeState {
     partnershipId: string,
     link: ParentChildRelationship,
   ) => void;
+  addSiblingViaNewUnion: (
+    target: Individual,
+    sibling: Individual,
+    partnership: PartnershipRelationship,
+    targetLink: ParentChildRelationship,
+    siblingLink: ParentChildRelationship,
+  ) => void;
+  addChildViaNewUnion: (
+    child: Individual,
+    partnership: PartnershipRelationship,
+    link: ParentChildRelationship,
+  ) => void;
+  fillUnionPartner: (partner: Individual, partnershipId: string) => void;
+  addParentsToParentlessUnion: (
+    parent1: Individual,
+    parent2: Individual,
+    partnershipId: string,
+  ) => void;
 
   // Legend actions
   addLegendEntry: (entry: LegendEntry) => void;
@@ -645,16 +663,18 @@ export const usePedigreeStore = create<PedigreeState>()(
             partnership.partner1Id === partner.id
               ? partnership.partner2Id
               : partnership.partner1Id;
-          individuals = applyMoves(
-            individuals,
-            makeRoomForPartner(
+          if (targetId) {
+            individuals = applyMoves(
               individuals,
-              state.document.partnerships,
-              targetId,
-              partner.id,
-              MIN_GENERATION_NODE_SPACING,
-            ),
-          );
+              makeRoomForPartner(
+                individuals,
+                state.document.partnerships,
+                targetId,
+                partner.id,
+                MIN_GENERATION_NODE_SPACING,
+              ),
+            );
+          }
           return {
             document: {
               ...state.document,
@@ -716,6 +736,126 @@ export const usePedigreeStore = create<PedigreeState>()(
                 ...state.document.parentChildLinks,
                 [link.id]: link,
               },
+            },
+          };
+        }),
+
+      addSiblingViaNewUnion: (_target, sibling, partnership, targetLink, siblingLink) =>
+        set((state) => {
+          let individuals: Record<string, Individual> = {
+            ...state.document.individuals,
+            [sibling.id]: sibling,
+          };
+          const partnerships = {
+            ...state.document.partnerships,
+            [partnership.id]: partnership,
+          };
+          if (sibling.generation !== undefined) {
+            individuals = applyGenerationRespacing(individuals, partnerships, sibling.generation);
+          }
+          return {
+            document: {
+              ...state.document,
+              metadata: { ...state.document.metadata, updatedAt: new Date().toISOString() },
+              individuals,
+              partnerships,
+              parentChildLinks: {
+                ...state.document.parentChildLinks,
+                [targetLink.id]: targetLink,
+                [siblingLink.id]: siblingLink,
+              },
+            },
+          };
+        }),
+
+      addChildViaNewUnion: (child, partnership, link) =>
+        set((state) => {
+          let individuals: Record<string, Individual> = {
+            ...state.document.individuals,
+            [child.id]: child,
+          };
+          const partnerships = {
+            ...state.document.partnerships,
+            [partnership.id]: partnership,
+          };
+          if (child.generation !== undefined) {
+            individuals = applyGenerationRespacing(individuals, partnerships, child.generation);
+          }
+          return {
+            document: {
+              ...state.document,
+              metadata: { ...state.document.metadata, updatedAt: new Date().toISOString() },
+              individuals,
+              partnerships,
+              parentChildLinks: { ...state.document.parentChildLinks, [link.id]: link },
+            },
+          };
+        }),
+
+      fillUnionPartner: (partner, partnershipId) =>
+        set((state) => {
+          const partnership = state.document.partnerships[partnershipId];
+          if (!partnership) return state;
+
+          const updatedPartnership = !partnership.partner1Id
+            ? { ...partnership, partner1Id: partner.id }
+            : { ...partnership, partner2Id: partner.id };
+
+          let individuals: Record<string, Individual> = {
+            ...state.document.individuals,
+            [partner.id]: partner,
+          };
+          const partnerships = {
+            ...state.document.partnerships,
+            [partnershipId]: updatedPartnership,
+          };
+          // Both slots are now filled, so re-centre the couple over their children.
+          individuals = applyMoves(
+            individuals,
+            centerParentsOverChildren(individuals, updatedPartnership),
+          );
+          return {
+            document: {
+              ...state.document,
+              metadata: { ...state.document.metadata, updatedAt: new Date().toISOString() },
+              individuals,
+              partnerships,
+            },
+          };
+        }),
+
+      addParentsToParentlessUnion: (parent1, parent2, partnershipId) =>
+        set((state) => {
+          const partnership = state.document.partnerships[partnershipId];
+          if (!partnership) return state;
+
+          const updatedPartnership = {
+            ...partnership,
+            partner1Id: parent1.id,
+            partner2Id: parent2.id,
+          };
+          let individuals: Record<string, Individual> = {
+            ...state.document.individuals,
+            [parent1.id]: parent1,
+            [parent2.id]: parent2,
+          };
+          const partnerships = {
+            ...state.document.partnerships,
+            [partnershipId]: updatedPartnership,
+          };
+          individuals = applyMoves(
+            individuals,
+            centerParentsOverChildren(individuals, updatedPartnership),
+          );
+          if (parent1.generation !== undefined) {
+            individuals = applyGenerationRespacing(individuals, partnerships, parent1.generation);
+          }
+          return {
+            document: {
+              ...state.document,
+              metadata: { ...state.document.metadata, updatedAt: new Date().toISOString() },
+              individuals,
+              partnerships,
             },
           };
         }),

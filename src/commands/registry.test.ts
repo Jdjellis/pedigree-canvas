@@ -16,6 +16,7 @@ function makeNoopActions(): EditorActions {
     zoomIn: vi.fn(),
     zoomOut: vi.fn(),
     resetView: vi.fn(),
+    fitView: vi.fn(),
     selectTool: vi.fn(),
     handTool: vi.fn(),
     textTool: vi.fn(),

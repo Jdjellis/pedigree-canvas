@@ -6,7 +6,11 @@ import type {
   ParentChildRelationship,
 } from '../../types/pedigree';
 import { LINE_COLOR, LINE_WIDTH, DASH_PATTERN } from '../../utils/constants';
-import { computeParentChildSegments } from './parentChildGeometry';
+import { getPresentPartners } from '../../utils/graphTraversal';
+import {
+  computeParentChildSegments,
+  computeParentlessSibshipSegments,
+} from './parentChildGeometry';
 
 interface ParentChildLineProps {
   partnership: PartnershipRelationship;
@@ -19,63 +23,46 @@ export function ParentChildLine({
   individuals,
   parentChildLinks,
 }: ParentChildLineProps) {
-  const p1 = individuals[partnership.partner1Id];
-  const p2 = individuals[partnership.partner2Id];
-
-  if (!p1 || !p2) return null;
-  if (partnership.childrenIds.length === 0) return null;
-
   const children = partnership.childrenIds
     .map((id) => individuals[id])
-    .filter(Boolean);
-
+    .filter((c): c is Individual => Boolean(c));
   if (children.length === 0) return null;
 
-  const partnershipY = (p1.position.y + p2.position.y) / 2;
-  const partnershipMidX = (p1.position.x + p2.position.x) / 2;
+  const partners = getPresentPartners(individuals, partnership);
+  const anchors = children.map((c) => ({ x: c.position.x, y: c.position.y }));
 
-  const { parentDrop, sibship, childDrops } = computeParentChildSegments(
-    partnershipMidX,
-    partnershipY,
-    children.map((c) => ({ x: c.position.x, y: c.position.y })),
-  );
+  let parentDrop: [number, number, number, number] | null = null;
+  let sibship: [number, number, number, number] | null = null;
+  let childDrops: [number, number, number, number][] = [];
+
+  // 0 partners → bare sibship bar (no descent up); 1–2 partners → descent from the averaged anchor.
+  if (partners.length === 0) {
+    ({ sibship, childDrops } = computeParentlessSibshipSegments(anchors));
+  } else {
+    const anchorX = partners.reduce((s, p) => s + p.position.x, 0) / partners.length;
+    const anchorY = partners.reduce((s, p) => s + p.position.y, 0) / partners.length;
+    ({ parentDrop, sibship, childDrops } = computeParentChildSegments(anchorX, anchorY, anchors));
+  }
 
   const lines: JSX.Element[] = [];
 
-  // Vertical line from partnership midpoint down to the sibship line.
-  lines.push(
-    <Line
-      key={`vert-${partnership.id}`}
-      points={parentDrop}
-      stroke={LINE_COLOR}
-      strokeWidth={LINE_WIDTH}
-    />
-  );
-
-  // Horizontal sibship line joining the parents' drop to every child drop.
-  // Drawn whenever anything is horizontally offset (incl. a single child whose
-  // x differs from the partnership midpoint), so the connector never breaks
-  // into disconnected stubs.
-  if (sibship) {
+  if (parentDrop) {
     lines.push(
-      <Line
-        key={`sib-${partnership.id}`}
-        points={sibship}
-        stroke={LINE_COLOR}
-        strokeWidth={LINE_WIDTH}
-      />
+      <Line key={`vert-${partnership.id}`} points={parentDrop} stroke={LINE_COLOR} strokeWidth={LINE_WIDTH} />,
     );
   }
 
-  // Vertical drops from the sibship line down to each child.
+  if (sibship) {
+    lines.push(
+      <Line key={`sib-${partnership.id}`} points={sibship} stroke={LINE_COLOR} strokeWidth={LINE_WIDTH} />,
+    );
+  }
+
   children.forEach((child, i) => {
     const link = Object.values(parentChildLinks).find(
-      (l) =>
-        l.parentPartnershipId === partnership.id &&
-        l.childId === child.id
+      (l) => l.parentPartnershipId === partnership.id && l.childId === child.id,
     );
     const isAdopted = link?.isAdopted ?? false;
-
     lines.push(
       <Line
         key={`drop-${child.id}`}
@@ -83,7 +70,7 @@ export function ParentChildLine({
         stroke={LINE_COLOR}
         strokeWidth={LINE_WIDTH}
         dash={isAdopted ? DASH_PATTERN : undefined}
-      />
+      />,
     );
   });
 

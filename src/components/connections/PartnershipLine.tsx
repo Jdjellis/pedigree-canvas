@@ -13,8 +13,8 @@ interface PartnershipLineProps {
 }
 
 export function PartnershipLine({ partnership, individuals }: PartnershipLineProps) {
-  const p1 = individuals[partnership.partner1Id];
-  const p2 = individuals[partnership.partner2Id];
+  const p1 = partnership.partner1Id ? individuals[partnership.partner1Id] : undefined;
+  const p2 = partnership.partner2Id ? individuals[partnership.partner2Id] : undefined;
 
   const openPopup = useCallback(
     (e: KonvaEventObject<MouseEvent | TouchEvent>) => {

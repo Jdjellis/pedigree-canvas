@@ -1,6 +1,7 @@
 import { usePedigreeStore } from '../../stores/pedigreeStore';
 import { useUIStore } from '../../stores/uiStore';
 import { generateId } from '../../utils/idGenerator';
+import { computeSmartTextPosition } from '../../utils/annotationPlacement';
 import {
   ANNOTATION_DEFAULT_FONT_SIZE,
   ANNOTATION_PLACEHOLDER_TEXT,
@@ -14,10 +15,18 @@ import {
  * @returns the new annotation's id.
  */
 export function placeTextAt(position: { x: number; y: number }): string {
+  const { document: doc } = usePedigreeStore.getState();
+  const center = computeSmartTextPosition(
+    position,
+    ANNOTATION_DEFAULT_FONT_SIZE,
+    Object.values(doc.individuals),
+    Object.values(doc.textAnnotations),
+    Object.values(doc.partnerships),
+  );
   const annotation = {
     id: generateId(),
     text: ANNOTATION_PLACEHOLDER_TEXT,
-    position: { x: Math.round(position.x), y: Math.round(position.y) },
+    position: center,
     fontSize: ANNOTATION_DEFAULT_FONT_SIZE,
   };
   usePedigreeStore.getState().addTextAnnotation(annotation);

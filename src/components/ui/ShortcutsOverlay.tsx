@@ -54,6 +54,7 @@ const SHORTCUT_GROUPS: ShortcutGroup[] = [
     label: 'Navigation',
     rows: [
       { description: 'Pan canvas', keys: ['Scroll'] },
+      { description: 'Pan (hold + drag)', keys: ['Space'] },
       { description: 'Zoom in / out', keys: ['Ctrl+Scroll'] },
       { description: 'Dismiss / close', keys: ['Esc'] },
     ],

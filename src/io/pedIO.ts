@@ -261,8 +261,8 @@ function buildParentMap(
     if (!partnership) continue;
 
     // Determine which partner is father / mother based on gender.
-    const p1 = doc.individuals[partnership.partner1Id];
-    const p2 = doc.individuals[partnership.partner2Id];
+    const p1 = partnership.partner1Id ? doc.individuals[partnership.partner1Id] : undefined;
+    const p2 = partnership.partner2Id ? doc.individuals[partnership.partner2Id] : undefined;
 
     let fatherId = MISSING_PARENT;
     let motherId = MISSING_PARENT;
@@ -370,8 +370,8 @@ function assignPositions(
   const parentIds = new Set<string>();
   for (const p of Object.values(partnerships)) {
     if (p.childrenIds.length > 0) {
-      parentIds.add(p.partner1Id);
-      parentIds.add(p.partner2Id);
+      if (p.partner1Id) parentIds.add(p.partner1Id);
+      if (p.partner2Id) parentIds.add(p.partner2Id);
     }
   }
 
@@ -401,7 +401,7 @@ function assignPositions(
       // Ensure the partner has the same generation
       const partnerId =
         p.partner1Id === current ? p.partner2Id : p.partner1Id;
-      if (!generation.has(partnerId)) {
+      if (partnerId && !generation.has(partnerId)) {
         generation.set(partnerId, gen);
         queue.push(partnerId);
       }

@@ -77,8 +77,10 @@ function AnnotationEditorInner({
     }
   };
 
-  // Stage-local screen coordinates of the annotation's top-left, derived from
-  // the live scale/position so the overlay re-renders on every pan/zoom.
+  // Stage-local screen coordinates of the annotation's CENTRE, derived from the
+  // live scale/position so the overlay re-renders on every pan/zoom. The
+  // textarea is then translated by -50%/-50% so it grows symmetrically around
+  // this point, matching the centred on-canvas text it replaces.
   const screenX = annotation.position.x * scale + position.x;
   const screenY = annotation.position.y * scale + position.y;
 
@@ -94,6 +96,7 @@ function AnnotationEditorInner({
       style={{
         left: `${screenX}px`,
         top: `${screenY}px`,
+        transform: 'translate(-50%, -50%)',
         // Match the on-canvas text size under the current zoom.
         fontSize: `${annotation.fontSize * scale}px`,
         fontFamily: LABEL_FONT_FAMILY,

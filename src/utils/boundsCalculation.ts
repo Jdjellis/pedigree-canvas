@@ -1,10 +1,75 @@
-import type { Individual } from '../types/pedigree';
+import type { Individual, TextAnnotation } from '../types/pedigree';
+import { SYMBOL_SIZE } from './constants';
+import { estimateAnnotationBlock } from './annotationPlacement';
 
 export interface CanvasBounds {
   x: number;
   y: number;
   width: number;
   height: number;
+}
+
+/** A tight axis-aligned bounding box around the visible content. */
+export interface ContentExtent {
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+}
+
+/** Half a symbol — symbol `position` is its centre, so it spans ±this. */
+const SYMBOL_HALF = SYMBOL_SIZE / 2;
+/**
+ * Extra room reserved below a symbol's centre for its name/age label lines so
+ * "fit to content" does not clip them. Generous on purpose; the viewport fit
+ * adds its own margin on top.
+ */
+const SYMBOL_LABEL_EXTENT = SYMBOL_SIZE;
+
+/**
+ * Compute a tight bounding box around every visible element — individual symbols
+ * (including their label room) and free-text annotations — for "fit to content".
+ *
+ * Unlike {@link computeBounds}, this does **not** force a paper aspect ratio or a
+ * minimum size; it returns the raw extent so the viewport can be centred and
+ * scaled to show exactly what is on the canvas. Connection lines are spanned by
+ * the individuals they join, so they need no separate accounting.
+ *
+ * @param individuals All individuals in the document.
+ * @param annotations All free-text annotations (their `position` is the centre).
+ * @returns The content extent, or `null` when there is nothing to fit.
+ */
+export function computeContentExtent(
+  individuals: Individual[],
+  annotations: TextAnnotation[] = [],
+): ContentExtent | null {
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+
+  for (const ind of individuals) {
+    minX = Math.min(minX, ind.position.x - SYMBOL_HALF);
+    maxX = Math.max(maxX, ind.position.x + SYMBOL_HALF);
+    minY = Math.min(minY, ind.position.y - SYMBOL_HALF);
+    maxY = Math.max(maxY, ind.position.y + SYMBOL_HALF + SYMBOL_LABEL_EXTENT);
+  }
+
+  for (const annotation of annotations) {
+    const { width, height } = estimateAnnotationBlock(
+      annotation.text,
+      annotation.fontSize,
+    );
+    const halfW = width / 2;
+    const halfH = height / 2;
+    minX = Math.min(minX, annotation.position.x - halfW);
+    maxX = Math.max(maxX, annotation.position.x + halfW);
+    minY = Math.min(minY, annotation.position.y - halfH);
+    maxY = Math.max(maxY, annotation.position.y + halfH);
+  }
+
+  if (!Number.isFinite(minX)) return null;
+  return { minX, minY, maxX, maxY };
 }
 
 const PADDING = 80;

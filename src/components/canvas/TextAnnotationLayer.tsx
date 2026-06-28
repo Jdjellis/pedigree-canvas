@@ -4,6 +4,7 @@ import type { KonvaEventObject } from 'konva/lib/Node';
 import type { TextAnnotation } from '../../types/pedigree';
 import { useUIStore } from '../../stores/uiStore';
 import { usePedigreeStore } from '../../stores/pedigreeStore';
+import { estimateAnnotationBlock } from '../../utils/annotationPlacement';
 import { LABEL_FONT_FAMILY, LABEL_COLOR } from '../../utils/constants';
 
 /** Selection outline colour, matching the individual-symbol selection chrome. */
@@ -11,8 +12,6 @@ const SELECTION_COLOR = '#6965db';
 const SELECTION_STROKE_WIDTH = 2;
 /** Padding around the text used for the selection rectangle and click target. */
 const SELECTION_PADDING = 4;
-/** Estimated text-block width (canvas units) for the selection box. */
-const ESTIMATED_GLYPH_WIDTH_RATIO = 0.6;
 
 export interface TextAnnotationLayerProps {
   /** All text annotations in the document, keyed by id. */
@@ -70,15 +69,12 @@ const AnnotationText: React.FC<AnnotationTextProps> = React.memo(
       [annotation.id],
     );
 
-    // Rough block dimensions for the selection rectangle / hit area. Exact
-    // metrics are not needed — this is purely a visual affordance.
-    const lines = annotation.text.split('\n');
-    const longest = lines.reduce((max, l) => Math.max(max, l.length), 0);
-    const blockWidth = Math.max(
+    // The Group is anchored at the annotation CENTRE; the text and selection box
+    // are offset by half the estimated block so the block is centred on it.
+    const { width: blockWidth, height: blockHeight } = estimateAnnotationBlock(
+      annotation.text,
       annotation.fontSize,
-      longest * annotation.fontSize * ESTIMATED_GLYPH_WIDTH_RATIO,
     );
-    const blockHeight = lines.length * annotation.fontSize;
 
     return (
       <Group
@@ -94,8 +90,8 @@ const AnnotationText: React.FC<AnnotationTextProps> = React.memo(
       >
         {isSelected && (
           <Rect
-            x={-SELECTION_PADDING}
-            y={-SELECTION_PADDING}
+            x={-blockWidth / 2 - SELECTION_PADDING}
+            y={-blockHeight / 2 - SELECTION_PADDING}
             width={blockWidth + SELECTION_PADDING * 2}
             height={blockHeight + SELECTION_PADDING * 2}
             stroke={SELECTION_COLOR}
@@ -111,6 +107,10 @@ const AnnotationText: React.FC<AnnotationTextProps> = React.memo(
           fontSize={annotation.fontSize}
           fontFamily={LABEL_FONT_FAMILY}
           fill={LABEL_COLOR}
+          width={blockWidth}
+          align="center"
+          x={-blockWidth / 2}
+          y={-blockHeight / 2}
         />
       </Group>
     );

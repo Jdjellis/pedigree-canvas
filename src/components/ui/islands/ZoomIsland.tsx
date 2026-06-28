@@ -7,8 +7,8 @@ import styles from './islands.module.css';
  * Floating zoom-control island.
  *
  * Renders Zoom Out (−), a live percentage display, Zoom In (+), and a Fit
- * button that resets the view. Reads `scale` reactively from
- * `useViewportStore` — safe here because this component lives in the
+ * button that zooms/pans the whole pedigree into view. Reads `scale` reactively
+ * from `useViewportStore` — safe here because this component lives in the
  * react-dom tree (not inside react-konva).
  *
  * @example
@@ -18,7 +18,7 @@ import styles from './islands.module.css';
  */
 export function ZoomIsland(): React.JSX.Element {
   const scale = useViewportStore((s) => s.scale);
-  const { zoomIn, zoomOut, resetView } = useEditorActions();
+  const { zoomIn, zoomOut, fitView } = useEditorActions();
 
   const zoomPercent = `${Math.round(scale * 100)}%`;
 
@@ -51,8 +51,8 @@ export function ZoomIsland(): React.JSX.Element {
       <button
         type="button"
         className={styles.button}
-        onClick={resetView}
-        title="Fit — reset view to 100%"
+        onClick={fitView}
+        title="Fit pedigree to screen"
         aria-label="Fit"
       >
         Fit

@@ -225,7 +225,12 @@ export function makeRoomForPartner(
     if (ra !== rb) parent.set(ra, rb);
   };
   for (const partnership of Object.values(partnerships)) {
-    if (inGen.has(partnership.partner1Id) && inGen.has(partnership.partner2Id)) {
+    if (
+      partnership.partner1Id &&
+      partnership.partner2Id &&
+      inGen.has(partnership.partner1Id) &&
+      inGen.has(partnership.partner2Id)
+    ) {
       unite(partnership.partner1Id, partnership.partner2Id);
     }
   }
@@ -309,8 +314,8 @@ export function centerParentsOverChildren(
   individuals: Record<string, Individual>,
   partnership: PartnershipRelationship,
 ): Record<string, number> {
-  const parent1 = individuals[partnership.partner1Id];
-  const parent2 = individuals[partnership.partner2Id];
+  const parent1 = partnership.partner1Id ? individuals[partnership.partner1Id] : undefined;
+  const parent2 = partnership.partner2Id ? individuals[partnership.partner2Id] : undefined;
   if (!parent1 || !parent2) return {};
 
   const childXs: number[] = [];
@@ -369,8 +374,8 @@ export function computeParentClearanceShift(
   // Find the child's spouse(s): partnerships where the child is a partner.
   const spouseIds: string[] = [];
   for (const partnership of Object.values(partnerships)) {
-    if (partnership.partner1Id === childId) spouseIds.push(partnership.partner2Id);
-    else if (partnership.partner2Id === childId) spouseIds.push(partnership.partner1Id);
+    if (partnership.partner1Id === childId && partnership.partner2Id) spouseIds.push(partnership.partner2Id);
+    else if (partnership.partner2Id === childId && partnership.partner1Id) spouseIds.push(partnership.partner1Id);
   }
   if (spouseIds.length === 0) return 0;
 
@@ -389,8 +394,8 @@ export function computeParentClearanceShift(
       if (link.childId !== spouseId) continue;
       const partnership = partnerships[link.parentPartnershipId];
       if (!partnership) continue;
-      const p1 = individuals[partnership.partner1Id];
-      const p2 = individuals[partnership.partner2Id];
+      const p1 = partnership.partner1Id ? individuals[partnership.partner1Id] : undefined;
+      const p2 = partnership.partner2Id ? individuals[partnership.partner2Id] : undefined;
       if (p1) inLawXs.push(p1.position.x);
       if (p2) inLawXs.push(p2.position.x);
     }
