@@ -18,9 +18,12 @@
 /* ─── Caption block, anchored just below the seed person (top-third) ── */
 .caption {
   position: absolute;
-  /* Anchor in the bottom third so the block reads clear of the seed person
-     (top third) and any radial options orbiting it. */
-  top: 67%;
+  /* Anchor just below the dashed bounds box.
+     Person sits at 33% of canvas height (CanvasContainer centering).
+     computeBounds enforces min 400×300 then snaps to Letter aspect ratio,
+     producing a ~309px-tall box centred on the person — half = 154.5px
+     below centre at scale 1.0. Adding a 20px visual gap gives 175px. */
+  top: calc(33% + 175px);
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -42,7 +45,7 @@
   line-height: 1.1;
   background: linear-gradient(
     135deg,
-    var(--color-text) 0%,
+    var(--color-text) 55%,
     var(--color-accent, #7c3aed) 100%
   );
   -webkit-background-clip: text;
