@@ -62,7 +62,10 @@ export function ParentChildLine({
     const link = Object.values(parentChildLinks).find(
       (l) => l.parentPartnershipId === partnership.id && l.childId === child.id,
     );
-    const isAdopted = link?.isAdopted ?? false;
+    // Dash the line of descent when the child is adopted, sourced from either the
+    // link's flag (adoption created via the link popup) or the individual's
+    // `adopted` toggle (properties panel). See NSGC/Bennett adoption notation.
+    const isAdopted = (link?.isAdopted ?? false) || (child.adopted ?? false);
     lines.push(
       <Line
         key={`drop-${child.id}`}

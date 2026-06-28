@@ -30,12 +30,18 @@ export function RelationshipPopup() {
     (type: PartnershipType) => {
       if (!partnershipId) return;
       updatePartnership(partnershipId, { type });
-      hideRelationshipPopup();
+      // Changing away from consanguinity is handled at render time (the degree
+      // field hides); the stored value is kept so toggling back restores it.
+      if (type !== RelationshipType.Consanguinity) {
+        hideRelationshipPopup();
+      }
     },
     [partnershipId, updatePartnership, hideRelationshipPopup],
   );
 
   if (!visible || !partnership) return null;
+
+  const isConsanguineous = partnership.type === RelationshipType.Consanguinity;
 
   return (
     <div className={styles.backdrop} onClick={hideRelationshipPopup}>
@@ -58,6 +64,26 @@ export function RelationshipPopup() {
             </button>
           );
         })}
+        {isConsanguineous && (
+          <div className={styles.degreeField}>
+            <label className={styles.degreeLabel} htmlFor="consanguinity-degree">
+              Degree of relationship
+            </label>
+            <input
+              id="consanguinity-degree"
+              className={styles.degreeInput}
+              value={partnership.consanguinityDegree ?? ''}
+              onChange={(e) =>
+                partnershipId &&
+                updatePartnership(partnershipId, {
+                  consanguinityDegree: e.target.value || undefined,
+                })
+              }
+              placeholder="e.g. 1st cousins"
+              autoFocus
+            />
+          </div>
+        )}
       </div>
     </div>
   );

@@ -53,3 +53,34 @@
 .check {
   font-size: 12px;
 }
+
+.degreeField {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 12px 6px;
+  border-top: 1px solid #eee;
+  margin-top: 4px;
+}
+
+.degreeLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: #888;
+}
+
+.degreeInput {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 5px 8px;
+  font-size: 13px;
+  font-family: inherit;
+  color: #333;
+  border: 1px solid #d4d4d4;
+  border-radius: 4px;
+}
+
+.degreeInput:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}

@@ -13,6 +13,7 @@ export function LinkTypePopup() {
   const hideLinkPopup = useUIStore((s) => s.hideLinkPopup);
   const addPartnership = usePedigreeStore((s) => s.addPartnership);
   const addParentChildLink = usePedigreeStore((s) => s.addParentChildLink);
+  const updateIndividual = usePedigreeStore((s) => s.updateIndividual);
 
   const createPartnership = useCallback(
     (type: RelationshipType.Partnership | RelationshipType.Consanguinity) => {
@@ -74,8 +75,10 @@ export function LinkTypePopup() {
     };
     addPartnership(partnership);
     addParentChildLink(link);
+    // Flag the adoptee so its symbol is drawn in adoption brackets.
+    updateIndividual(targetId, { adopted: true });
     hideLinkPopup();
-  }, [sourceId, targetId, addPartnership, addParentChildLink, hideLinkPopup]);
+  }, [sourceId, targetId, addPartnership, addParentChildLink, updateIndividual, hideLinkPopup]);
 
   if (!visible || !sourceId || !targetId) return null;
 

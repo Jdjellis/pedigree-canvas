@@ -1,12 +1,18 @@
 import type { JSX } from 'react';
-import { Line } from 'react-konva';
+import { Line, Text } from 'react-konva';
 import type {
   Individual,
   PartnershipRelationship,
   TwinGroup,
 } from '../../types/pedigree';
 import { TwinType } from '../../types/enums';
-import { LINE_COLOR, LINE_WIDTH } from '../../utils/constants';
+import {
+  LINE_COLOR,
+  LINE_WIDTH,
+  LABEL_FONT_FAMILY,
+  TWIN_UNKNOWN_FONT_SIZE,
+  RELATIONSHIP_LABEL_OFFSET,
+} from '../../utils/constants';
 
 interface TwinConnectorProps {
   twinGroup: TwinGroup;
@@ -76,6 +82,26 @@ export function TwinConnector({
         points={[leftX, barY, rightX, barY]}
         stroke={LINE_COLOR}
         strokeWidth={LINE_WIDTH}
+      />
+    );
+  }
+
+  // "?" at the convergence point for unknown zygosity.
+  if (twinGroup.twinType === TwinType.Unknown) {
+    const boxWidth = 40;
+    elements.push(
+      <Text
+        key={`twin-unknown-${twinGroup.id}`}
+        text="?"
+        x={twinMidX - boxWidth / 2}
+        y={sibshipY - RELATIONSHIP_LABEL_OFFSET - TWIN_UNKNOWN_FONT_SIZE}
+        width={boxWidth}
+        align="center"
+        fontSize={TWIN_UNKNOWN_FONT_SIZE}
+        fontFamily={LABEL_FONT_FAMILY}
+        fontStyle="bold"
+        fill={LINE_COLOR}
+        listening={false}
       />
     );
   }

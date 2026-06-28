@@ -30,6 +30,21 @@ export const LINE_WIDTH = 2;
 export const CONSANGUINITY_GAP = 4;
 export const DASH_PATTERN = [8, 4];
 
+// Adoption brackets (square brackets enclosing an adopted individual's symbol).
+// Geometry is centred on the symbol origin (0,0).
+/** Horizontal distance from the symbol centre to each bracket's vertical stroke. */
+export const ADOPTION_BRACKET_GAP = SYMBOL_SIZE / 2 + 7;
+/** Vertical half-height of each bracket (extends a little past the symbol). */
+export const ADOPTION_BRACKET_HALF_HEIGHT = SYMBOL_SIZE / 2 + 5;
+/** Length of the short horizontal arms at the top and bottom of each bracket. */
+export const ADOPTION_BRACKET_ARM = 6;
+
+// Twin "?" label (unknown zygosity) and consanguinity degree annotation.
+/** Font size for the unknown-zygosity "?" drawn at the twin convergence point. */
+export const TWIN_UNKNOWN_FONT_SIZE = 16;
+/** Vertical gap above a line at which a small annotation's baseline/box sits. */
+export const RELATIONSHIP_LABEL_OFFSET = 6;
+
 // Grid
 export const GRID_SIZE = 20;
 export const GRID_COLOR = '#e5e5e5';

@@ -187,6 +187,7 @@ interface PedigreeState {
 
   // Twin group actions
   addTwinGroup: (tg: TwinGroup) => void;
+  updateTwinGroup: (id: string, patch: Partial<TwinGroup>) => void;
   removeTwinGroup: (id: string) => void;
 
   // Text annotation actions
@@ -519,6 +520,25 @@ export const usePedigreeStore = create<PedigreeState>()(
             },
           },
         })),
+
+      updateTwinGroup: (id, patch) =>
+        set((state) => {
+          const existing = state.document.twinGroups[id];
+          if (!existing) return state;
+          return {
+            document: {
+              ...state.document,
+              metadata: {
+                ...state.document.metadata,
+                updatedAt: new Date().toISOString(),
+              },
+              twinGroups: {
+                ...state.document.twinGroups,
+                [id]: { ...existing, ...patch },
+              },
+            },
+          };
+        }),
 
       removeTwinGroup: (id) =>
         set((state) => {

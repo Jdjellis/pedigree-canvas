@@ -5,6 +5,7 @@ import {
   GenderIdentity,
   SexAssignedAtBirth,
   VitalStatus,
+  TwinType,
 } from '../../types/enums';
 import { generateId } from '../../utils/idGenerator';
 import { collectInvestigations } from '../../utils/investigations';
@@ -44,6 +45,9 @@ export function PropertiesPanel() {
   const updateLegendEntry = usePedigreeStore((s) => s.updateLegendEntry);
   const addLegendEntry = usePedigreeStore((s) => s.addLegendEntry);
   const legendConfig = usePedigreeStore((s) => s.document.legendConfig);
+  const twinGroups = usePedigreeStore((s) => s.document.twinGroups);
+  const updateTwinGroup = usePedigreeStore((s) => s.updateTwinGroup);
+  const removeTwinGroup = usePedigreeStore((s) => s.removeTwinGroup);
 
   const selectedId =
     selectedIds.size === 1 ? Array.from(selectedIds)[0] : null;
@@ -171,6 +175,10 @@ export function PropertiesPanel() {
       </div>
     );
   }
+
+  const twinGroup = Object.values(twinGroups).find((tg) =>
+    tg.individualIds.includes(individual.id),
+  );
 
   const toggleCondition = (entryId: string) => {
     const current = individual.conditionIds ?? [];
@@ -653,7 +661,53 @@ export function PropertiesPanel() {
             <option value="consultand">Consultand</option>
           </select>
         </div>
+
+        <div className={styles.field}>
+          <label className={styles.checkbox}>
+            <input
+              type="checkbox"
+              checked={individual.adopted ?? false}
+              onChange={(e) => update({ adopted: e.target.checked || undefined })}
+            />
+            Adopted
+          </label>
+          <p className={styles.hint}>
+            Draws the symbol in square brackets and dashes the line of descent
+            from the (adoptive) parents.
+          </p>
+        </div>
       </div>
+
+      {twinGroup && (
+        <>
+          <div className={styles.divider} />
+          <div className={styles.section}>
+            <div className={styles.sectionTitle}>Twin</div>
+            <div className={styles.field}>
+              <label className={styles.label}>Zygosity</label>
+              <select
+                className={styles.select}
+                value={twinGroup.twinType}
+                onChange={(e) =>
+                  updateTwinGroup(twinGroup.id, {
+                    twinType: e.target.value as TwinType,
+                  })
+                }
+              >
+                <option value={TwinType.Monozygotic}>Monozygotic (identical)</option>
+                <option value={TwinType.Dizygotic}>Dizygotic (fraternal)</option>
+                <option value={TwinType.Unknown}>Unknown zygosity</option>
+              </select>
+            </div>
+            <button
+              className={styles.addButton}
+              onClick={() => removeTwinGroup(twinGroup.id)}
+            >
+              Ungroup twins
+            </button>
+          </div>
+        </>
+      )}
 
       <div className={styles.divider} />
 

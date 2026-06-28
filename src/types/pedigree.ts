@@ -111,6 +111,13 @@ export interface Individual {
   position: Position;
   generation?: number;
 
+  /**
+   * When true the individual was adopted: the symbol is drawn enclosed in
+   * square brackets and the line of descent from their (adoptive) parents is
+   * dashed, per NSGC/Bennett nomenclature. See {@link AdoptionBrackets}.
+   */
+  adopted?: boolean;
+
   // Annotations
   investigations: Investigation[];
   annotations: Annotation[];
@@ -127,6 +134,12 @@ export interface PartnershipRelationship {
   partner2Id?: string;
   childrenIds: string[];
   isAdoptive?: boolean;
+  /**
+   * Free-text degree of relationship for a consanguineous union (e.g.
+   * "1st cousins"), rendered above the double partnership line. Only
+   * meaningful when {@link type} is {@link RelationshipType.Consanguinity}.
+   */
+  consanguinityDegree?: string;
 }
 
 export interface ParentChildRelationship {

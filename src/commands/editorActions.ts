@@ -2,6 +2,8 @@ import { usePedigreeStore } from '../stores/pedigreeStore';
 import { useUIStore } from '../stores/uiStore';
 import { useViewportStore } from '../stores/viewportStore';
 import { loadFromFile } from '../io/jsonIO';
+import { TwinType } from '../types/enums';
+import { buildTwinGroup } from '../utils/twinOperations';
 
 /**
  * Module-level action functions that use `getState()` to read store values
@@ -52,4 +54,27 @@ export function deleteSelectedAction(): void {
     }
   }
   useUIStore.getState().clearSelection();
+}
+
+/**
+ * Group the currently-selected individuals into a twin group. They must be two
+ * or more siblings of the same parent partnership; otherwise the document is
+ * left unchanged and the user is alerted. New groups default to dizygotic —
+ * zygosity is then editable in the properties panel, which is focused on the
+ * first twin so the change is immediately reachable.
+ */
+export function markSelectedAsTwinsAction(): void {
+  if (useUIStore.getState().editingLocked) return;
+  const ids = Array.from(useUIStore.getState().selectedIds);
+  const doc = usePedigreeStore.getState().document;
+
+  const group = buildTwinGroup(doc, ids, TwinType.Dizygotic);
+  if (!group) {
+    alert('Select two or more siblings (children of the same parents) to mark as twins.');
+    return;
+  }
+
+  usePedigreeStore.getState().addTwinGroup(group);
+  // Focus a single twin so the properties panel shows the zygosity control.
+  useUIStore.getState().select(group.individualIds[0]);
 }

@@ -1,11 +1,19 @@
 import { useCallback } from 'react';
-import { Line } from 'react-konva';
+import { Line, Text } from 'react-konva';
 import type { KonvaEventObject } from 'konva/lib/Node';
 import type { Individual, PartnershipRelationship } from '../../types/pedigree';
 import { RelationshipType } from '../../types/enums';
 import { useUIStore } from '../../stores/uiStore';
 import { useViewportStore } from '../../stores/viewportStore';
-import { LINE_COLOR, LINE_WIDTH, CONSANGUINITY_GAP } from '../../utils/constants';
+import {
+  LINE_COLOR,
+  LINE_WIDTH,
+  CONSANGUINITY_GAP,
+  LABEL_FONT_SIZE,
+  LABEL_FONT_FAMILY,
+  LABEL_COLOR,
+  RELATIONSHIP_LABEL_OFFSET,
+} from '../../utils/constants';
 
 interface PartnershipLineProps {
   partnership: PartnershipRelationship;
@@ -57,6 +65,9 @@ export function PartnershipLine({ partnership, individuals }: PartnershipLinePro
   };
 
   if (partnership.type === RelationshipType.Consanguinity) {
+    const degree = partnership.consanguinityDegree?.trim();
+    const midX = (p1.position.x + p2.position.x) / 2;
+    const labelBoxWidth = 200;
     return (
       <>
         <Line
@@ -67,6 +78,19 @@ export function PartnershipLine({ partnership, individuals }: PartnershipLinePro
           points={[p1.position.x, y + CONSANGUINITY_GAP / 2, p2.position.x, y + CONSANGUINITY_GAP / 2]}
           {...lineProps}
         />
+        {degree && (
+          <Text
+            text={degree}
+            x={midX - labelBoxWidth / 2}
+            y={y - CONSANGUINITY_GAP / 2 - RELATIONSHIP_LABEL_OFFSET - LABEL_FONT_SIZE}
+            width={labelBoxWidth}
+            align="center"
+            fontSize={LABEL_FONT_SIZE}
+            fontFamily={LABEL_FONT_FAMILY}
+            fill={LABEL_COLOR}
+            listening={false}
+          />
+        )}
       </>
     );
   }

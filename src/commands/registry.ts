@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useUIStore } from '../stores/uiStore';
 import type { Command, CommandContext } from './types';
 import { useEditorActions, type EditorActions } from './useEditorActions';
+import { markSelectedAsTwinsAction } from './editorActions';
 
 /**
  * Build the full command list from a stable `EditorActions` reference.
@@ -79,6 +80,14 @@ export function buildCommands(actions: EditorActions): Command[] {
       keywords: ['delete', 'remove', 'selected'],
       isAvailable: (ctx: CommandContext) => ctx.selectedIds.size > 0,
       run: () => actions.deleteSelected(),
+    },
+    {
+      id: 'edit.markAsTwins',
+      title: 'Mark selected as twins',
+      category: 'edit',
+      keywords: ['twin', 'twins', 'monozygotic', 'dizygotic', 'zygosity', 'sibling', 'group'],
+      isAvailable: (ctx: CommandContext) => ctx.selectedIds.size >= 2,
+      run: () => markSelectedAsTwinsAction(),
     },
     // ── View ──────────────────────────────────────────────────────────────
     {

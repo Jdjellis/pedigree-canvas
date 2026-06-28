@@ -198,8 +198,9 @@ App: `LegendConfig` with `LegendEntry[]` (id, quarter, fillColor, fillPattern, n
 - Sex assigned at birth as separate annotation (2022-compliant)
 - Quarter-based multi-condition shading with fill patterns and legend
 - Partnership, consanguinity, separation relationship types
-- Parent-child and adoption links
-- MZ / DZ / unknown twin groups
+- Consanguinity double line with optional degree-of-relationship annotation (`PartnershipRelationship.consanguinityDegree`)
+- Parent-child and adoption links; adopted individuals are drawn in square brackets (`Individual.adopted`, `AdoptionBrackets`) with a dashed line of descent
+- MZ / DZ / unknown twin groups (with the `?` rendered for unknown zygosity); created via the "Mark selected as twins" command, zygosity editable in the properties panel
 - Pregnancy outcomes: SAB, TOP, ECT, SB
 - Vital status: alive, deceased, stillborn
 - Individual numbering within generations (`generationOrder`)
