@@ -136,8 +136,8 @@ export function computeSmartTextPosition(
   let bestLine: { x: number; y: number } | null = null;
   let bestLineDist = LINE_SNAP_RADIUS;
   for (const p of partnerships) {
-    const a = byId.get(p.partner1Id);
-    const b = byId.get(p.partner2Id);
+    const a = p.partner1Id ? byId.get(p.partner1Id) : undefined;
+    const b = p.partner2Id ? byId.get(p.partner2Id) : undefined;
     if (!a || !b) continue;
     const d = distanceToSegment(click, a.position, b.position);
     if (d <= bestLineDist) {
