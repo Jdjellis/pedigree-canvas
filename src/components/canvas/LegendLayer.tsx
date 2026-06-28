@@ -15,8 +15,6 @@ import { formatInvestigation } from '../../utils/investigations';
 import { SYMBOL_COLOR, LABEL_FONT_FAMILY } from '../../utils/constants';
 import {
   PADDING,
-  ROW_HEIGHT,
-  TITLE_HEIGHT,
   SWATCH_SIZE,
   legendSwatchWidth,
   legendContentWidth,

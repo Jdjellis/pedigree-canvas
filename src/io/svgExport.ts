@@ -35,10 +35,7 @@ import {
 } from '../components/connections/parentChildGeometry';
 import {
   PADDING as LEGEND_PADDING,
-  ROW_HEIGHT as LEGEND_ROW_HEIGHT,
-  TITLE_HEIGHT as LEGEND_TITLE_HEIGHT,
   SWATCH_SIZE as LEGEND_SWATCH_SIZE,
-  LABEL_WIDTH as LEGEND_LABEL_WIDTH,
   legendSwatchWidth,
   legendContentWidth,
   legendContentHeight,
