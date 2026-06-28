@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { createRelativeIndividual } from './RadialMenu';
+import { createRelativeIndividual } from './radialActions';
 import { GenderIdentity } from '../../types/enums';
 
 describe('createRelativeIndividual', () => {

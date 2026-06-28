@@ -5,27 +5,11 @@ import { hasParents, hasPartnership, findPartnerships } from '../../utils/graphT
 import { generateId } from '../../utils/idGenerator';
 import { RelationshipType, GenderIdentity } from '../../types/enums';
 import { PARTNER_SPACING, GENERATION_SPACING, SIBLING_SPACING } from '../../utils/constants';
-import type { PartnershipRelationship, ParentChildRelationship, Individual } from '../../types/pedigree';
+import type { PartnershipRelationship, ParentChildRelationship } from '../../types/pedigree';
 import { RADIAL_MENU_DISMISS_DISTANCE } from '../../utils/constants';
-import { genderForSex, type DefaultSex } from '../../utils/sex';
+import { createRelativeIndividual } from './radialActions';
 import styles from './RadialMenu.module.css';
 import clsx from 'clsx';
-
-/**
- * Build a new singly-added relative (partner / child / sibling) whose sex is the
- * current default. +Parents does NOT use this — it always creates a fixed
- * father+mother pair.
- *
- * @param sex - The active default sex.
- * @param overrides - Position/generation (and any other) overrides.
- * @returns A new individual with the mapped gender identity.
- */
-export function createRelativeIndividual(
-  sex: DefaultSex,
-  overrides: Partial<Individual>,
-): Individual {
-  return createDefaultIndividual({ genderIdentity: genderForSex(sex), ...overrides });
-}
 
 export function RadialMenu() {
   const { visible, targetId, screenPosition } = useUIStore(

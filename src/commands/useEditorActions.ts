@@ -187,7 +187,6 @@ export function useEditorActions(): EditorActions {
       eraserTool,
       toggleEditingLock,
     }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     []
   );
 }
