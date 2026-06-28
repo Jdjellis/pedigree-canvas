@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useUIStore } from '../../stores/uiStore';
+import { useViewportStore } from '../../stores/viewportStore';
 import { usePedigreeStore, createDefaultIndividual } from '../../stores/pedigreeStore';
 import { getPresentPartners, findPartnerships } from '../../utils/graphTraversal';
 import { generateId } from '../../utils/idGenerator';
@@ -11,13 +12,16 @@ import styles from './RadialMenu.module.css';
 import clsx from 'clsx';
 
 export function RadialMenu() {
-  const { visible, targetId, screenPosition } = useUIStore(
-    (s) => s.radialMenu
-  );
+  const { visible, targetId } = useUIStore((s) => s.radialMenu);
   const hideRadialMenu = useUIStore((s) => s.hideRadialMenu);
   const select = useUIStore((s) => s.select);
   const defaultSex = useUIStore((s) => s.defaultSex);
   const editingLocked = useUIStore((s) => s.editingLocked);
+
+  // Subscribe to viewport primitives so the menu re-renders on pan/zoom.
+  const viewportScale = useViewportStore((s) => s.scale);
+  const viewportX = useViewportStore((s) => s.position.x);
+  const viewportY = useViewportStore((s) => s.position.y);
 
   const doc = usePedigreeStore((s) => s.document);
   const addParentsForChild = usePedigreeStore((s) => s.addParentsForChild);
@@ -31,6 +35,12 @@ export function RadialMenu() {
   const menuRef = useRef<HTMLDivElement>(null);
 
   const target = targetId ? doc.individuals[targetId] : null;
+
+  // Derive screen position from the live canvas position + live viewport so the
+  // menu tracks pan, zoom, and drag without stale coordinates.
+  const screenPosition = target
+    ? { x: target.position.x * viewportScale + viewportX, y: target.position.y * viewportScale + viewportY }
+    : { x: 0, y: 0 };
 
   // Add Parents is disabled only when the target already has two present parents.
   const canAddParents = (() => {

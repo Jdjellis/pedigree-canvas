@@ -13,6 +13,15 @@ import { clipSymbolPath } from '../../utils/symbolClip';
 import { createPatternCanvas } from '../../utils/fillPatterns';
 import { formatInvestigation } from '../../utils/investigations';
 import { SYMBOL_COLOR, LABEL_FONT_FAMILY } from '../../utils/constants';
+import {
+  PADDING,
+  SWATCH_SIZE,
+  legendSwatchWidth,
+  legendContentWidth,
+  legendContentHeight,
+  legendEntryRowY,
+  legendInvestigationRowY,
+} from '../../utils/legendLayout';
 
 interface LegendLayerProps {
   legendConfig: LegendConfig;
@@ -25,11 +34,6 @@ interface LegendLayerProps {
    */
   editingLocked?: boolean;
 }
-
-const SWATCH_SIZE = 20;
-const PADDING = 12;
-const ROW_HEIGHT = 28;
-const TITLE_HEIGHT = 24;
 
 function SwatchShape({
   x,
@@ -103,13 +107,9 @@ export const LegendLayer: React.FC<LegendLayerProps> = React.memo(
 
     // Calculate width: entries with "both" genders need wider rows
     const hasBothGender = legendConfig.entries.some((e) => !e.applicableTo);
-    const swatchWidth = hasBothGender ? SWATCH_SIZE * 2 + 4 : SWATCH_SIZE;
-    const contentWidth = PADDING * 2 + swatchWidth + 8 + 120;
-    const contentHeight =
-      PADDING * 2 +
-      TITLE_HEIGHT +
-      legendConfig.entries.length * ROW_HEIGHT +
-      investigations.length * ROW_HEIGHT;
+    const swatchWidth = legendSwatchWidth(hasBothGender);
+    const contentWidth = legendContentWidth(hasBothGender);
+    const contentHeight = legendContentHeight(legendConfig.entries.length, investigations.length);
 
     const handleDragEnd = (e: KonvaEventObject<DragEvent>) => {
       onMove({ x: e.target.x(), y: e.target.y() });
@@ -149,7 +149,7 @@ export const LegendLayer: React.FC<LegendLayerProps> = React.memo(
 
         {/* Entries */}
         {legendConfig.entries.map((entry, idx) => {
-          const rowY = PADDING + TITLE_HEIGHT + idx * ROW_HEIGHT;
+          const rowY = legendEntryRowY(idx);
           const showBoth = !entry.applicableTo;
           const showSquare = entry.applicableTo === 'man' || showBoth;
           const showCircle = entry.applicableTo === 'woman' || showBoth;
@@ -195,12 +195,7 @@ export const LegendLayer: React.FC<LegendLayerProps> = React.memo(
           <Text
             key={`${investigation.label} ${investigation.description}`}
             x={PADDING}
-            y={
-              PADDING +
-              TITLE_HEIGHT +
-              (legendConfig.entries.length + idx) * ROW_HEIGHT +
-              4
-            }
+            y={legendInvestigationRowY(legendConfig.entries.length, idx) + 4}
             text={formatInvestigation(investigation)}
             fontSize={12}
             fontFamily={LABEL_FONT_FAMILY}

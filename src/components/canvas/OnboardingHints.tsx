@@ -3,7 +3,6 @@ import type { ReactElement } from 'react';
 import { usePedigreeStore } from '../../stores/pedigreeStore';
 import { useEditorActions } from '../../commands/useEditorActions';
 import { useUIStore } from '../../stores/uiStore';
-import { useViewportStore } from '../../stores/viewportStore';
 import { shouldShowOnboarding } from './onboarding';
 import styles from './OnboardingHints.module.css';
 
@@ -51,11 +50,7 @@ export function OnboardingHints(): ReactElement | null {
       if (ui.radialMenu.visible || ui.editingLocked) return;
       const seed = usePedigreeStore.getState().document.individuals[seedId];
       if (!seed) return;
-      // Compute the screen position at fire time — by now CanvasContainer has
-      // centred the viewport on the seed, so this lands on the (centred) person
-      // rather than the pre-centre origin.
-      const screen = useViewportStore.getState().canvasToScreen(seed.position);
-      ui.showRadialMenu(seedId, screen);
+      ui.showRadialMenu(seedId, seed.position);
       // Pin so the proximity controller doesn't dismiss it when the pointer
       // drifts away — the radial stays until the user adds a relative (which
       // calls hideRadialMenu), presses Escape, or clicks empty canvas.
@@ -94,7 +89,6 @@ export function OnboardingHints(): ReactElement | null {
             strokeWidth="1.8"
             strokeLinecap="round"
             fill="none"
-            strokeDasharray="4 2"
           />
           <path
             d="M10 10 L16 18 M10 10 L20 12"
@@ -120,7 +114,6 @@ export function OnboardingHints(): ReactElement | null {
             strokeWidth="1.8"
             strokeLinecap="round"
             fill="none"
-            strokeDasharray="4 2"
           />
           <path
             d="M10 50 L16 42 M10 50 L20 48"
@@ -146,7 +139,6 @@ export function OnboardingHints(): ReactElement | null {
             strokeWidth="1.8"
             strokeLinecap="round"
             fill="none"
-            strokeDasharray="4 2"
           />
           <path
             d="M70 50 L64 42 M70 50 L60 48"

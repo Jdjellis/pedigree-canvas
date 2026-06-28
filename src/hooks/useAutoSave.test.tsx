@@ -117,7 +117,13 @@ describe('useAutoSave', () => {
     it('coalesces rapid edits into a single write', () => {
       renderHook(() => useAutoSave());
 
-      const setSpy = vi.spyOn(Storage.prototype, 'setItem');
+      // Spy on the prototype of whatever localStorage actually is — Storage.prototype
+      // in CI (native jsdom) or MemoryStorage.prototype locally (shim). This is
+      // more portable than targeting either concrete type directly.
+      const setSpy = vi.spyOn(
+        Object.getPrototypeOf(localStorage) as Storage,
+        'setItem',
+      );
 
       act(() => {
         usePedigreeStore.getState().addIndividual(createDefaultIndividual());
@@ -142,7 +148,10 @@ describe('useAutoSave', () => {
       const { unmount } = renderHook(() => useAutoSave());
       unmount();
 
-      const setSpy = vi.spyOn(Storage.prototype, 'setItem');
+      const setSpy = vi.spyOn(
+        Object.getPrototypeOf(localStorage) as Storage,
+        'setItem',
+      );
       act(() => {
         usePedigreeStore.getState().addIndividual(createDefaultIndividual());
         vi.advanceTimersByTime(2000);

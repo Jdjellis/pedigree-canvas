@@ -55,7 +55,7 @@ export function useRadialHover(panMode: boolean): void {
 
       // Find the person nearest the pointer, in screen space.
       let nearestId: string | null = null;
-      let nearest: { x: number; y: number } | null = null;
+      let nearestCanvasPos: { x: number; y: number } | null = null;
       let nearestDist = Infinity;
       for (const individual of Object.values(individuals)) {
         const screen = canvasToScreen(individual.position);
@@ -63,7 +63,7 @@ export function useRadialHover(panMode: boolean): void {
         if (dist < nearestDist) {
           nearestDist = dist;
           nearestId = individual.id;
-          nearest = screen;
+          nearestCanvasPos = individual.position;
         }
       }
 
@@ -71,22 +71,22 @@ export function useRadialHover(panMode: boolean): void {
         // Hand off to a nearer person the pointer has moved onto.
         if (
           nearestId &&
-          nearest &&
+          nearestCanvasPos &&
           nearestId !== radialMenu.targetId &&
           nearestDist <= RADIAL_HOVER_ENTER_RADIUS
         ) {
-          ui.showRadialMenu(nearestId, nearest);
+          ui.showRadialMenu(nearestId, nearestCanvasPos);
           return;
         }
         // Otherwise keep it open until the pointer clears the EXIT radius of the
-        // current anchor (the gap the option buttons live in).
-        const anchorDist = Math.hypot(
-          px - radialMenu.screenPosition.x,
-          py - radialMenu.screenPosition.y,
-        );
+        // current anchor. Compute from canvas position so pan/drag stays correct.
+        const anchorScreen = radialMenu.targetId
+          ? canvasToScreen(individuals[radialMenu.targetId]?.position ?? radialMenu.canvasPosition)
+          : canvasToScreen(radialMenu.canvasPosition);
+        const anchorDist = Math.hypot(px - anchorScreen.x, py - anchorScreen.y);
         if (anchorDist > RADIAL_HOVER_EXIT_RADIUS) ui.hideRadialMenu();
-      } else if (nearestId && nearest && nearestDist <= RADIAL_HOVER_ENTER_RADIUS) {
-        ui.showRadialMenu(nearestId, nearest);
+      } else if (nearestId && nearestCanvasPos && nearestDist <= RADIAL_HOVER_ENTER_RADIUS) {
+        ui.showRadialMenu(nearestId, nearestCanvasPos);
       }
     };
 

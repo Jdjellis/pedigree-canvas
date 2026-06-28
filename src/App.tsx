@@ -21,6 +21,7 @@ import { ActionsIsland } from './components/ui/islands/ActionsIsland';
 import { ZoomIsland } from './components/ui/islands/ZoomIsland';
 import { HistoryIsland } from './components/ui/islands/HistoryIsland';
 import { HelpIsland } from './components/ui/islands/HelpIsland';
+import { PrivacyBadge } from './components/ui/PrivacyBadge';
 import { useUIStore } from './stores/uiStore';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useAutoSave } from './hooks/useAutoSave';
@@ -68,6 +69,7 @@ function App() {
       </div>
 
       <div className={styles.slotBottomRight}>
+        <PrivacyBadge />
         <HelpIsland />
       </div>
 
