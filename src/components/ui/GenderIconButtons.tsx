@@ -31,7 +31,8 @@ function DiamondSymbol() {
 function UnknownSymbol() {
   return (
     <svg width={SYMBOL_SIZE} height={SYMBOL_SIZE} viewBox="0 0 28 28" aria-hidden="true">
-      <rect x="3" y="3" width="22" height="22" rx="1" stroke="currentColor" strokeWidth="2.5" fill="none" strokeDasharray="4 3" />
+      <polygon points="14,3 25,14 14,25 3,14" stroke="currentColor" strokeWidth="2.5" fill="none" />
+      <text x="14" y="18" textAnchor="middle" fontSize="10" fill="currentColor">?</text>
     </svg>
   );
 }

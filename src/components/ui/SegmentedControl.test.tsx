@@ -35,4 +35,9 @@ describe('SegmentedControl', () => {
     fireEvent.click(screen.getByText('Alpha'));
     expect(onChange).not.toHaveBeenCalled();
   });
+
+  it('applies aria-label to the group when provided', () => {
+    render(<SegmentedControl options={OPTIONS} value="a" onChange={() => {}} ariaLabel="Test group" />);
+    expect(screen.getByRole('group', { name: 'Test group' })).toBeInTheDocument();
+  });
 });

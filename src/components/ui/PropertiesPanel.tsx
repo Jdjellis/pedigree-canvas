@@ -600,6 +600,7 @@ export function PropertiesPanel() {
             options={VITAL_STATUS_OPTIONS}
             value={individual.vitalStatus}
             onChange={(v) => update({ vitalStatus: v })}
+            ariaLabel="Vital status"
           />
         </div>
 
@@ -661,6 +662,7 @@ export function PropertiesPanel() {
                 isConsultand: v === 'consultand',
               })
             }
+            ariaLabel="Pedigree role"
           />
         </div>
       </div>

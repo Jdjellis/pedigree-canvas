@@ -9,15 +9,17 @@ interface SegmentedControlProps<T extends string> {
   options: Option<T>[];
   value: T;
   onChange: (value: T) => void;
+  ariaLabel?: string;
 }
 
 export function SegmentedControl<T extends string>({
   options,
   value,
   onChange,
+  ariaLabel,
 }: SegmentedControlProps<T>) {
   return (
-    <div className={styles.segmented} role="group">
+    <div className={styles.segmented} role="group" aria-label={ariaLabel}>
       {options.map((opt) => (
         <button
           key={opt.value}
