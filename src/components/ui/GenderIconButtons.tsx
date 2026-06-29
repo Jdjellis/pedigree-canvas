@@ -45,8 +45,8 @@ interface GenderOption {
 }
 
 const GENDER_OPTIONS: GenderOption[] = [
-  { value: GenderIdentity.Man, label: 'Male', initial: 'M', Symbol: SquareSymbol },
-  { value: GenderIdentity.Woman, label: 'Female', initial: 'F', Symbol: CircleSymbol },
+  { value: GenderIdentity.Man, label: 'Man', initial: 'M', Symbol: SquareSymbol },
+  { value: GenderIdentity.Woman, label: 'Woman', initial: 'F', Symbol: CircleSymbol },
   { value: GenderIdentity.NonBinary, label: 'Non-binary', initial: 'NB', Symbol: DiamondSymbol },
   { value: GenderIdentity.Unknown, label: 'Unknown', initial: '', Symbol: UnknownSymbol },
 ];
