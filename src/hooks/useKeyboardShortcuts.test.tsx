@@ -246,6 +246,11 @@ describe('edit-lock gate on text and eraser shortcuts', () => {
 // ---------------------------------------------------------------------------
 
 describe('Delete / Backspace key removes selected individuals', () => {
+  function addUnselectedIndividual(): void {
+    const individual = createDefaultIndividual({ position: { x: 0, y: 0 } });
+    usePedigreeStore.getState().addIndividual(individual);
+  }
+
   function addAndSelectIndividual(): string {
     const individual = createDefaultIndividual({ position: { x: 0, y: 0 } });
     usePedigreeStore.getState().addIndividual(individual);
@@ -255,6 +260,7 @@ describe('Delete / Backspace key removes selected individuals', () => {
 
   test('pressing Delete removes selected individuals from the document', () => {
     render(<TestHarness />);
+    addUnselectedIndividual(); // ensures at least one remains after delete
     addAndSelectIndividual();
 
     fireEvent.keyDown(document.body, { key: 'Delete' });
@@ -262,11 +268,12 @@ describe('Delete / Backspace key removes selected individuals', () => {
     const individuals = Object.values(
       usePedigreeStore.getState().document.individuals
     );
-    expect(individuals).toHaveLength(0);
+    expect(individuals).toHaveLength(1);
   });
 
   test('pressing Delete clears the selection', () => {
     render(<TestHarness />);
+    addUnselectedIndividual(); // ensures at least one remains after delete
     addAndSelectIndividual();
 
     fireEvent.keyDown(document.body, { key: 'Delete' });
@@ -276,6 +283,7 @@ describe('Delete / Backspace key removes selected individuals', () => {
 
   test('pressing Backspace removes selected individuals', () => {
     render(<TestHarness />);
+    addUnselectedIndividual(); // ensures at least one remains after delete
     addAndSelectIndividual();
 
     fireEvent.keyDown(document.body, { key: 'Backspace' });
@@ -283,7 +291,7 @@ describe('Delete / Backspace key removes selected individuals', () => {
     const individuals = Object.values(
       usePedigreeStore.getState().document.individuals
     );
-    expect(individuals).toHaveLength(0);
+    expect(individuals).toHaveLength(1);
   });
 
   test('pressing Delete with no selection does not remove anything', () => {
