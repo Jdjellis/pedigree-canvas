@@ -13,6 +13,8 @@ import {
   TWIN_UNKNOWN_FONT_SIZE,
   RELATIONSHIP_LABEL_OFFSET,
 } from '../../utils/constants';
+import { getPresentPartners } from '../../utils/graphTraversal';
+import { computeSibshipY } from './parentChildGeometry';
 
 interface TwinConnectorProps {
   twinGroup: TwinGroup;
@@ -34,14 +36,24 @@ export function TwinConnector({
   const partnership = partnerships[twinGroup.parentPartnershipId];
   if (!partnership) return null;
 
-  const p1 = partnership.partner1Id ? individuals[partnership.partner1Id] : undefined;
-  const p2 = partnership.partner2Id ? individuals[partnership.partner2Id] : undefined;
-  if (!p1 || !p2) return null;
+  // The sibship bar depth is shared with ParentChildLine so the V apex lands on
+  // it for any number of present parents (0, 1, or 2). Earlier this connector
+  // required BOTH partners to exist and silently rendered nothing otherwise,
+  // leaving single-parent and parentless twins with no connector at all.
+  const childAnchors = partnership.childrenIds
+    .map((id) => individuals[id])
+    .filter((c): c is Individual => Boolean(c))
+    .map((c) => ({ x: c.position.x, y: c.position.y }));
+  if (childAnchors.length === 0) return null;
 
-  // The branch point is on the sibship line directly above the twins' midpoint
-  const partnershipY = (p1.position.y + p2.position.y) / 2;
+  const partnerAnchors = getPresentPartners(individuals, partnership).map((p) => ({
+    x: p.position.x,
+    y: p.position.y,
+  }));
+
+  // The branch point is on the sibship line directly above the twins' midpoint.
+  const sibshipY = computeSibshipY(partnerAnchors, childAnchors);
   const childrenY = Math.min(...twins.map((t) => t.position.y));
-  const sibshipY = partnershipY + (childrenY - partnershipY) / 2;
 
   const twinMidX =
     twins.reduce((sum, t) => sum + t.position.x, 0) / twins.length;

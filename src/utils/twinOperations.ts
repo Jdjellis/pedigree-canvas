@@ -1,4 +1,4 @@
-import type { PedigreeDocument, TwinGroup } from '../types/pedigree';
+import type { Individual, PedigreeDocument, TwinGroup } from '../types/pedigree';
 import type { TwinType } from '../types/enums';
 import { generateId } from './idGenerator';
 
@@ -74,4 +74,33 @@ export function findTwinGroupForIndividual(
   return Object.values(doc.twinGroups).find((tg) =>
     tg.individualIds.includes(individualId),
   );
+}
+
+/**
+ * Map every twin member's id to its group's **apex X** — the mean X of the
+ * group's present members, which is exactly where {@link TwinConnector}'s
+ * converging lines meet the sibship line.
+ *
+ * The sibship bar uses this so a twin pair contributes a single anchor (the
+ * apex) instead of one per member. Without it the bar spans the twins' own
+ * positions and leaves a redundant horizontal stub above the converging lines;
+ * with it a centred twins-only sibship collapses to a single junction point, as
+ * Bennett/NSGC specify for monozygotic twins (a bar only remains when the apex
+ * is genuinely offset from the parent drop or other siblings).
+ */
+export function twinApexXByMember(
+  twinGroups: Record<string, TwinGroup>,
+  individuals: Record<string, Individual>,
+): Map<string, number> {
+  const apexByMember = new Map<string, number>();
+  for (const group of Object.values(twinGroups)) {
+    const xs = group.individualIds
+      .map((id) => individuals[id])
+      .filter((ind): ind is Individual => Boolean(ind))
+      .map((ind) => ind.position.x);
+    if (xs.length === 0) continue;
+    const apexX = xs.reduce((sum, x) => sum + x, 0) / xs.length;
+    for (const id of group.individualIds) apexByMember.set(id, apexX);
+  }
+  return apexByMember;
 }

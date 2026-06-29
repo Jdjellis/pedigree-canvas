@@ -97,3 +97,27 @@ export function computeParentlessSibshipSegments(
     childDrops: children.map((c) => [c.x, sibshipY, c.x, c.y]),
   };
 }
+
+/**
+ * Depth of a union's sibship line, computed identically to the parent-child
+ * connector so a twin connector's V apex lands exactly on the sibship bar for
+ * any number of present parents.
+ *
+ * Mirrors the 0-vs-1+ partner branch in `ParentChildLine`: with no present
+ * partners the bar sits a fixed rise above the children; otherwise it sits
+ * halfway between the partners' averaged anchor and the topmost child.
+ *
+ * @param partners  Anchor points of the present partners (0, 1, or 2).
+ * @param children  Anchor points of all the union's children (must be non-empty).
+ */
+export function computeSibshipY(
+  partners: ChildAnchor[],
+  children: ChildAnchor[],
+): number {
+  if (partners.length === 0) {
+    return computeParentlessSibshipSegments(children).sibshipY;
+  }
+  const anchorX = partners.reduce((sum, p) => sum + p.x, 0) / partners.length;
+  const anchorY = partners.reduce((sum, p) => sum + p.y, 0) / partners.length;
+  return computeParentChildSegments(anchorX, anchorY, children).sibshipY;
+}

@@ -44,6 +44,7 @@ export function ConnectionsLayer({
           partnership={partnership}
           individuals={individuals}
           parentChildLinks={parentChildLinks}
+          twinGroups={twinGroups}
         />
       ))}
       {Object.values(twinGroups).map((twinGroup) => (
