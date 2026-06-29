@@ -1,12 +1,16 @@
 import type { JSX } from 'react';
+import { useCallback } from 'react';
 import { Line } from 'react-konva';
+import type { KonvaEventObject } from 'konva/lib/Node';
 import type {
   Individual,
   PartnershipRelationship,
   ParentChildRelationship,
   TwinGroup,
 } from '../../types/pedigree';
-import { LINE_COLOR, LINE_WIDTH, DASH_PATTERN } from '../../utils/constants';
+import { LINE_COLOR, LINE_WIDTH, DASH_PATTERN, SELECTION_COLOR } from '../../utils/constants';
+import { useUIStore } from '../../stores/uiStore';
+import type { ConnectionSelection } from '../../stores/uiStore';
 import { getPresentPartners } from '../../utils/graphTraversal';
 import { twinApexXByMember } from '../../utils/twinOperations';
 import {
@@ -19,6 +23,7 @@ interface ParentChildLineProps {
   individuals: Record<string, Individual>;
   parentChildLinks: Record<string, ParentChildRelationship>;
   twinGroups: Record<string, TwinGroup>;
+  selectedConnection?: ConnectionSelection | null;
 }
 
 export function ParentChildLine({
@@ -26,7 +31,21 @@ export function ParentChildLine({
   individuals,
   parentChildLinks,
   twinGroups,
+  selectedConnection,
 }: ParentChildLineProps) {
+  const setCursor = useCallback((cursor: string) => {
+    const stage = document.querySelector('canvas');
+    if (stage) stage.style.cursor = cursor;
+  }, []);
+
+  const selectLink = useCallback(
+    (e: KonvaEventObject<MouseEvent | TouchEvent>, linkId: string) => {
+      e.cancelBubble = true;
+      useUIStore.getState().selectConnection({ kind: 'parentChild', id: linkId });
+    },
+    [],
+  );
+
   const children = partnership.childrenIds
     .map((id) => individuals[id])
     .filter((c): c is Individual => Boolean(c));
@@ -81,15 +100,28 @@ export function ParentChildLine({
     const link = Object.values(parentChildLinks).find(
       (l) => l.parentPartnershipId === partnership.id && l.childId === child.id,
     );
+    const isSelected =
+      !!link &&
+      selectedConnection?.kind === 'parentChild' &&
+      selectedConnection.id === link.id;
     // Dash the line of descent only for an adoptive (non-biological) edge, per
     // NSGC/Bennett. Brackets on the child are handled separately in the symbol.
     lines.push(
       <Line
         key={`drop-${child.id}`}
         points={childDrops[i]}
-        stroke={LINE_COLOR}
+        stroke={isSelected ? SELECTION_COLOR : LINE_COLOR}
         strokeWidth={LINE_WIDTH}
         dash={link?.isAdoptive ? DASH_PATTERN : undefined}
+        {...(link
+          ? {
+              hitStrokeWidth: 12,
+              onClick: (e: KonvaEventObject<MouseEvent>) => selectLink(e, link.id),
+              onTap: (e: KonvaEventObject<TouchEvent>) => selectLink(e, link.id),
+              onMouseEnter: () => setCursor('pointer'),
+              onMouseLeave: () => setCursor('default'),
+            }
+          : {})}
       />,
     );
   });

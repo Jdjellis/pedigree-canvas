@@ -10,6 +10,7 @@ import {
   SYMBOL_STROKE_WIDTH,
   SYMBOL_COLOR,
   SYMBOL_FILL,
+  SELECTION_COLOR,
 } from '../../../utils/constants';
 
 import {
@@ -54,7 +55,6 @@ export interface PedigreeSymbolProps {
   editingLocked?: boolean;
 }
 
-const SELECTION_COLOR = '#6965db';
 const SELECTION_STROKE_WIDTH = 2;
 const HOVER_OPACITY = 0.08;
 

@@ -1,5 +1,6 @@
 import type { JSX } from 'react';
 import { Line, Text } from 'react-konva';
+import type { KonvaEventObject } from 'konva/lib/Node';
 import type {
   Individual,
   PartnershipRelationship,
@@ -12,7 +13,10 @@ import {
   LABEL_FONT_FAMILY,
   TWIN_UNKNOWN_FONT_SIZE,
   RELATIONSHIP_LABEL_OFFSET,
+  SELECTION_COLOR,
 } from '../../utils/constants';
+import { useUIStore } from '../../stores/uiStore';
+import type { ConnectionSelection } from '../../stores/uiStore';
 import { getPresentPartners } from '../../utils/graphTraversal';
 import { computeSibshipY } from './parentChildGeometry';
 
@@ -20,12 +24,14 @@ interface TwinConnectorProps {
   twinGroup: TwinGroup;
   individuals: Record<string, Individual>;
   partnerships: Record<string, PartnershipRelationship>;
+  selectedConnection?: ConnectionSelection | null;
 }
 
 export function TwinConnector({
   twinGroup,
   individuals,
   partnerships,
+  selectedConnection,
 }: TwinConnectorProps) {
   const twins = twinGroup.individualIds
     .map((id) => individuals[id])
@@ -58,6 +64,28 @@ export function TwinConnector({
   const twinMidX =
     twins.reduce((sum, t) => sum + t.position.x, 0) / twins.length;
 
+  const isSelected =
+    selectedConnection?.kind === 'twin' && selectedConnection.id === twinGroup.id;
+  const stroke = isSelected ? SELECTION_COLOR : LINE_COLOR;
+
+  const setCursor = (cursor: string) => {
+    const stage = document.querySelector('canvas');
+    if (stage) stage.style.cursor = cursor;
+  };
+
+  const selectGroup = (e: KonvaEventObject<MouseEvent | TouchEvent>) => {
+    e.cancelBubble = true;
+    useUIStore.getState().selectConnection({ kind: 'twin', id: twinGroup.id });
+  };
+
+  const interactive = {
+    hitStrokeWidth: 12,
+    onClick: selectGroup,
+    onTap: selectGroup,
+    onMouseEnter: () => setCursor('pointer'),
+    onMouseLeave: () => setCursor('default'),
+  };
+
   const elements: JSX.Element[] = [];
 
   // V-shaped lines from branch point to each twin
@@ -66,8 +94,9 @@ export function TwinConnector({
       <Line
         key={`twin-line-${twin.id}`}
         points={[twinMidX, sibshipY, twin.position.x, twin.position.y]}
-        stroke={LINE_COLOR}
+        stroke={stroke}
         strokeWidth={LINE_WIDTH}
+        {...interactive}
       />
     );
   }
@@ -92,8 +121,9 @@ export function TwinConnector({
       <Line
         key={`twin-bar-${twinGroup.id}`}
         points={[leftX, barY, rightX, barY]}
-        stroke={LINE_COLOR}
+        stroke={stroke}
         strokeWidth={LINE_WIDTH}
+        {...interactive}
       />
     );
   }

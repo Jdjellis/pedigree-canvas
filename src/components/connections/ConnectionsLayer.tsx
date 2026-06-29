@@ -5,6 +5,7 @@ import type {
   ParentChildRelationship,
   TwinGroup,
 } from '../../types/pedigree';
+import type { ConnectionSelection } from '../../stores/uiStore';
 import { PartnershipLine } from './PartnershipLine';
 import { ParentChildLine } from './ParentChildLine';
 import { TwinConnector } from './TwinConnector';
@@ -14,6 +15,7 @@ interface ConnectionsLayerProps {
   parentChildLinks: Record<string, ParentChildRelationship>;
   twinGroups: Record<string, TwinGroup>;
   individuals: Record<string, Individual>;
+  selectedConnection: ConnectionSelection | null;
 }
 
 /**
@@ -28,6 +30,7 @@ export function ConnectionsLayer({
   parentChildLinks,
   twinGroups,
   individuals,
+  selectedConnection,
 }: ConnectionsLayerProps) {
   return (
     <Layer>
@@ -36,6 +39,7 @@ export function ConnectionsLayer({
           key={`p-${partnership.id}`}
           partnership={partnership}
           individuals={individuals}
+          selectedConnection={selectedConnection}
         />
       ))}
       {Object.values(partnerships).map((partnership) => (
@@ -45,6 +49,7 @@ export function ConnectionsLayer({
           individuals={individuals}
           parentChildLinks={parentChildLinks}
           twinGroups={twinGroups}
+          selectedConnection={selectedConnection}
         />
       ))}
       {Object.values(twinGroups).map((twinGroup) => (
@@ -53,6 +58,7 @@ export function ConnectionsLayer({
           twinGroup={twinGroup}
           individuals={individuals}
           partnerships={partnerships}
+          selectedConnection={selectedConnection}
         />
       ))}
     </Layer>

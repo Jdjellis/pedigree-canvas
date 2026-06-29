@@ -27,6 +27,8 @@ export const MIN_GENERATION_NODE_SPACING = SYMBOL_SIZE * 2;
 // Connection lines
 export const LINE_COLOR = '#1a1a1a';
 export const LINE_WIDTH = 2;
+/** Accent colour for selected symbols and connections. */
+export const SELECTION_COLOR = '#6965db';
 export const CONSANGUINITY_GAP = 4;
 export const DASH_PATTERN = [8, 4];
 

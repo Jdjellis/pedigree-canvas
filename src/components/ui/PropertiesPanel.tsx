@@ -5,10 +5,11 @@ import {
   GenderIdentity,
   SexAssignedAtBirth,
   VitalStatus,
-  TwinType,
 } from '../../types/enums';
 import { GenderIconButtons } from './GenderIconButtons';
 import { SegmentedControl } from './SegmentedControl';
+import { ConnectionProperties } from './ConnectionProperties';
+import { TwinZygosityFields } from './TwinZygosityFields';
 import { generateId } from '../../utils/idGenerator';
 import { collectInvestigations } from '../../utils/investigations';
 import {
@@ -76,6 +77,7 @@ export function PropertiesPanel() {
   const selectedIds = useUIStore((s) => s.selectedIds);
   const propertiesPanelOpen = useUIStore((s) => s.propertiesPanelOpen);
   const editingLocked = useUIStore((s) => s.editingLocked);
+  const selectedConnection = useUIStore((s) => s.selectedConnection);
   const individuals = usePedigreeStore((s) => s.document.individuals);
   const partnerships = usePedigreeStore((s) => s.document.partnerships);
   const parentChildLinks = usePedigreeStore((s) => s.document.parentChildLinks);
@@ -205,6 +207,10 @@ export function PropertiesPanel() {
       ),
     [individuals]
   );
+
+  if (selectedConnection) {
+    return <ConnectionProperties />;
+  }
 
   if (!propertiesPanelOpen || !individual) {
     return (
@@ -766,28 +772,11 @@ export function PropertiesPanel() {
           <div className={styles.divider} />
           <div className={styles.section}>
             <div className={styles.sectionTitle}>Twin</div>
-            <div className={styles.field}>
-              <label className={styles.label}>Zygosity</label>
-              <select
-                className={styles.select}
-                value={twinGroup.twinType}
-                onChange={(e) =>
-                  updateTwinGroup(twinGroup.id, {
-                    twinType: e.target.value as TwinType,
-                  })
-                }
-              >
-                <option value={TwinType.Monozygotic}>Monozygotic (identical)</option>
-                <option value={TwinType.Dizygotic}>Dizygotic (fraternal)</option>
-                <option value={TwinType.Unknown}>Unknown zygosity</option>
-              </select>
-            </div>
-            <button
-              className={styles.addButton}
-              onClick={() => removeTwinGroup(twinGroup.id)}
-            >
-              Ungroup twins
-            </button>
+            <TwinZygosityFields
+              twinGroup={twinGroup}
+              onChangeType={(twinType) => updateTwinGroup(twinGroup.id, { twinType })}
+              onUngroup={() => removeTwinGroup(twinGroup.id)}
+            />
           </div>
         </>
       )}

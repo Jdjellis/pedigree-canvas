@@ -4,7 +4,7 @@ import type { KonvaEventObject } from 'konva/lib/Node';
 import type { Individual, PartnershipRelationship } from '../../types/pedigree';
 import { RelationshipType } from '../../types/enums';
 import { useUIStore } from '../../stores/uiStore';
-import { useViewportStore } from '../../stores/viewportStore';
+import type { ConnectionSelection } from '../../stores/uiStore';
 import {
   LINE_COLOR,
   LINE_WIDTH,
@@ -13,36 +13,25 @@ import {
   LABEL_FONT_FAMILY,
   LABEL_COLOR,
   RELATIONSHIP_LABEL_OFFSET,
+  SELECTION_COLOR,
 } from '../../utils/constants';
 
 interface PartnershipLineProps {
   partnership: PartnershipRelationship;
   individuals: Record<string, Individual>;
+  selectedConnection?: ConnectionSelection | null;
 }
 
-export function PartnershipLine({ partnership, individuals }: PartnershipLineProps) {
+export function PartnershipLine({ partnership, individuals, selectedConnection }: PartnershipLineProps) {
   const p1 = partnership.partner1Id ? individuals[partnership.partner1Id] : undefined;
   const p2 = partnership.partner2Id ? individuals[partnership.partner2Id] : undefined;
 
-  const openPopup = useCallback(
+  const selectLine = useCallback(
     (e: KonvaEventObject<MouseEvent | TouchEvent>) => {
       e.cancelBubble = true;
-      if (!p1 || !p2) return;
-      const midpoint = {
-        x: (p1.position.x + p2.position.x) / 2,
-        y: (p1.position.y + p2.position.y) / 2,
-      };
-      const { canvasToScreen } = useViewportStore.getState();
-      const screenPos = canvasToScreen(midpoint);
-      const canvasEl = document.querySelector('.konvajs-content');
-      if (canvasEl) {
-        const rect = canvasEl.getBoundingClientRect();
-        screenPos.x += rect.left;
-        screenPos.y += rect.top;
-      }
-      useUIStore.getState().showRelationshipPopup(partnership.id, screenPos);
+      useUIStore.getState().selectConnection({ kind: 'partnership', id: partnership.id });
     },
-    [p1, p2, partnership.id],
+    [partnership.id],
   );
 
   const setCursor = useCallback((cursor: string) => {
@@ -54,12 +43,15 @@ export function PartnershipLine({ partnership, individuals }: PartnershipLinePro
 
   const y = (p1.position.y + p2.position.y) / 2;
 
+  const isSelected =
+    selectedConnection?.kind === 'partnership' && selectedConnection.id === partnership.id;
+
   const lineProps = {
-    stroke: LINE_COLOR,
+    stroke: isSelected ? SELECTION_COLOR : LINE_COLOR,
     strokeWidth: LINE_WIDTH,
     hitStrokeWidth: 12,
-    onClick: openPopup,
-    onTap: openPopup,
+    onClick: selectLine,
+    onTap: selectLine,
     onMouseEnter: () => setCursor('pointer'),
     onMouseLeave: () => setCursor('default'),
   };
