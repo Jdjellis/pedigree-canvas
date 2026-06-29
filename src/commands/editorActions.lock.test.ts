@@ -22,6 +22,8 @@ describe('deleteSelectedAction respects the edit lock', () => {
   });
 
   test('deletes when unlocked', () => {
+    const other = createDefaultIndividual({});
+    usePedigreeStore.getState().addIndividual(other); // unselected — ensures one remains
     const ind = createDefaultIndividual({});
     usePedigreeStore.getState().addIndividual(ind);
     useUIStore.getState().select(ind.id);

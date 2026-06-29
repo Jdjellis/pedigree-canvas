@@ -45,7 +45,13 @@ export async function openDocumentAction(): Promise<void> {
 export function deleteSelectedAction(): void {
   if (useUIStore.getState().editingLocked) return;
   const { selectedIds } = useUIStore.getState();
-  const { textAnnotations } = usePedigreeStore.getState().document;
+  const { textAnnotations, individuals } = usePedigreeStore.getState().document;
+
+  const selectedIndividualIds = [...selectedIds].filter((id) => !textAnnotations[id]);
+  const remainingIndividuals =
+    Object.keys(individuals).length - selectedIndividualIds.length;
+  if (remainingIndividuals < 1) return;
+
   for (const id of selectedIds) {
     if (textAnnotations[id]) {
       usePedigreeStore.getState().removeTextAnnotation(id);

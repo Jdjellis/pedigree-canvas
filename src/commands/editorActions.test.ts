@@ -53,6 +53,7 @@ describe('deleteSelectedAction', () => {
   test('removes each selected individual from the document', () => {
     const id1 = addIndividualToStore();
     const id2 = addIndividualToStore();
+    addIndividualToStore(); // unselected — ensures at least one remains
     useUIStore.getState().selectMultiple([id1, id2]);
 
     deleteSelectedAction();
@@ -60,16 +61,31 @@ describe('deleteSelectedAction', () => {
     const individuals = Object.values(
       usePedigreeStore.getState().document.individuals
     );
-    expect(individuals).toHaveLength(0);
+    expect(individuals).toHaveLength(1);
   });
 
   test('clears the selection after deletion', () => {
+    addIndividualToStore(); // unselected — ensures at least one remains after delete
     const id = addIndividualToStore();
     useUIStore.getState().select(id);
 
     deleteSelectedAction();
 
     expect(useUIStore.getState().selectedIds.size).toBe(0);
+  });
+
+  test('does not delete the last individual on the canvas', () => {
+    const id = addIndividualToStore();
+    useUIStore.getState().select(id);
+
+    deleteSelectedAction();
+
+    const individuals = Object.values(
+      usePedigreeStore.getState().document.individuals
+    );
+    expect(individuals).toHaveLength(1);
+    // Selection is left intact so the user can see what was blocked
+    expect(useUIStore.getState().selectedIds.has(id)).toBe(true);
   });
 
   test('does nothing when no individuals are selected', () => {
