@@ -1,6 +1,6 @@
 import { Line } from 'react-konva';
 import { LINE_WIDTH } from '../../../utils/constants';
-import { adoptionBracketPolylines } from './adoptionBrackets';
+import { adoptionBracketPolylines } from './adoptionBracketGeometry';
 
 interface AdoptionBracketsProps {
   /** Stroke colour (matches the symbol outline / selection colour). */

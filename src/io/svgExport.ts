@@ -30,7 +30,7 @@ import {
   TWIN_UNKNOWN_FONT_SIZE,
   RELATIONSHIP_LABEL_OFFSET,
 } from '../utils/constants';
-import { adoptionBracketPolylines } from '../components/canvas/symbols/adoptionBrackets';
+import { adoptionBracketPolylines } from '../components/canvas/symbols/adoptionBracketGeometry';
 import { getPresentPartners } from '../utils/graphTraversal';
 import {
   computeParentChildSegments,
