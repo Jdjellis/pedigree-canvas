@@ -6,6 +6,7 @@ import {
   SexAssignedAtBirth,
   VitalStatus,
 } from '../../types/enums';
+import { GenderIconButtons } from './GenderIconButtons';
 import { SegmentedControl } from './SegmentedControl';
 import { generateId } from '../../utils/idGenerator';
 import { collectInvestigations } from '../../utils/investigations';
@@ -244,20 +245,10 @@ export function PropertiesPanel() {
 
         <div className={styles.field}>
           <label className={styles.label}>Gender Identity</label>
-          <select
-            className={styles.select}
+          <GenderIconButtons
             value={individual.genderIdentity}
-            onChange={(e) =>
-              update({
-                genderIdentity: e.target.value as GenderIdentity,
-              })
-            }
-          >
-            <option value={GenderIdentity.Unknown}>Unknown</option>
-            <option value={GenderIdentity.Man}>Man</option>
-            <option value={GenderIdentity.Woman}>Woman</option>
-            <option value={GenderIdentity.NonBinary}>Non-binary</option>
-          </select>
+            onChange={(v) => update({ genderIdentity: v })}
+          />
         </div>
 
         <div className={styles.field}>
