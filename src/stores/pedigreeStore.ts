@@ -18,88 +18,11 @@ import {
 import { generateId } from '../utils/idGenerator';
 import { genderForSex, type DefaultSex } from '../utils/sex';
 import {
-  respaceGenerationWithSubtrees,
-  collectDescendants,
-} from '../utils/respacing';
-import { MIN_GENERATION_NODE_SPACING } from '../utils/constants';
-import {
   computeTreeLayout,
   findRootUnion,
   DEFAULT_LAYOUT_SPACING,
   type LayoutDoc,
 } from '../utils/treeLayout';
-
-/**
- * Return a new individuals map with `moved` (id -> new x) applied immutably.
- * Vertical (y) positions and every individual not in `moved` are left
- * untouched. Returns the original map when there is nothing to move.
- */
-function applyMoves(
-  individuals: Record<string, Individual>,
-  moved: Record<string, number>,
-): Record<string, Individual> {
-  if (Object.keys(moved).length === 0) return individuals;
-
-  const next: Record<string, Individual> = { ...individuals };
-  for (const [id, newX] of Object.entries(moved)) {
-    const individual = next[id];
-    if (!individual) continue;
-    next[id] = {
-      ...individual,
-      position: { ...individual.position, x: newX },
-    };
-  }
-  return next;
-}
-
-/**
- * Return a new individuals map with bounded, subtree-aware respacing applied to
- * the given generation. Overlapping nodes in that generation are pushed apart
- * and each shifted node carries its whole subtree along, so descendants stay
- * aligned. Every other individual is returned untouched.
- *
- * Callers must invoke this on the already-inserted individuals map within the
- * SAME `set(...)` update as the insert, so the add and the nudge collapse into a
- * single zundo history entry (one undo reverts both).
- */
-// Retained for Task 7 cleanup; no longer called by add ops.
-function _applyGenerationRespacing(
-  individuals: Record<string, Individual>,
-  partnerships: Record<string, PartnershipRelationship>,
-  generation: number,
-): Record<string, Individual> {
-  const moved = respaceGenerationWithSubtrees(
-    individuals,
-    partnerships,
-    generation,
-    MIN_GENERATION_NODE_SPACING,
-  );
-  return applyMoves(individuals, moved);
-}
-
-/**
- * Shift `rootId` and its whole subtree horizontally by `delta`, returning a new
- * individuals map. Used to keep a node centred under newly added parents while
- * carrying its descendants rigidly along.
- * Retained for Task 7 cleanup; no longer called by add ops.
- */
-function _shiftSubtree(
-  individuals: Record<string, Individual>,
-  partnerships: Record<string, PartnershipRelationship>,
-  rootId: string,
-  delta: number,
-): Record<string, Individual> {
-  if (delta === 0) return individuals;
-
-  const moved: Record<string, number> = {};
-  const root = individuals[rootId];
-  if (root) moved[rootId] = root.position.x + delta;
-  for (const descId of collectDescendants(rootId, partnerships)) {
-    const descendant = individuals[descId];
-    if (descendant) moved[descId] = descendant.position.x + delta;
-  }
-  return applyMoves(individuals, moved);
-}
 
 /**
  * Apply id -> {x,y} position changes immutably; untouched individuals are kept.

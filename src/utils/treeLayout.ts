@@ -1,7 +1,5 @@
 import type {
   Individual,
-  PartnershipRelationship,
-  ParentChildRelationship,
   PedigreeDocument,
 } from '../types/pedigree';
 import { SIBLING_SPACING, PARTNER_SPACING, GENERATION_SPACING } from './constants';
@@ -73,7 +71,6 @@ export function findRootUnion(doc: LayoutDoc, nodeId: string): string | null {
   let childId = nodeId;
   let rootUnion: string | null = null;
   const seen = new Set<string>();
-  // eslint-disable-next-line no-constant-condition
   while (true) {
     const parentLink = Object.values(doc.parentChildLinks).find(
       (l) => l.childId === childId,
@@ -140,14 +137,6 @@ export function packBlocks(blocks: readonly Block[], spacing: number): number[] 
   }
   return offsets;
 }
-
-// Re-export types consumed from pedigree for convenience (layout module consumers
-// only need to import from this module).
-export type {
-  Individual,
-  PartnershipRelationship,
-  ParentChildRelationship,
-};
 
 /** A laid-out subtree in local frame coordinates. */
 interface Frame {

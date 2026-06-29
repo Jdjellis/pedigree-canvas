@@ -181,9 +181,9 @@ describe('computeTreeLayout — clearance & cross-sibship', () => {
       b: link('b', 'sibship', 'sib'),
     };
     const moved = computeTreeLayout({ individuals, partnerships, parentChildLinks }, 'sibship');
-    const posOf = (id: string, _fallback: number) => moved[id]?.x ?? individuals[id].position.x;
+    const posOf = (id: string) => moved[id]?.x ?? individuals[id].position.x;
     // The sibling must end clear of the partner: at least SIBLING_SPACING (80) past it.
-    expect(posOf('sib', 80)).toBeGreaterThanOrEqual(posOf('partner', 120) + 80);
+    expect(posOf('sib')).toBeGreaterThanOrEqual(posOf('partner') + 80);
   });
 
   it('separates two cousin sibships under sibling parents (scenario 2)', () => {
