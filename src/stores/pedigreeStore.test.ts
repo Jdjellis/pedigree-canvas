@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { usePedigreeStore, createDefaultIndividual } from './pedigreeStore';
+import { usePedigreeStore, createDefaultIndividual, createDefaultDocument } from './pedigreeStore';
 import { generateId } from '../utils/idGenerator';
 import { RelationshipType } from '../types/enums';
-import { MIN_GENERATION_NODE_SPACING } from '../utils/constants';
+import { MIN_GENERATION_NODE_SPACING, GENERATION_SPACING } from '../utils/constants';
 import type {
   TextAnnotation,
   PartnershipRelationship,
@@ -209,6 +209,9 @@ describe('pedigreeStore bounded respacing on add', () => {
     expect(individuals.partner.position.x).toBeLessThan(
       individuals.neighbour.position.x,
     );
+    // No-op invariant: childless partnership triggers no layout, so the
+    // neighbour stays exactly where it started.
+    expect(individuals.neighbour.position.x).toBe(130);
   });
 
   it('a single undo reverts the partner add (no layout ran for a childless union)', () => {
@@ -963,5 +966,229 @@ describe('addParentsToParentlessUnion', () => {
     expect(doc.individuals[dad.id]).toBeUndefined();
     expect(doc.partnerships['u1'].partner1Id).toBeUndefined();
     expect(doc.partnerships['u1'].partner2Id).toBeUndefined();
+  });
+});
+
+describe('autospacing acceptance (#55)', () => {
+  beforeEach(() => {
+    usePedigreeStore.setState({ document: createDefaultDocument() });
+    usePedigreeStore.temporal.getState().clear();
+  });
+
+  it('S4: sole parent re-centres after each sibling add', () => {
+    const store = usePedigreeStore.getState();
+
+    const parent = createDefaultIndividual({ id: 'parent', generation: 0, position: { x: 0, y: 0 } });
+    store.addIndividual(parent);
+
+    // First child via addChildViaNewUnion (creates the 1-partner union).
+    const child1 = createDefaultIndividual({ id: 'child1', generation: 1, position: { x: 0, y: 150 } });
+    store.addChildViaNewUnion(
+      child1,
+      { id: 'u1', type: RelationshipType.Partnership, partner1Id: parent.id, childrenIds: [child1.id] },
+      parentChildLink('u1', child1.id),
+    );
+
+    // Add two more siblings via addChildToFamily.
+    const child2 = createDefaultIndividual({ id: 'child2', generation: 1, position: { x: 80, y: 150 } });
+    store.addChildToFamily(child2, 'u1', parentChildLink('u1', child2.id));
+
+    const child3 = createDefaultIndividual({ id: 'child3', generation: 1, position: { x: 160, y: 150 } });
+    store.addChildToFamily(child3, 'u1', parentChildLink('u1', child3.id));
+
+    const individuals = usePedigreeStore.getState().document.individuals;
+    const parentX = individuals.parent.position.x;
+    const childXs = ['child1', 'child2', 'child3']
+      .map((id) => individuals[id].position.x)
+      .sort((a, b) => a - b);
+
+    // Sole parent must be centred over the full sibling row.
+    expect(parentX).toBe((childXs[0] + childXs[childXs.length - 1]) / 2);
+    // Every adjacent sibling pair must be at least SIBLING_SPACING apart.
+    for (let i = 1; i < childXs.length; i++) {
+      expect(childXs[i] - childXs[i - 1]).toBeGreaterThanOrEqual(MIN_GENERATION_NODE_SPACING);
+    }
+  });
+
+  it('every family add collapses to a single undo step', () => {
+    const store = usePedigreeStore.getState();
+
+    // Build a parent+spouse union with one child so that adding a second partner
+    // to the parent triggers a real relayout (siblings get re-centred).
+    const parent = createDefaultIndividual({ id: 'parent', generation: 0, position: { x: 0, y: 0 } });
+    const spouse = createDefaultIndividual({ id: 'spouse', generation: 0, position: { x: 80, y: 0 } });
+    const child = createDefaultIndividual({ id: 'child', generation: 1, position: { x: 40, y: 150 } });
+    const fam: PartnershipRelationship = {
+      id: 'fam',
+      type: RelationshipType.Partnership,
+      partner1Id: parent.id,
+      partner2Id: spouse.id,
+      childrenIds: [child.id],
+    };
+    store.addIndividual(parent);
+    store.addIndividual(spouse);
+    store.addIndividual(child);
+    store.addPartnership(fam);
+    store.addParentChildLink(parentChildLink('fam', child.id));
+
+    // Clear history so only the upcoming add is on the undo stack.
+    usePedigreeStore.temporal.getState().clear();
+
+    const before = usePedigreeStore.getState().document.individuals;
+
+    // addPartnerToIndividual on a blood-family member triggers relayout, moving
+    // siblings around.  One undo must restore all positions.
+    const newPartner = createDefaultIndividual({ id: 'newPartner', generation: 0, position: { x: -60, y: 0 } });
+    const union: PartnershipRelationship = {
+      id: 'pUnion',
+      type: RelationshipType.Partnership,
+      partner1Id: parent.id,
+      partner2Id: newPartner.id,
+      childrenIds: [],
+    };
+    store.addPartnerToIndividual(newPartner, union);
+
+    // A single undo must fully restore the pre-add individuals map (positions included).
+    usePedigreeStore.temporal.getState().undo();
+    expect(usePedigreeStore.getState().document.individuals).toEqual(before);
+  });
+
+  it('a manual reorder survives the next sibling add (order-preserving relayout)', () => {
+    const store = usePedigreeStore.getState();
+
+    const parent = createDefaultIndividual({ id: 'parent', generation: 0, position: { x: 0, y: 0 } });
+    store.addIndividual(parent);
+
+    // Add children A and B via the normal path.
+    const childA = createDefaultIndividual({ id: 'childA', generation: 1, position: { x: 0, y: 150 } });
+    store.addChildViaNewUnion(
+      childA,
+      { id: 'u1', type: RelationshipType.Partnership, partner1Id: parent.id, childrenIds: [childA.id] },
+      parentChildLink('u1', childA.id),
+    );
+
+    const childB = createDefaultIndividual({ id: 'childB', generation: 1, position: { x: 80, y: 150 } });
+    store.addChildToFamily(childB, 'u1', parentChildLink('u1', childB.id));
+
+    // Manually drag B to the left of A — simulating a user reorder.
+    store.moveIndividual('childB', { x: -80, y: 150 });
+
+    // Add a third child; the relayout must honour the new B < A order.
+    const childC = createDefaultIndividual({ id: 'childC', generation: 1, position: { x: 160, y: 150 } });
+    store.addChildToFamily(childC, 'u1', parentChildLink('u1', childC.id));
+
+    const individuals = usePedigreeStore.getState().document.individuals;
+
+    // After relayout, the final left-to-right order must be B, A, C.
+    expect(individuals.childB.position.x).toBeLessThan(individuals.childA.position.x);
+    expect(individuals.childA.position.x).toBeLessThan(individuals.childC.position.x);
+  });
+
+  it('addSiblingViaNewUnion: siblings are pushed at least SIBLING_SPACING apart', () => {
+    const store = usePedigreeStore.getState();
+
+    // Place sibling intentionally closer than 80 to the target so the layout
+    // must push them apart.
+    const target = createDefaultIndividual({ id: 'target', generation: 1, position: { x: 0, y: 0 } });
+    store.addIndividual(target);
+
+    const sibling = createDefaultIndividual({ id: 'sibling', generation: 1, position: { x: 30, y: 0 } });
+    store.addSiblingViaNewUnion(
+      target, sibling,
+      { id: 'u1', type: RelationshipType.Partnership, childrenIds: [target.id, sibling.id] },
+      parentChildLink('u1', target.id),
+      parentChildLink('u1', sibling.id),
+    );
+
+    const individuals = usePedigreeStore.getState().document.individuals;
+
+    // Both siblings must be present.
+    expect(individuals[target.id]).toBeDefined();
+    expect(individuals[sibling.id]).toBeDefined();
+
+    // They must be at least SIBLING_SPACING apart (no overlap).
+    const gap = Math.abs(individuals[sibling.id].position.x - individuals[target.id].position.x);
+    expect(gap).toBeGreaterThanOrEqual(MIN_GENERATION_NODE_SPACING);
+
+    // The layout must preserve the sibship centroid (no systematic drift).
+    const initialCentroid = (0 + 30) / 2;
+    const finalCentroid = (individuals[target.id].position.x + individuals[sibling.id].position.x) / 2;
+    expect(finalCentroid).toBe(initialCentroid);
+  });
+
+  it('addChildViaNewUnion: single child lands centred under its sole parent', () => {
+    const store = usePedigreeStore.getState();
+
+    const parent = createDefaultIndividual({ id: 'parent', generation: 0, position: { x: 0, y: 0 } });
+    store.addIndividual(parent);
+
+    // Intentionally place the child off-centre so the layout engine has something to correct.
+    const child = createDefaultIndividual({ id: 'child', generation: 1, position: { x: 50, y: 150 } });
+    store.addChildViaNewUnion(
+      child,
+      { id: 'u1', type: RelationshipType.Partnership, partner1Id: parent.id, childrenIds: [child.id] },
+      parentChildLink('u1', child.id),
+    );
+
+    const individuals = usePedigreeStore.getState().document.individuals;
+
+    // A single child under a sole parent must land directly below it.
+    expect(individuals.child.position.x).toBe(individuals.parent.position.x);
+    // And must be exactly one generation row below.
+    expect(individuals.child.position.y).toBe(individuals.parent.position.y + GENERATION_SPACING);
+  });
+
+  it('fillUnionPartner: couple midpoint equals child x after filling the second slot', () => {
+    const store = usePedigreeStore.getState();
+
+    const parent = createDefaultIndividual({ id: 'parent', generation: 0, position: { x: 0, y: 0 } });
+    store.addIndividual(parent);
+
+    // 1-partner union with one child.
+    const child = createDefaultIndividual({ id: 'child', generation: 1, position: { x: 0, y: 150 } });
+    store.addChildViaNewUnion(
+      child,
+      { id: 'u1', type: RelationshipType.Partnership, partner1Id: parent.id, childrenIds: [child.id] },
+      parentChildLink('u1', child.id),
+    );
+
+    // Fill the empty slot with a partner placed at PARTNER_SPACING from the parent.
+    const partner = createDefaultIndividual({ id: 'partner', generation: 0, position: { x: 120, y: 0 } });
+    store.fillUnionPartner(partner, 'u1');
+
+    const individuals = usePedigreeStore.getState().document.individuals;
+
+    // After filling, the couple must be centred over their single child.
+    const coupleMidpoint =
+      (individuals.parent.position.x + individuals.partner.position.x) / 2;
+    expect(coupleMidpoint).toBe(individuals.child.position.x);
+  });
+
+  it('addParentsToParentlessUnion: new couple midpoint equals children x-span midpoint', () => {
+    const store = usePedigreeStore.getState();
+
+    // Build a 0-partner sibship with two children.
+    const childA = createDefaultIndividual({ id: 'childA', generation: 1, position: { x: 0, y: 0 } });
+    const childB = createDefaultIndividual({ id: 'childB', generation: 1, position: { x: 80, y: 0 } });
+    store.addIndividual(childA);
+    store.addSiblingViaNewUnion(
+      childA, childB,
+      { id: 'u1', type: RelationshipType.Partnership, childrenIds: [childA.id, childB.id] },
+      parentChildLink('u1', childA.id),
+      parentChildLink('u1', childB.id),
+    );
+
+    // Add parents to the parentless sibship.
+    const dad = createDefaultIndividual({ id: 'dad', generation: 0, position: { x: -60, y: -150 } });
+    const mom = createDefaultIndividual({ id: 'mom', generation: 0, position: { x: 60, y: -150 } });
+    store.addParentsToParentlessUnion(dad, mom, 'u1');
+
+    const individuals = usePedigreeStore.getState().document.individuals;
+
+    // The new couple must be centred over the children's x-span.
+    const coupleMidpoint = (individuals.dad.position.x + individuals.mom.position.x) / 2;
+    const childrenXs = [individuals.childA.position.x, individuals.childB.position.x];
+    const childrenMidpoint = (Math.min(...childrenXs) + Math.max(...childrenXs)) / 2;
+    expect(coupleMidpoint).toBe(childrenMidpoint);
   });
 });
