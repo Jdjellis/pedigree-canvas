@@ -76,13 +76,14 @@ export function PropertiesPanel() {
   const selectedIds = useUIStore((s) => s.selectedIds);
   const propertiesPanelOpen = useUIStore((s) => s.propertiesPanelOpen);
   const editingLocked = useUIStore((s) => s.editingLocked);
-  const doc = usePedigreeStore((s) => s.document);
-  const individuals = doc.individuals;
+  const individuals = usePedigreeStore((s) => s.document.individuals);
+  const partnerships = usePedigreeStore((s) => s.document.partnerships);
+  const parentChildLinks = usePedigreeStore((s) => s.document.parentChildLinks);
+  const legendConfig = usePedigreeStore((s) => s.document.legendConfig);
+  const twinGroups = usePedigreeStore((s) => s.document.twinGroups);
   const updateIndividual = usePedigreeStore((s) => s.updateIndividual);
   const updateLegendEntry = usePedigreeStore((s) => s.updateLegendEntry);
   const addLegendEntry = usePedigreeStore((s) => s.addLegendEntry);
-  const legendConfig = doc.legendConfig;
-  const twinGroups = doc.twinGroups;
   const updateTwinGroup = usePedigreeStore((s) => s.updateTwinGroup);
   const removeTwinGroup = usePedigreeStore((s) => s.removeTwinGroup);
   const setAdoption = usePedigreeStore((s) => s.setAdoption);
@@ -690,7 +691,7 @@ export function PropertiesPanel() {
         </div>
 
         {(() => {
-          const childLinks = parentLinksForChild(doc.parentChildLinks, selectedId ?? '');
+          const childLinks = parentLinksForChild(parentChildLinks, selectedId ?? '');
 
           if (childLinks.length >= 2) {
             return (
@@ -706,7 +707,7 @@ export function PropertiesPanel() {
                 </label>
                 {childLinks.map((cl) => (
                   <div key={cl.id} className={styles.field}>
-                    <label className={styles.label}>{parentCoupleLabel(doc, cl)}</label>
+                    <label className={styles.label}>{parentCoupleLabel({ individuals, partnerships }, cl)}</label>
                     <SegmentedControl
                       options={[
                         { value: 'biological', label: 'Biological' },
@@ -714,7 +715,7 @@ export function PropertiesPanel() {
                       ]}
                       value={cl.isAdoptive ? 'adoptive' : 'biological'}
                       onChange={(v) => setLinkAdoptive(cl.id, v === 'adoptive')}
-                      ariaLabel={`Line of descent for ${parentCoupleLabel(doc, cl)}`}
+                      ariaLabel={`Line of descent for ${parentCoupleLabel({ individuals, partnerships }, cl)}`}
                     />
                   </div>
                 ))}

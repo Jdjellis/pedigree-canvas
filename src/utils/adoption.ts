@@ -1,4 +1,8 @@
-import type { ParentChildRelationship, PedigreeDocument } from '../types/pedigree';
+import type {
+  Individual,
+  ParentChildRelationship,
+  PartnershipRelationship,
+} from '../types/pedigree';
 
 /** Union of the three adoption states shown in the properties panel. */
 export type AdoptionMode = 'none' | 'in' | 'out';
@@ -37,14 +41,17 @@ export function adoptionModeForLink(
  * document.
  */
 export function parentCoupleLabel(
-  doc: PedigreeDocument,
+  source: {
+    individuals: Record<string, Individual>;
+    partnerships: Record<string, PartnershipRelationship>;
+  },
   link: ParentChildRelationship,
 ): string {
-  const partnership = doc.partnerships[link.parentPartnershipId];
+  const partnership = source.partnerships[link.parentPartnershipId];
   if (!partnership) return 'Parents';
 
   const name = (id: string | undefined): string =>
-    (id !== undefined && doc.individuals[id]?.displayName) || id || '?';
+    (id !== undefined && source.individuals[id]?.displayName) || id || '?';
 
   const a = name(partnership.partner1Id);
   const b =
