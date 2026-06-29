@@ -202,9 +202,10 @@ tests migrated or replaced by `treeLayout` tests):
 - `computeParentClearanceShift`
 - `centerParentsOverChildren`
 
-Retained: `collectDescendants` (moves into `treeLayout.ts`, reused by the
-recursion). If nothing else imports `respacing.ts` afterwards, the file is
-deleted.
+`collectDescendants` is **also retired**: the tidy recursion walks
+`partnership.childrenIds` directly and never needs a flattened descendant set,
+so nothing imports it after the rewrite. `src/utils/respacing.ts` and its test
+are deleted in full.
 
 ## Testing (TDD)
 
