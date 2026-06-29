@@ -317,17 +317,19 @@ export function PropertiesPanel() {
             />
             <div className={styles.field}>
               <label className={styles.label}>Color</label>
-              <select
-                className={styles.select}
-                value={conditionColor}
-                onChange={(e) => setConditionColor(e.target.value)}
-              >
+              <div className={styles.swatchRow}>
                 {COLOR_OPTIONS.map((c) => (
-                  <option key={c.value} value={c.value}>
-                    {c.label}
-                  </option>
+                  <button
+                    key={c.value}
+                    type="button"
+                    className={`${styles.swatch} ${conditionColor === c.value ? styles.swatchActive : ''}`}
+                    style={{ backgroundColor: c.value }}
+                    aria-label={c.label}
+                    aria-pressed={conditionColor === c.value}
+                    onClick={() => setConditionColor(c.value)}
+                  />
                 ))}
-              </select>
+              </div>
             </div>
             <div className={styles.field}>
               <label className={styles.label}>Quarter</label>

@@ -261,3 +261,27 @@
 .noteCancelButton:hover {
   text-decoration: underline;
 }
+
+/* ── Add Condition: colour swatches ───────────────── */
+.swatchRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.swatch {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  cursor: pointer;
+  transition: outline-color 0.1s;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.swatchActive {
+  outline-color: var(--color-primary);
+}
