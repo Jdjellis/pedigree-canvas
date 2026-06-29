@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { usePedigreeStore, createDefaultIndividual, createDefaultDocument } from './pedigreeStore';
 import { generateId } from '../utils/idGenerator';
-import { RelationshipType } from '../types/enums';
+import { RelationshipType, GenderIdentity, VitalStatus } from '../types/enums';
 import { MIN_GENERATION_NODE_SPACING } from '../utils/constants';
 import type {
   TextAnnotation,
@@ -1026,5 +1026,43 @@ describe('setLinkAdoptive', () => {
     usePedigreeStore.getState().setLinkAdoptive(linkId, true);
     usePedigreeStore.temporal.getState().undo();
     expect(usePedigreeStore.getState().document.parentChildLinks[linkId].isAdoptive).toBeUndefined();
+  });
+});
+
+describe('updateIndividuals (bulk)', () => {
+  it('applies the patch to every listed individual and leaves others untouched', () => {
+    const store = usePedigreeStore.getState();
+    store.addIndividual(createDefaultIndividual({ id: 'a' }));
+    store.addIndividual(createDefaultIndividual({ id: 'b' }));
+    store.addIndividual(createDefaultIndividual({ id: 'c' }));
+
+    store.updateIndividuals(['a', 'b'], { vitalStatus: VitalStatus.Deceased });
+
+    const doc = usePedigreeStore.getState().document;
+    expect(doc.individuals.a.vitalStatus).toBe(VitalStatus.Deceased);
+    expect(doc.individuals.b.vitalStatus).toBe(VitalStatus.Deceased);
+    expect(doc.individuals.c.vitalStatus).toBe(VitalStatus.Alive);
+  });
+
+  it('ignores unknown ids', () => {
+    const store = usePedigreeStore.getState();
+    store.addIndividual(createDefaultIndividual({ id: 'a' }));
+    store.updateIndividuals(['a', 'missing'], { genderIdentity: GenderIdentity.Woman });
+    expect(usePedigreeStore.getState().document.individuals.a.genderIdentity).toBe(
+      GenderIdentity.Woman,
+    );
+  });
+
+  it('records a single undoable step for the whole batch', () => {
+    const store = usePedigreeStore.getState();
+    store.addIndividual(createDefaultIndividual({ id: 'a' }));
+    store.addIndividual(createDefaultIndividual({ id: 'b' }));
+
+    store.updateIndividuals(['a', 'b'], { adopted: true });
+    usePedigreeStore.temporal.getState().undo();
+
+    const doc = usePedigreeStore.getState().document;
+    expect(doc.individuals.a.adopted).toBeUndefined();
+    expect(doc.individuals.b.adopted).toBeUndefined();
   });
 });

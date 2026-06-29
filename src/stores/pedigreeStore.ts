@@ -162,6 +162,11 @@ interface PedigreeState {
   // Individual actions
   addIndividual: (individual: Individual) => void;
   updateIndividual: (id: string, patch: Partial<Individual>) => void;
+  /**
+   * Apply the same patch to several individuals in one `set` call so the whole
+   * bulk edit is a single undo step. Unknown ids are skipped.
+   */
+  updateIndividuals: (ids: string[], patch: Partial<Individual>) => void;
   removeIndividual: (id: string) => void;
   moveIndividual: (id: string, position: Position) => void;
 
@@ -301,6 +306,29 @@ export const usePedigreeStore = create<PedigreeState>()(
                 ...state.document.individuals,
                 [id]: { ...existing, ...patch },
               },
+            },
+          };
+        }),
+
+      updateIndividuals: (ids, patch) =>
+        set((state) => {
+          const individuals = { ...state.document.individuals };
+          let changed = false;
+          for (const id of ids) {
+            const existing = individuals[id];
+            if (!existing) continue;
+            individuals[id] = { ...existing, ...patch };
+            changed = true;
+          }
+          if (!changed) return state;
+          return {
+            document: {
+              ...state.document,
+              metadata: {
+                ...state.document.metadata,
+                updatedAt: new Date().toISOString(),
+              },
+              individuals,
             },
           };
         }),
