@@ -1,12 +1,12 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useUIStore } from '../../stores/uiStore';
 import { useViewportStore } from '../../stores/viewportStore';
 import { usePedigreeStore, createDefaultIndividual } from '../../stores/pedigreeStore';
 import { getPresentPartners, findPartnerships } from '../../utils/graphTraversal';
 import { generateId } from '../../utils/idGenerator';
-import { RelationshipType, GenderIdentity } from '../../types/enums';
+import { RelationshipType, GenderIdentity, TwinType } from '../../types/enums';
 import { PARTNER_SPACING, GENERATION_SPACING, SIBLING_SPACING } from '../../utils/constants';
-import type { PartnershipRelationship, ParentChildRelationship } from '../../types/pedigree';
+import type { PartnershipRelationship, ParentChildRelationship, TwinGroup } from '../../types/pedigree';
 import { createRelativeIndividual } from './radialActions';
 import styles from './RadialMenu.module.css';
 import clsx from 'clsx';
@@ -31,7 +31,9 @@ export function RadialMenu() {
   const addChildViaNewUnion = usePedigreeStore((s) => s.addChildViaNewUnion);
   const fillUnionPartner = usePedigreeStore((s) => s.fillUnionPartner);
   const addParentsToParentlessUnion = usePedigreeStore((s) => s.addParentsToParentlessUnion);
+  const addTwinGroup = usePedigreeStore((s) => s.addTwinGroup);
 
+  const [altMod, setAltMod] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const target = targetId ? doc.individuals[targetId] : null;
@@ -52,22 +54,24 @@ export function RadialMenu() {
     return getPresentPartners(doc.individuals, union).length < 2;
   })();
 
-  // Hover-driven open/close (with hysteresis) is owned by the proximity
-  // controller, useRadialHover. This component only handles Escape-to-dismiss
-  // and the click actions; empty-canvas clicks dismiss via the Stage handler.
-
-  // Dismiss on Escape (also clears the pinned flag via hideRadialMenu)
+  // Tracks Escape (dismiss) and ⌥/Alt (reveal twin split). Reset altMod on
+  // every visibility transition so stale state doesn't carry over.
   useEffect(() => {
+    setAltMod(false);
     if (!visible) return;
 
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        hideRadialMenu();
-      }
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') hideRadialMenu();
+      setAltMod(e.altKey);
     };
+    const onKeyUp = (e: KeyboardEvent) => setAltMod(e.altKey);
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('keyup', onKeyUp);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('keyup', onKeyUp);
+    };
   }, [visible, hideRadialMenu]);
 
   const handleAddParent = useCallback(() => {
@@ -276,6 +280,63 @@ export function RadialMenu() {
     select(sibling.id);
   }, [target, targetId, doc, defaultSex, addChildToFamily, addSiblingViaNewUnion, hideRadialMenu, select]);
 
+  const handleAddTwin = useCallback((twinType: TwinType) => {
+    if (!target || !targetId) return;
+
+    const parentLink = Object.values(doc.parentChildLinks).find((l) => l.childId === targetId);
+
+    if (parentLink) {
+      const partnership = doc.partnerships[parentLink.parentPartnershipId];
+      if (!partnership) return;
+      const siblings = partnership.childrenIds.map((id) => doc.individuals[id]).filter(Boolean);
+      const maxX = Math.max(...siblings.map((s) => s.position.x));
+      const twin = createDefaultIndividual({
+        generation: target.generation,
+        position: { x: maxX + SIBLING_SPACING, y: target.position.y },
+      });
+      const link: ParentChildRelationship = {
+        id: generateId(), type: RelationshipType.ParentChild,
+        parentPartnershipId: partnership.id, childId: twin.id, isAdopted: false,
+      };
+      const twinGroup: TwinGroup = {
+        id: generateId(), twinType,
+        individualIds: [targetId, twin.id], parentPartnershipId: partnership.id,
+      };
+      addChildToFamily(twin, partnership.id, link);
+      addTwinGroup(twinGroup);
+      hideRadialMenu();
+      select(twin.id);
+      return;
+    }
+
+    // No parents: create a 0-partner sibship then mark the pair as twins.
+    const partnershipId = generateId();
+    const twin = createRelativeIndividual(defaultSex, {
+      generation: target.generation,
+      position: { x: target.position.x + SIBLING_SPACING, y: target.position.y },
+    });
+    const partnership: PartnershipRelationship = {
+      id: partnershipId, type: RelationshipType.Partnership,
+      childrenIds: [target.id, twin.id],
+    };
+    const targetLink: ParentChildRelationship = {
+      id: generateId(), type: RelationshipType.ParentChild,
+      parentPartnershipId: partnershipId, childId: target.id, isAdopted: false,
+    };
+    const siblingLink: ParentChildRelationship = {
+      id: generateId(), type: RelationshipType.ParentChild,
+      parentPartnershipId: partnershipId, childId: twin.id, isAdopted: false,
+    };
+    const twinGroup: TwinGroup = {
+      id: generateId(), twinType,
+      individualIds: [targetId, twin.id], parentPartnershipId: partnershipId,
+    };
+    addSiblingViaNewUnion(target, twin, partnership, targetLink, siblingLink);
+    addTwinGroup(twinGroup);
+    hideRadialMenu();
+    select(twin.id);
+  }, [target, targetId, doc, defaultSex, addChildToFamily, addSiblingViaNewUnion, addTwinGroup, hideRadialMenu, select]);
+
   if (!visible || !target || editingLocked) return null;
 
   return (
@@ -310,11 +371,25 @@ export function RadialMenu() {
           Child
         </button>
         <button
-          className={clsx(styles.option, styles.left)}
+          className={clsx(styles.option, styles.left, altMod && styles.altActive)}
           onClick={handleAddSibling}
-          title="Add Sibling"
+          title="Add Sibling (hold ⌥ for MZ / DZ twin)"
         >
           Sibling
+        </button>
+        <button
+          className={clsx(styles.option, styles.leftUpper, altMod && styles.altActive)}
+          onClick={() => handleAddTwin(TwinType.Monozygotic)}
+          title="Add Monozygotic twin (MZ)"
+        >
+          MZ
+        </button>
+        <button
+          className={clsx(styles.option, styles.leftLower, altMod && styles.altActive)}
+          onClick={() => handleAddTwin(TwinType.Dizygotic)}
+          title="Add Dizygotic twin (DZ)"
+        >
+          DZ
         </button>
       </div>
     </div>

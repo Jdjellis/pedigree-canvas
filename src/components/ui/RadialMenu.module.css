@@ -6,8 +6,8 @@
 
 .menu {
   position: relative;
-  width: 160px;
-  height: 160px;
+  width: 180px;
+  height: 180px;
   transform: translate(-50%, -50%);
   pointer-events: none;
 }
@@ -25,7 +25,7 @@
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
   cursor: pointer;
   pointer-events: auto;
-  transition: background-color 0.15s, border-color 0.15s, transform 0.15s;
+  transition: background-color 0.15s, border-color 0.15s, transform 0.15s, opacity 0.12s;
   font-size: 8px;
   font-weight: 600;
   color: var(--color-text);
@@ -46,54 +46,96 @@
 }
 
 /*
- * Positions are measured from the menu center (which sits on the symbol center).
- * The symbol is 40px, so 56px clears it on every side.
+ * All positions are measured from the menu center (= symbol center).
+ * The symbol radius is ~20px; 66px clears it on every cardinal axis.
  *
- * The symbol's name / age / number label is rendered as a center-aligned column
- * of text directly below the symbol, starting ~28px down and growing downward by
- * one line per detail. A "Child" item placed straight down (0, 56) lands on top
- * of that label. To keep "Child" reachable yet clear of the centered label
- * column, it is pushed onto the lower-right diagonal (down and to the side, out
- * of the text). "Sibling" is given a matching slight downward nudge on the left
- * so the two lower items sit symmetrically about the label and the menu stays
- * balanced. Parent and Partner remain on their cardinal axes.
+ * "Child" sits at the cardinal south (6 o'clock) — the natural generational
+ * direction — but is pushed to 72px to give the number/name label (which
+ * starts ~48px below center) as much breathing room as possible.
+ *
+ * "Sibling" sits at the cardinal west (9 o'clock). Holding ⌥ fades it out
+ * and reveals "MZ" (monozygotic) and "DZ" (dizygotic) twin buttons that
+ * split from the same origin point above and below the Sibling axis.
  */
 .top {
   left: 50%;
   top: 50%;
-  transform: translate(-50%, -50%) translate(0px, -56px);
+  transform: translate(-50%, -50%) translate(0px, -66px);
 }
 .top:hover {
-  transform: translate(-50%, -50%) translate(0px, -56px) scale(1.1);
+  transform: translate(-50%, -50%) translate(0px, -66px) scale(1.1);
 }
 
 .right {
   left: 50%;
   top: 50%;
-  transform: translate(-50%, -50%) translate(56px, 0px);
+  transform: translate(-50%, -50%) translate(66px, 0px);
 }
 .right:hover {
-  transform: translate(-50%, -50%) translate(56px, 0px) scale(1.1);
+  transform: translate(-50%, -50%) translate(66px, 0px) scale(1.1);
 }
 
-/* Lower-right diagonal: clears the centered label column below the symbol. */
+/* Cardinal south: child goes straight down in the generational direction. */
 .bottom {
   left: 50%;
   top: 50%;
-  transform: translate(-50%, -50%) translate(50px, 50px);
+  transform: translate(-50%, -50%) translate(0px, 72px);
 }
 .bottom:hover {
-  transform: translate(-50%, -50%) translate(50px, 50px) scale(1.1);
+  transform: translate(-50%, -50%) translate(0px, 72px) scale(1.1);
 }
 
-/* Lower-left diagonal: mirrors "Child" so the lower pair stays symmetric. */
+/* Cardinal west: Sibling. Fades out when ⌥ is held. */
 .left {
   left: 50%;
   top: 50%;
-  transform: translate(-50%, -50%) translate(-50px, 50px);
+  transform: translate(-50%, -50%) translate(-66px, 0px);
+  opacity: 1;
 }
 .left:hover {
-  transform: translate(-50%, -50%) translate(-50px, 50px) scale(1.1);
+  transform: translate(-50%, -50%) translate(-66px, 0px) scale(1.1);
+}
+.left.altActive {
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -50%) translate(-66px, 0px) scale(0.7);
+}
+
+/*
+ * Twin buttons: both start collapsed at the Sibling position.
+ * When .altActive is applied they slide apart to ±22px on the vertical axis
+ * while fading in — creating a split-from-origin animation.
+ */
+.leftUpper {
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) translate(-66px, 0px) scale(0.7);
+  opacity: 0;
+  pointer-events: none;
+}
+.leftUpper.altActive {
+  transform: translate(-50%, -50%) translate(-66px, -22px);
+  opacity: 1;
+  pointer-events: auto;
+}
+.leftUpper.altActive:hover {
+  transform: translate(-50%, -50%) translate(-66px, -22px) scale(1.1);
+}
+
+.leftLower {
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) translate(-66px, 0px) scale(0.7);
+  opacity: 0;
+  pointer-events: none;
+}
+.leftLower.altActive {
+  transform: translate(-50%, -50%) translate(-66px, 22px);
+  opacity: 1;
+  pointer-events: auto;
+}
+.leftLower.altActive:hover {
+  transform: translate(-50%, -50%) translate(-66px, 22px) scale(1.1);
 }
 
 .disabled {
