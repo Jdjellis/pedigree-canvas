@@ -13,7 +13,8 @@ import styles from './ToolHint.module.css';
 const HINTS: Partial<Record<ActiveTool, ReactNode>> = {
   select: (
     <>
-      To move the canvas, hold <kbd>Scroll wheel</kbd> or <kbd>Space</kbd> while
+      Hold <kbd>Alt</kbd> and drag from one person onto another to link them. To
+      move the canvas, hold <kbd>Scroll wheel</kbd> or <kbd>Space</kbd> while
       dragging, or use the hand tool
     </>
   ),

@@ -56,4 +56,12 @@ describe('when activeModal is shortcuts', () => {
     // The overlay must list "Command palette" as a recognisable shortcut
     expect(screen.getByText(/command palette/i)).toBeInTheDocument();
   });
+
+  test('documents the alt-drag link gesture so relationships are discoverable', () => {
+    setModal('shortcuts');
+    render(<ShortcutsOverlay />);
+
+    expect(screen.getByText(/link two people/i)).toBeInTheDocument();
+    expect(screen.getByText(/Alt \+ Drag/i)).toBeInTheDocument();
+  });
 });

@@ -41,6 +41,15 @@ const SHORTCUT_GROUPS: ShortcutGroup[] = [
     ],
   },
   {
+    label: 'Relationships',
+    rows: [
+      {
+        description: 'Link two people (then pick the relationship type)',
+        keys: ['Alt + Drag'],
+      },
+    ],
+  },
+  {
     label: 'Tools',
     rows: [
       { description: 'Select tool', keys: ['1', 'V'] },

@@ -26,6 +26,14 @@ describe('ToolHint', () => {
     expect(screen.getByText('Space')).toBeInTheDocument();
   });
 
+  test('surfaces the alt-drag link gesture on the select tool', () => {
+    setTool('select');
+    render(<ToolHint />);
+
+    expect(screen.getByRole('note')).toHaveTextContent(/drag from one person onto another to link/i);
+    expect(screen.getByText('Alt')).toBeInTheDocument();
+  });
+
   test('renders nothing for tools without a hint', () => {
     setTool('text');
     const { container } = render(<ToolHint />);
