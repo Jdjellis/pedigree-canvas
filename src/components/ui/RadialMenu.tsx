@@ -54,10 +54,11 @@ export function RadialMenu() {
     return getPresentPartners(doc.individuals, union).length < 2;
   })();
 
-  // Tracks Escape (dismiss) and ⌥/Alt (reveal twin split). Reset altMod on
-  // every visibility transition so stale state doesn't carry over.
+  // Tracks Escape (dismiss) and ⌥/Alt (reveal twin split).
+  // altMod needs no explicit reset: listeners are torn down on hide, so it
+  // can only be true if a live keydown set it. If the user reopens the menu
+  // while still holding Alt that's correct — the split shows immediately.
   useEffect(() => {
-    setAltMod(false);
     if (!visible) return;
 
     const onKeyDown = (e: KeyboardEvent) => {
