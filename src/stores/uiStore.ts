@@ -13,8 +13,27 @@ export type ActiveTool = 'select' | 'hand' | 'text' | 'eraser';
 /** The modal dialog currently open, or `null` when no modal is shown. */
 export type ActiveModal = 'import' | 'export' | 'settings' | 'legendEditor' | 'shortcuts' | null;
 
+/** What kind of connection an id in {@link ConnectionSelection} refers to. */
+export type ConnectionKind = 'partnership' | 'parentChild' | 'twin';
+
+/**
+ * A single, typed connection selection (mutually exclusive with the individual
+ * `selectedIds` selection). `id` is a partnership id, a `ParentChildRelationship`
+ * id, or a twin-group id, per `kind`.
+ */
+export interface ConnectionSelection {
+  kind: ConnectionKind;
+  id: string;
+}
+
 interface UIState {
   selectedIds: Set<string>;
+  /**
+   * The currently selected connection (line of descent / partnership / twin
+   * connector), or `null`. Mutually exclusive with `selectedIds`: selecting a
+   * connection clears the individual selection and vice versa.
+   */
+  selectedConnection: ConnectionSelection | null;
   hoveredId: string | null;
 
   radialMenu: {
@@ -124,6 +143,10 @@ interface UIState {
   startEditingAnnotation: (id: string) => void;
   /** Leave inline annotation edit mode. */
   stopEditingAnnotation: () => void;
+  /** Select a single connection; clears any individual selection, opens the panel. */
+  selectConnection: (sel: ConnectionSelection) => void;
+  /** Clear the connection selection (leaves the panel open/closed as-is). */
+  clearConnectionSelection: () => void;
   /** Whether first-run onboarding has been completed (persisted in localStorage). */
   onboarded: boolean;
   /** Mark onboarding as complete — updates store and persists to localStorage. */
@@ -132,6 +155,7 @@ interface UIState {
 
 export const useUIStore = create<UIState>()((set) => ({
   selectedIds: new Set<string>(),
+  selectedConnection: null,
   hoveredId: null,
 
   radialMenu: {
@@ -174,6 +198,7 @@ export const useUIStore = create<UIState>()((set) => ({
   select: (id) =>
     set((state) => ({
       selectedIds: new Set([id]),
+      selectedConnection: null,
       propertiesPanelOpen: true,
       // Leave annotation edit mode unless we're re-selecting the same one.
       editingAnnotationId:
@@ -183,6 +208,7 @@ export const useUIStore = create<UIState>()((set) => ({
   selectMultiple: (ids) =>
     set({
       selectedIds: new Set(ids),
+      selectedConnection: null,
       propertiesPanelOpen: ids.length > 0,
       editingAnnotationId: null,
     }),
@@ -190,6 +216,7 @@ export const useUIStore = create<UIState>()((set) => ({
   clearSelection: () =>
     set({
       selectedIds: new Set(),
+      selectedConnection: null,
       propertiesPanelOpen: false,
       editingAnnotationId: null,
     }),
@@ -204,6 +231,7 @@ export const useUIStore = create<UIState>()((set) => ({
       }
       return {
         selectedIds: next,
+        selectedConnection: null,
         propertiesPanelOpen: next.size > 0,
       };
     }),
@@ -303,10 +331,21 @@ export const useUIStore = create<UIState>()((set) => ({
     set({
       editingAnnotationId: id,
       selectedIds: new Set([id]),
+      selectedConnection: null,
       propertiesPanelOpen: true,
     }),
 
   stopEditingAnnotation: () => set({ editingAnnotationId: null }),
+
+  selectConnection: (sel) =>
+    set({
+      selectedConnection: sel,
+      selectedIds: new Set<string>(),
+      propertiesPanelOpen: true,
+      editingAnnotationId: null,
+    }),
+
+  clearConnectionSelection: () => set({ selectedConnection: null }),
 
   onboarded: safeStorage.getItem(ONBOARDED_STORAGE_KEY) === '1',
 
