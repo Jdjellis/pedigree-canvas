@@ -98,9 +98,9 @@ describe('OnboardingHints button actions', () => {
     expect(useUIStore.getState().activeModal).toBe('import');
   });
 
-  test('clicking Help opens the shortcuts modal', () => {
+  test('clicking Help opens the help modal', () => {
     render(<OnboardingHints />);
     fireEvent.click(screen.getByRole('button', { name: 'Help' }));
-    expect(useUIStore.getState().activeModal).toBe('shortcuts');
+    expect(useUIStore.getState().activeModal).toBe('help');
   });
 });
