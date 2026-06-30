@@ -7,7 +7,6 @@ import { generateId } from '../../utils/idGenerator';
 import { RelationshipType, GenderIdentity, TwinType } from '../../types/enums';
 import { PARTNER_SPACING, GENERATION_SPACING, SIBLING_SPACING } from '../../utils/constants';
 import type { PartnershipRelationship, ParentChildRelationship, TwinGroup } from '../../types/pedigree';
-import { createRelativeIndividual } from './radialActions';
 import styles from './RadialMenu.module.css';
 import clsx from 'clsx';
 
@@ -15,7 +14,8 @@ export function RadialMenu() {
   const { visible, targetId } = useUIStore((s) => s.radialMenu);
   const hideRadialMenu = useUIStore((s) => s.hideRadialMenu);
   const select = useUIStore((s) => s.select);
-  const defaultSex = useUIStore((s) => s.defaultSex);
+  const showGenderPicker = useUIStore((s) => s.showGenderPicker);
+  const genderPicker = useUIStore((s) => s.genderPicker);
   const editingLocked = useUIStore((s) => s.editingLocked);
 
   // Subscribe to viewport primitives so the menu re-renders on pan/zoom.
@@ -163,10 +163,12 @@ export function RadialMenu() {
       fillUnionPartner(partner, soleUnionId);
       hideRadialMenu();
       select(partner.id);
+      showGenderPicker(partner.id);
       return;
     }
 
-    const partner = createRelativeIndividual(defaultSex, {
+    const partner = createDefaultIndividual({
+      genderIdentity: GenderIdentity.Unknown,
       generation: target.generation,
       position: {
         x: target.position.x + PARTNER_SPACING,
@@ -180,7 +182,8 @@ export function RadialMenu() {
     addPartnerToIndividual(partner, partnership);
     hideRadialMenu();
     select(partner.id);
-  }, [target, targetId, doc, defaultSex, fillUnionPartner, addPartnerToIndividual, hideRadialMenu, select]);
+    showGenderPicker(partner.id);
+  }, [target, targetId, doc, showGenderPicker, fillUnionPartner, addPartnerToIndividual, hideRadialMenu, select]);
 
   const handleAddChild = useCallback(() => {
     if (!target || !targetId) return;
@@ -205,6 +208,7 @@ export function RadialMenu() {
       addChildViaNewUnion(child, partnership, link);
       hideRadialMenu();
       select(child.id);
+      showGenderPicker(child.id);
       return;
     }
 
@@ -218,7 +222,8 @@ export function RadialMenu() {
       : target.position.x;
     const existingChildren = partnership.childrenIds.length;
 
-    const child = createRelativeIndividual(defaultSex, {
+    const child = createDefaultIndividual({
+      genderIdentity: GenderIdentity.Unknown,
       generation: (target.generation ?? 0) + 1,
       position: { x: midX + existingChildren * SIBLING_SPACING, y: target.position.y + GENERATION_SPACING },
     });
@@ -229,7 +234,8 @@ export function RadialMenu() {
     addChildToFamily(child, partnership.id, link);
     hideRadialMenu();
     select(child.id);
-  }, [target, targetId, doc, defaultSex, addChildToFamily, addChildViaNewUnion, hideRadialMenu, select]);
+    showGenderPicker(child.id);
+  }, [target, targetId, doc, showGenderPicker, addChildToFamily, addChildViaNewUnion, hideRadialMenu, select]);
 
   const handleAddSibling = useCallback(() => {
     if (!target || !targetId) return;
@@ -255,12 +261,14 @@ export function RadialMenu() {
       addChildToFamily(sibling, partnership.id, link);
       hideRadialMenu();
       select(sibling.id);
+      showGenderPicker(sibling.id);
       return;
     }
 
     // No parents: create a 0-partner sibship holding the target and the new sibling.
     const partnershipId = generateId();
-    const sibling = createRelativeIndividual(defaultSex, {
+    const sibling = createDefaultIndividual({
+      genderIdentity: GenderIdentity.Unknown,
       generation: target.generation,
       position: { x: target.position.x + SIBLING_SPACING, y: target.position.y },
     });
@@ -279,7 +287,8 @@ export function RadialMenu() {
     addSiblingViaNewUnion(target, sibling, partnership, targetLink, siblingLink);
     hideRadialMenu();
     select(sibling.id);
-  }, [target, targetId, doc, defaultSex, addChildToFamily, addSiblingViaNewUnion, hideRadialMenu, select]);
+    showGenderPicker(sibling.id);
+  }, [target, targetId, doc, showGenderPicker, addChildToFamily, addSiblingViaNewUnion, hideRadialMenu, select]);
 
   const handleAddTwin = useCallback((twinType: TwinType) => {
     if (!target || !targetId) return;
@@ -312,7 +321,8 @@ export function RadialMenu() {
 
     // No parents: create a 0-partner sibship then mark the pair as twins.
     const partnershipId = generateId();
-    const twin = createRelativeIndividual(defaultSex, {
+    const twin = createDefaultIndividual({
+      genderIdentity: GenderIdentity.Unknown,
       generation: target.generation,
       position: { x: target.position.x + SIBLING_SPACING, y: target.position.y },
     });
@@ -336,9 +346,9 @@ export function RadialMenu() {
     addTwinGroup(twinGroup);
     hideRadialMenu();
     select(twin.id);
-  }, [target, targetId, doc, defaultSex, addChildToFamily, addSiblingViaNewUnion, addTwinGroup, hideRadialMenu, select]);
+  }, [target, targetId, doc, addChildToFamily, addSiblingViaNewUnion, addTwinGroup, hideRadialMenu, select]);
 
-  if (!visible || !target || editingLocked) return null;
+  if (!visible || !target || editingLocked || genderPicker.targetId) return null;
 
   return (
     <div

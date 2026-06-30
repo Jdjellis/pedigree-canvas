@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import type { DefaultSex } from '../utils/sex';
 import { ONBOARDED_STORAGE_KEY } from '../components/canvas/onboarding';
 import * as safeStorage from '../utils/safeStorage';
 
@@ -44,6 +43,9 @@ interface UIState {
     pinned: boolean;
   };
 
+  /** The individual whose gender is being chosen via the inline picker, or `null`. */
+  genderPicker: { targetId: string | null };
+
   dragLink: {
     active: boolean;
     sourceId: string | null;
@@ -61,8 +63,6 @@ interface UIState {
   propertiesPanelOpen: boolean;
   activeModal: ActiveModal;
   activeTool: ActiveTool;
-  /** The sex applied to singly-added people (seed + radial +Partner/+Child/+Sibling). */
-  defaultSex: DefaultSex;
 
   /** When true, the pedigree is read-only: no structural or property edits. */
   editingLocked: boolean;
@@ -103,6 +103,10 @@ interface UIState {
     canvasPos: { x: number; y: number }
   ) => void;
   hideRadialMenu: () => void;
+  /** Open the inline gender picker on the given individual. */
+  showGenderPicker: (id: string) => void;
+  /** Close the inline gender picker (keeps the individual's current shape). */
+  hideGenderPicker: () => void;
   /** Pin the radial menu open so it survives the pointer leaving the hot-zone. */
   pinRadialMenu: () => void;
   /** Release a pinned radial menu (it then follows hover rules again). */
@@ -114,8 +118,6 @@ interface UIState {
   showLinkPopup: (sourceId: string, targetId: string, screenPos: { x: number; y: number }) => void;
   hideLinkPopup: () => void;
   setActiveTool: (tool: ActiveTool) => void;
-  /** Set the default sex used for singly-added people. */
-  setDefaultSex: (sex: DefaultSex) => void;
   /** Toggle whether the pedigree is locked against editing. */
   toggleEditingLocked: () => void;
   openModal: (modal: ActiveModal) => void;
@@ -154,6 +156,8 @@ export const useUIStore = create<UIState>()((set) => ({
     pinned: false,
   },
 
+  genderPicker: { targetId: null },
+
   dragLink: {
     active: false,
     sourceId: null,
@@ -171,7 +175,6 @@ export const useUIStore = create<UIState>()((set) => ({
   propertiesPanelOpen: false,
   activeModal: null,
   activeTool: 'select',
-  defaultSex: 'unknown',
   editingLocked: false,
   commandPaletteOpen: false,
   editingAnnotationId: null,
@@ -236,6 +239,10 @@ export const useUIStore = create<UIState>()((set) => ({
       },
     }),
 
+  showGenderPicker: (id) => set({ genderPicker: { targetId: id } }),
+
+  hideGenderPicker: () => set({ genderPicker: { targetId: null } }),
+
   pinRadialMenu: () =>
     set((state) => ({ radialMenu: { ...state.radialMenu, pinned: true } })),
 
@@ -274,8 +281,6 @@ export const useUIStore = create<UIState>()((set) => ({
     }),
 
   setActiveTool: (activeTool) => set({ activeTool }),
-
-  setDefaultSex: (defaultSex) => set({ defaultSex }),
 
   toggleEditingLocked: () =>
     set((state) => ({ editingLocked: !state.editingLocked })),

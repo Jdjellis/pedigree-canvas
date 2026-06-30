@@ -52,12 +52,13 @@ export function useAutoSave() {
     if (doc) {
       usePedigreeStore.getState().setDocument(doc);
     } else {
-      // Genuinely fresh start (nothing valid to restore): seed a first person at
-      // canvas origin. CanvasContainer centres the viewport on it once the stage
-      // is measured — robust regardless of mount timing (the stage element does
-      // not exist yet at this point, so a position computed here would be wrong).
-      const sex = useUIStore.getState().defaultSex;
-      usePedigreeStore.getState().setDocument(createSeededDocument(sex));
+      // Genuinely fresh start: seed an Unknown first person at canvas origin and
+      // pop the gender picker on it (first-run only). CanvasContainer centres the
+      // viewport on it once the stage is measured.
+      const doc = createSeededDocument();
+      usePedigreeStore.getState().setDocument(doc);
+      const seedId = Object.keys(doc.individuals)[0];
+      if (seedId) useUIStore.getState().showGenderPicker(seedId);
     }
   }, []);
 

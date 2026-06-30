@@ -67,6 +67,8 @@ the same person, which already creates a fresh partnership each time.
 
 ### 2. Default-sex control
 
+> ⚠️ **Superseded 2026-06-29** by [`2026-06-29-inline-gender-picker-design.md`](2026-06-29-inline-gender-picker-design.md). The persistent default-sex control described below was removed: gender is now chosen per-creation via an inline picker on the new node, with no default mode. The rest of this spec stands.
+
 An always-visible segmented control sits beside **Select**, labelled "add as", with
 three options rendered as pedigree glyphs: square (male), circle (female), diamond
 (unknown). It is the always-visible "B" placement from the design review (chosen over

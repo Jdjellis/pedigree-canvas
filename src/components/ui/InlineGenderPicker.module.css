@@ -1,0 +1,20 @@
+/* src/components/ui/InlineGenderPicker.module.css */
+/* Transparent catch-all: a click anywhere outside the picker dismisses it. */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+}
+
+/* `left`/`top` are the node's screen centre; translate up-and-centred so the
+   picker floats directly above the symbol. */
+.picker {
+  position: absolute;
+  z-index: 100;
+  transform: translate(-50%, -100%);
+  padding: 6px;
+  background: #ffffff;
+  border: 1px solid #d4d4d8;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+}
