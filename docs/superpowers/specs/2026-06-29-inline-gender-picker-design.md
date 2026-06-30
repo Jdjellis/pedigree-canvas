@@ -116,7 +116,7 @@ Trace (S0 = before create):
 
 This keeps the picker's *dismiss-keeps-Unknown* rule falling out naturally (an empty amendment). `commitGenderPick` lives in `src/components/ui/commitGenderPick.ts` (a small store-operating module beside `radialActions.ts`, which similarly bridges UI → store), so it is unit-testable without rendering Konva.
 
-**Proband exception:** the proband's pick has nothing to coalesce with (the seed predates any user gesture), so there it is a plain tracked edit — its own one-step undo, consistent with editing via the panel. (Whether the seed itself should be undoable into a blank canvas is pre-existing behaviour, out of scope.)
+**Seed pick (implemented uniformly):** the seed/first-person pick is routed through the same `commitGenderPick` as every other pick (no special case) — the pause/resume simply amends the `setDocument` seed entry rather than a per-node creation entry, so the gender lands without adding a second history step. An earlier draft of this spec proposed a "proband exception" (a plain tracked edit for the seed); that was dropped during implementation in favour of one uniform path, matching the implementation plan. Net effect: one undo after seeding + picking reverts the seed together with its gender (the seed has always been undoable; this feature does not change that). Whether the seed should be undoable into a blank canvas at all is pre-existing behaviour, out of scope.
 
 ### 5. Deletions / simplifications (the cleanup payoff)
 
