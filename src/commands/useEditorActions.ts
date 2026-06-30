@@ -85,11 +85,11 @@ export function useEditorActions(): EditorActions {
     }
     useUIStore.getState().setOnboarded();
     useViewportStore.getState().resetView();
-    const sex = useUIStore.getState().defaultSex;
-    usePedigreeStore.getState().setDocument(
-      createSeededDocument(sex, getVisibleCanvasCenter()),
-    );
+    const doc = createSeededDocument(getVisibleCanvasCenter());
+    usePedigreeStore.getState().setDocument(doc);
     useUIStore.getState().clearSelection();
+    const seedId = Object.keys(doc.individuals)[0];
+    if (seedId) useUIStore.getState().showGenderPicker(seedId);
   };
 
   const openDocument = (): Promise<void> => openDocumentAction();

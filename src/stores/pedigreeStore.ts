@@ -16,7 +16,6 @@ import {
   VitalStatus,
 } from '../types/enums';
 import { generateId } from '../utils/idGenerator';
-import { genderForSex, type DefaultSex } from '../utils/sex';
 import {
   respaceGenerationWithSubtrees,
   centerParentsOverChildren,
@@ -135,21 +134,19 @@ export function createDefaultIndividual(
 }
 
 /**
- * Build a fresh document seeded with a single starting person of the given
- * default sex, positioned at `position` (canvas coordinates). The seed is NOT
- * the proband. Used whenever the user starts a new pedigree.
+ * Build a fresh document seeded with a single Unknown starting person,
+ * positioned at `position` (canvas coordinates). The seed is NOT the proband.
+ * Used whenever the user starts a new pedigree; the caller is responsible for
+ * opening the inline gender picker on the returned seed id.
  *
- * @param sex - The default sex for the seeded person.
  * @param position - Canvas-space position; defaults to the origin.
  * @returns A new document containing exactly one individual.
  */
 export function createSeededDocument(
-  sex: DefaultSex,
   position: { x: number; y: number } = { x: 0, y: 0 },
 ): PedigreeDocument {
   const doc = createDefaultDocument();
   const seed = createDefaultIndividual({
-    genderIdentity: genderForSex(sex),
     position: { x: Math.round(position.x), y: Math.round(position.y) },
   });
   doc.individuals[seed.id] = seed;
