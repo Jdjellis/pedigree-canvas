@@ -247,9 +247,11 @@ describe('MultiSelectProperties — twins', () => {
     selectPeople(['a', 'b']);
 
     render(<PropertiesPanel />);
-    expect(screen.getByRole('button', { name: /Group as MZ/ })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Group as DZ/ })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Group as Unknown/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Group as monozygotic twins' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Group as dizygotic twins' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Group as twins of unknown zygosity' }),
+    ).toBeInTheDocument();
   });
 
   it('creates a twin group when a zygosity button is clicked', () => {
@@ -257,7 +259,7 @@ describe('MultiSelectProperties — twins', () => {
     selectPeople(['a', 'b']);
 
     render(<PropertiesPanel />);
-    act(() => fireEvent.click(screen.getByRole('button', { name: /Group as DZ/ })));
+    act(() => fireEvent.click(screen.getByRole('button', { name: 'Group as dizygotic twins' })));
 
     const groups = Object.values(usePedigreeStore.getState().document.twinGroups);
     expect(groups).toHaveLength(1);
@@ -277,7 +279,7 @@ describe('MultiSelectProperties — twins', () => {
     selectPeople(['b', 'c']);
 
     render(<PropertiesPanel />);
-    const addButton = screen.getByRole('button', { name: /Add to existing twin group/ });
+    const addButton = screen.getByRole('button', { name: 'Add to twin group' });
     act(() => fireEvent.click(addButton));
 
     const tg = usePedigreeStore.getState().document.twinGroups['tg1'];

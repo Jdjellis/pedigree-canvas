@@ -106,42 +106,57 @@ export function MultiSelectProperties() {
             <div className={styles.section}>
               <div className={styles.sectionTitle}>Twins</div>
               {survivingGroup ? (
-                <>
-                  <p className={styles.hint}>
-                    Existing group zygosity: {ZYGOSITY_LABELS[survivingGroup.twinType]}
-                  </p>
+                <div className={styles.field}>
                   <button
                     type="button"
-                    className={styles.addButton}
+                    className={styles.twinAddButton}
                     onClick={() => groupTwins(ids, survivingGroup.twinType)}
                   >
-                    Add to existing twin group
+                    Add to twin group
                   </button>
-                </>
+                  <p className={styles.hint}>
+                    Joins the existing {ZYGOSITY_LABELS[survivingGroup.twinType]} twin group.
+                  </p>
+                </div>
               ) : (
-                <>
-                  <button
-                    type="button"
-                    className={styles.addButton}
-                    onClick={() => groupTwins(ids, TwinType.Monozygotic)}
+                <div className={styles.field}>
+                  <div
+                    className={styles.twinChoices}
+                    role="group"
+                    aria-label="Group as twins"
                   >
-                    Group as MZ twins
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.addButton}
-                    onClick={() => groupTwins(ids, TwinType.Dizygotic)}
-                  >
-                    Group as DZ twins
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.addButton}
-                    onClick={() => groupTwins(ids, TwinType.Unknown)}
-                  >
-                    Group as Unknown twins
-                  </button>
-                </>
+                    <button
+                      type="button"
+                      className={styles.twinChoice}
+                      title="Monozygotic (identical)"
+                      aria-label="Group as monozygotic twins"
+                      onClick={() => groupTwins(ids, TwinType.Monozygotic)}
+                    >
+                      MZ
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.twinChoice}
+                      title="Dizygotic (fraternal)"
+                      aria-label="Group as dizygotic twins"
+                      onClick={() => groupTwins(ids, TwinType.Dizygotic)}
+                    >
+                      DZ
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.twinChoice}
+                      title="Unknown zygosity"
+                      aria-label="Group as twins of unknown zygosity"
+                      onClick={() => groupTwins(ids, TwinType.Unknown)}
+                    >
+                      Unknown
+                    </button>
+                  </div>
+                  <p className={styles.hint}>
+                    Group the {people.length} selected siblings as twins.
+                  </p>
+                </div>
               )}
             </div>
           </>
