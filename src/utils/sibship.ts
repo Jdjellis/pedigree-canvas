@@ -16,18 +16,18 @@ export function commonSibshipId(
 ): string | null {
   if (ids.length < 2) return null;
   const links = Object.values(doc.parentChildLinks);
-  let common: Set<string> | null = null;
-  for (const id of ids) {
-    const partnerships = new Set(
+  const sibshipsOf = (id: string): Set<string> =>
+    new Set(
       links.filter((l) => l.childId === id).map((l) => l.parentPartnershipId),
     );
-    if (partnerships.size === 0) return null;
-    common =
-      common === null
-        ? partnerships
-        : new Set([...common].filter((p) => partnerships.has(p)));
+
+  const [firstId, ...restIds] = ids;
+  let common = sibshipsOf(firstId);
+  if (common.size === 0) return null;
+  for (const id of restIds) {
+    const next = sibshipsOf(id);
+    common = new Set([...common].filter((p) => next.has(p)));
     if (common.size === 0) return null;
   }
-  if (!common || common.size === 0) return null;
   return [...common].sort()[0];
 }
