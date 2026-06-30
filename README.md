@@ -1,12 +1,15 @@
-# Pedigree
+# Pedigree Canvas
 
-[![CI](https://github.com/Jdjellis/pedigree/actions/workflows/ci.yml/badge.svg)](https://github.com/Jdjellis/pedigree/actions/workflows/ci.yml)
+> Clinical pedigree drawing for geneticists and genetic counsellors.
 
-A local-first, opinionated **genetic pedigree mapping tool**. Build clinical family
-pedigrees on an infinite canvas with standardized symbols, condition shading, and
-export to shareable documents — all in your browser, no account required.
+[![CI](https://github.com/Jdjellis/pedigree-canvas/actions/workflows/ci.yml/badge.svg)](https://github.com/Jdjellis/pedigree-canvas/actions/workflows/ci.yml)
 
-Think Excalidraw, but purpose-built for genetic counselors and clinical geneticists.
+**Pedigree Canvas** is a local-first clinical pedigree drawing tool for geneticists
+and genetic counsellors. Build standardised family pedigrees with clinical genetics
+symbols, condition shading, test-result annotations, and export to PDF, PNG, SVG,
+JSON and `.ped` — all in your browser, no account required.
+
+Think Excalidraw, but purpose-built for genetic counsellors and clinical geneticists.
 
 ## Features
 
@@ -65,7 +68,19 @@ npm run lint && npm run typecheck && npm test && npm run build
 All pedigree data lives **only in your browser** (`localStorage` autosave). Nothing is
 sent to a server. Use **Export → JSON** to save a permanent, re-openable copy.
 
+## Disclaimer
+
+Pedigree is a documentation and educational tool. It is **not a medical device**
+and is **not intended for diagnostic decisions or patient management**. It does
+not validate clinical accuracy or inheritance logic. Always verify every pedigree
+against the source record and applicable clinical guidelines. The authors accept
+no liability for clinical use.
+
 ## Status
 
-Active development. See the [issues](https://github.com/Jdjellis/pedigree/issues) for
+Active development. See the [issues](https://github.com/Jdjellis/pedigree-canvas/issues) for
 the current roadmap.
+
+## License
+
+[MIT](LICENSE) © 2026 Joshua Ellis

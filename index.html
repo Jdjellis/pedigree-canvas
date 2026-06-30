@@ -2,9 +2,49 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Pedigree Editor</title>
+    <meta name="theme-color" content="#1f2937" />
+
+    <title>Pedigree Canvas — Clinical pedigree drawing for geneticists and genetic counsellors</title>
+    <meta
+      name="description"
+      content="Pedigree Canvas is a local-first clinical pedigree drawing tool for geneticists and genetic counsellors. Build standardised family pedigrees with clinical genetics symbols, condition shading, test-result annotations, and export to PDF, PNG, SVG, JSON and .ped."
+    />
+
+    <!-- Open Graph (Facebook, LinkedIn, iMessage, Slack, Discord) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Pedigree Canvas — Clinical pedigree drawing for geneticists and genetic counsellors" />
+    <meta
+      property="og:description"
+      content="Pedigree Canvas is a local-first clinical pedigree drawing tool for geneticists and genetic counsellors. Build standardised family pedigrees with clinical genetics symbols, condition shading, test-result annotations, and export to PDF, PNG, SVG, JSON and .ped."
+    />
+    <!-- TODO(launch): replace with a rasterized 1200x630 PNG; some scrapers (X, Facebook) ignore SVG og:image. -->
+    <meta property="og:image" content="/og-image.svg" />
+
+    <!-- Twitter / X -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Pedigree Canvas — Clinical pedigree drawing for geneticists and genetic counsellors" />
+    <meta
+      name="twitter:description"
+      content="Pedigree Canvas is a local-first clinical pedigree drawing tool for geneticists and genetic counsellors. Build standardised family pedigrees with clinical genetics symbols, condition shading, test-result annotations, and export to PDF, PNG, SVG, JSON and .ped."
+    />
+    <meta name="twitter:image" content="/og-image.svg" />
+
+    <!-- Structured data: helps search engines and LLM crawlers classify the tool -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "Pedigree Canvas",
+        "applicationCategory": "HealthApplication",
+        "applicationSubCategory": "Clinical pedigree drawing tool",
+        "operatingSystem": "Web browser",
+        "description": "Pedigree Canvas is a local-first clinical pedigree drawing tool for geneticists and genetic counsellors. Build standardised family pedigrees with clinical genetics symbols, condition shading, test-result annotations, and export to PDF, PNG, SVG, JSON and .ped.",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+      }
+    </script>
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;500&display=swap" rel="stylesheet" />

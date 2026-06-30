@@ -72,6 +72,11 @@ export function PrivacyBadge(): React.JSX.Element {
             Nothing is ever sent to a server — all pedigree data is stored
             locally in your browser only.
           </p>
+          <p className={styles.disclaimer}>
+            For documentation and educational use. Not a medical device and not
+            for diagnostic decisions — verify every pedigree against the source
+            record.
+          </p>
         </div>
       )}
       <button
