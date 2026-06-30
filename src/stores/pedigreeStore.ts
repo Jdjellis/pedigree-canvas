@@ -17,82 +17,44 @@ import {
 } from '../types/enums';
 import { generateId } from '../utils/idGenerator';
 import {
-  respaceGenerationWithSubtrees,
-  centerParentsOverChildren,
-  collectDescendants,
-  computeParentClearanceShift,
-  makeRoomForPartner,
-} from '../utils/respacing';
-import { MIN_GENERATION_NODE_SPACING } from '../utils/constants';
+  computeTreeLayout,
+  findRootUnion,
+  DEFAULT_LAYOUT_SPACING,
+  type LayoutDoc,
+} from '../utils/treeLayout';
 
 /**
- * Return a new individuals map with `moved` (id -> new x) applied immutably.
- * Vertical (y) positions and every individual not in `moved` are left
- * untouched. Returns the original map when there is nothing to move.
+ * Apply id -> {x,y} position changes immutably; untouched individuals are kept.
+ * Returns the original map when there is nothing to apply.
  */
-function applyMoves(
+function applyPositions(
   individuals: Record<string, Individual>,
-  moved: Record<string, number>,
+  positions: Record<string, { x: number; y: number }>,
 ): Record<string, Individual> {
-  if (Object.keys(moved).length === 0) return individuals;
-
+  if (Object.keys(positions).length === 0) return individuals;
   const next: Record<string, Individual> = { ...individuals };
-  for (const [id, newX] of Object.entries(moved)) {
-    const individual = next[id];
-    if (!individual) continue;
-    next[id] = {
-      ...individual,
-      position: { ...individual.position, x: newX },
-    };
+  for (const [id, pos] of Object.entries(positions)) {
+    const ind = next[id];
+    if (!ind) continue;
+    next[id] = { ...ind, position: { x: pos.x, y: pos.y } };
   }
   return next;
 }
 
 /**
- * Return a new individuals map with bounded, subtree-aware respacing applied to
- * the given generation. Overlapping nodes in that generation are pushed apart
- * and each shifted node carries its whole subtree along, so descendants stay
- * aligned. Every other individual is returned untouched.
- *
- * Callers must invoke this on the already-inserted individuals map within the
- * SAME `set(...)` update as the insert, so the add and the nudge collapse into a
- * single zundo history entry (one undo reverts both).
+ * Re-tidy the connected blood family containing `anchorId`: find its root union,
+ * run the deterministic layout, and return a new individuals map with the moves
+ * applied. A no-op (returns the same map) when the anchor has no blood-family
+ * union with children.
  */
-function applyGenerationRespacing(
-  individuals: Record<string, Individual>,
-  partnerships: Record<string, PartnershipRelationship>,
-  generation: number,
+function relayoutFamily(
+  doc: LayoutDoc,
+  anchorId: string,
 ): Record<string, Individual> {
-  const moved = respaceGenerationWithSubtrees(
-    individuals,
-    partnerships,
-    generation,
-    MIN_GENERATION_NODE_SPACING,
-  );
-  return applyMoves(individuals, moved);
-}
-
-/**
- * Shift `rootId` and its whole subtree horizontally by `delta`, returning a new
- * individuals map. Used to keep a node centred under newly added parents while
- * carrying its descendants rigidly along.
- */
-function shiftSubtree(
-  individuals: Record<string, Individual>,
-  partnerships: Record<string, PartnershipRelationship>,
-  rootId: string,
-  delta: number,
-): Record<string, Individual> {
-  if (delta === 0) return individuals;
-
-  const moved: Record<string, number> = {};
-  const root = individuals[rootId];
-  if (root) moved[rootId] = root.position.x + delta;
-  for (const descId of collectDescendants(rootId, partnerships)) {
-    const descendant = individuals[descId];
-    if (descendant) moved[descId] = descendant.position.x + delta;
-  }
-  return applyMoves(individuals, moved);
+  const rootUnion = findRootUnion(doc, anchorId);
+  if (!rootUnion) return doc.individuals;
+  const positions = computeTreeLayout(doc, rootUnion, DEFAULT_LAYOUT_SPACING);
+  return applyPositions(doc.individuals, positions);
 }
 
 /** Build an empty PedigreeDocument with sensible defaults. */
@@ -147,6 +109,11 @@ export function createSeededDocument(
 ): PedigreeDocument {
   const doc = createDefaultDocument();
   const seed = createDefaultIndividual({
+    // The founder anchors the generation coordinate system at 0: every relative
+    // derives its generation from the seed (partner inherits it, parents step to
+    // -1, children to +1). Leaving it undefined lets that gap propagate to a
+    // spouse, where the layout maps the missing value onto the wrong row.
+    generation: 0,
     position: { x: Math.round(position.x), y: Math.round(position.y) },
   });
   doc.individuals[seed.id] = seed;
@@ -161,6 +128,8 @@ interface PedigreeState {
   updateIndividual: (id: string, patch: Partial<Individual>) => void;
   removeIndividual: (id: string) => void;
   moveIndividual: (id: string, position: Position) => void;
+  /** Commit a drag: set the dropped position, then re-tidy the family (one undo step). */
+  commitDragWithRelayout: (id: string, position: Position) => void;
 
   // Adoption actions (each produces one undo step)
   /**
@@ -454,6 +423,31 @@ export const usePedigreeStore = create<PedigreeState>()(
           };
         }),
 
+      commitDragWithRelayout: (id, position) =>
+        set((state) => {
+          const existing = state.document.individuals[id];
+          if (!existing) return state;
+          let individuals: Record<string, Individual> = {
+            ...state.document.individuals,
+            [id]: { ...existing, position },
+          };
+          individuals = relayoutFamily(
+            {
+              individuals,
+              partnerships: state.document.partnerships,
+              parentChildLinks: state.document.parentChildLinks,
+            },
+            id,
+          );
+          return {
+            document: {
+              ...state.document,
+              metadata: { ...state.document.metadata, updatedAt: new Date().toISOString() },
+              individuals,
+            },
+          };
+        }),
+
       addPartnership: (partnership) =>
         set((state) => ({
           document: {
@@ -695,9 +689,8 @@ export const usePedigreeStore = create<PedigreeState>()(
         set((state) => {
           const existing = state.document.individuals[childId];
           if (!existing) return state;
-          // Insert the parents (created centred over the child) and pin the
-          // child's generation. Everything below shares this one `set` so a
-          // single undo reverts the whole operation.
+          // Insert the parents and pin the child's generation. Build the full
+          // updated doc slices first so relayoutFamily sees the new link.
           let individuals: Record<string, Individual> = {
             ...state.document.individuals,
             [parent1.id]: parent1,
@@ -708,36 +701,14 @@ export const usePedigreeStore = create<PedigreeState>()(
             ...state.document.partnerships,
             [partnership.id]: partnership,
           };
-
-          // Slide the new parents clear of the other partner's parents (the
-          // child's in-laws), then carry the child and its subtree by the same
-          // amount so the child stays centred under its new parents.
-          const shift = computeParentClearanceShift(
-            individuals,
-            state.document.partnerships,
-            state.document.parentChildLinks,
-            parent1.id,
-            parent2.id,
-            childId,
-            MIN_GENERATION_NODE_SPACING,
-          );
-          if (shift !== 0) {
-            individuals = applyMoves(individuals, {
-              [parent1.id]: parent1.position.x + shift,
-              [parent2.id]: parent2.position.x + shift,
-            });
-            individuals = shiftSubtree(individuals, partnerships, childId, shift);
-          }
-
-          // Resolve any remaining overlap in the parents' generation, carrying
-          // affected subtrees along.
-          if (parent1.generation !== undefined) {
-            individuals = applyGenerationRespacing(
-              individuals,
-              partnerships,
-              parent1.generation,
-            );
-          }
+          const parentChildLinks = {
+            ...state.document.parentChildLinks,
+            [link.id]: link,
+          };
+          // Re-tidy the whole blood family so parents are centred over their
+          // children. The add and the layout share this one `set` so a single
+          // undo reverts the whole operation.
+          individuals = relayoutFamily({ individuals, partnerships, parentChildLinks }, childId);
           return {
             document: {
               ...state.document,
@@ -747,41 +718,37 @@ export const usePedigreeStore = create<PedigreeState>()(
               },
               individuals,
               partnerships,
-              parentChildLinks: {
-                ...state.document.parentChildLinks,
-                [link.id]: link,
-              },
+              parentChildLinks,
             },
           };
         }),
 
       addPartnerToIndividual: (partner, partnership) =>
         set((state) => {
-          // Insert the partner, then make room for the new union. When the
-          // individual already has siblings, the partner would land on top of
-          // them, so the siblings — and their subtrees — are swept aside while
-          // the target and partner stay anchored together. Insert + reflow share
-          // this one `set` so a single undo reverts both.
-          let individuals: Record<string, Individual> = {
-            ...state.document.individuals,
-            [partner.id]: partner,
-          };
+          // Insert the partner and the new union, then re-tidy the blood family
+          // rooted at the EXISTING target individual (not the new partner).
+          // The new partner has no parents and the new partnership is childless,
+          // so findRootUnion(partner.id) returns null and no layout would run.
+          // Anchoring on the target traverses up to the family root so real
+          // siblings are pushed clear of the incoming partner.
+          // The insert and the layout share this one `set` so a single undo
+          // reverts both.
           const targetId =
             partnership.partner1Id === partner.id
               ? partnership.partner2Id
               : partnership.partner1Id;
-          if (targetId) {
-            individuals = applyMoves(
-              individuals,
-              makeRoomForPartner(
-                individuals,
-                state.document.partnerships,
-                targetId,
-                partner.id,
-                MIN_GENERATION_NODE_SPACING,
-              ),
-            );
-          }
+          let individuals: Record<string, Individual> = {
+            ...state.document.individuals,
+            [partner.id]: partner,
+          };
+          const partnerships = {
+            ...state.document.partnerships,
+            [partnership.id]: partnership,
+          };
+          individuals = relayoutFamily(
+            { individuals, partnerships, parentChildLinks: state.document.parentChildLinks },
+            targetId ?? partner.id,
+          );
           return {
             document: {
               ...state.document,
@@ -790,10 +757,7 @@ export const usePedigreeStore = create<PedigreeState>()(
                 updatedAt: new Date().toISOString(),
               },
               individuals,
-              partnerships: {
-                ...state.document.partnerships,
-                [partnership.id]: partnership,
-              },
+              partnerships,
             },
           };
         }),
@@ -810,26 +774,19 @@ export const usePedigreeStore = create<PedigreeState>()(
             ...state.document.partnerships,
             [partnershipId]: updatedPartnership,
           };
-          // Insert the child, then respace the child's generation so the new
-          // node does not overlap existing siblings/cousins (subtrees carried
-          // along). Finally re-centre the parents over the full sibling row so
-          // the couple sits above the middle of their children, not off to one
-          // side. Everything shares this one `set` so a single undo reverts it.
+          const parentChildLinks = {
+            ...state.document.parentChildLinks,
+            [link.id]: link,
+          };
+          // Insert the child, then re-tidy the whole blood family so the parents
+          // are re-centred over the full sibling row. The link is included in the
+          // doc slice so relayoutFamily can traverse up to the root union. The
+          // insert and the layout share this one `set` so a single undo reverts both.
           let individuals: Record<string, Individual> = {
             ...state.document.individuals,
             [child.id]: child,
           };
-          if (child.generation !== undefined) {
-            individuals = applyGenerationRespacing(
-              individuals,
-              partnerships,
-              child.generation,
-            );
-          }
-          individuals = applyMoves(
-            individuals,
-            centerParentsOverChildren(individuals, updatedPartnership),
-          );
+          individuals = relayoutFamily({ individuals, partnerships, parentChildLinks }, child.id);
           return {
             document: {
               ...state.document,
@@ -839,10 +796,7 @@ export const usePedigreeStore = create<PedigreeState>()(
               },
               individuals,
               partnerships,
-              parentChildLinks: {
-                ...state.document.parentChildLinks,
-                [link.id]: link,
-              },
+              parentChildLinks,
             },
           };
         }),
@@ -857,20 +811,19 @@ export const usePedigreeStore = create<PedigreeState>()(
             ...state.document.partnerships,
             [partnership.id]: partnership,
           };
-          if (sibling.generation !== undefined) {
-            individuals = applyGenerationRespacing(individuals, partnerships, sibling.generation);
-          }
+          const parentChildLinks = {
+            ...state.document.parentChildLinks,
+            [targetLink.id]: targetLink,
+            [siblingLink.id]: siblingLink,
+          };
+          individuals = relayoutFamily({ individuals, partnerships, parentChildLinks }, sibling.id);
           return {
             document: {
               ...state.document,
               metadata: { ...state.document.metadata, updatedAt: new Date().toISOString() },
               individuals,
               partnerships,
-              parentChildLinks: {
-                ...state.document.parentChildLinks,
-                [targetLink.id]: targetLink,
-                [siblingLink.id]: siblingLink,
-              },
+              parentChildLinks,
             },
           };
         }),
@@ -885,16 +838,18 @@ export const usePedigreeStore = create<PedigreeState>()(
             ...state.document.partnerships,
             [partnership.id]: partnership,
           };
-          if (child.generation !== undefined) {
-            individuals = applyGenerationRespacing(individuals, partnerships, child.generation);
-          }
+          const parentChildLinks = {
+            ...state.document.parentChildLinks,
+            [link.id]: link,
+          };
+          individuals = relayoutFamily({ individuals, partnerships, parentChildLinks }, child.id);
           return {
             document: {
               ...state.document,
               metadata: { ...state.document.metadata, updatedAt: new Date().toISOString() },
               individuals,
               partnerships,
-              parentChildLinks: { ...state.document.parentChildLinks, [link.id]: link },
+              parentChildLinks,
             },
           };
         }),
@@ -903,6 +858,15 @@ export const usePedigreeStore = create<PedigreeState>()(
         set((state) => {
           const partnership = state.document.partnerships[partnershipId];
           if (!partnership) return state;
+
+          // Derive the EXISTING partner from the original slots (before the fill)
+          // so the relayout anchors on the blood-family member, not the new arrival.
+          // The new partner has no parents, so findRootUnion(partner.id) would only
+          // reach this union, pinning the load-bearing existing partner and pulling
+          // the children under the new partner's x instead of centring the couple.
+          const existingId = !partnership.partner1Id
+            ? partnership.partner2Id
+            : partnership.partner1Id;
 
           const updatedPartnership = !partnership.partner1Id
             ? { ...partnership, partner1Id: partner.id }
@@ -916,10 +880,12 @@ export const usePedigreeStore = create<PedigreeState>()(
             ...state.document.partnerships,
             [partnershipId]: updatedPartnership,
           };
-          // Both slots are now filled, so re-centre the couple over their children.
-          individuals = applyMoves(
-            individuals,
-            centerParentsOverChildren(individuals, updatedPartnership),
+          // Both slots are now filled; re-tidy the family so the couple is
+          // centred over their children. Anchor on the EXISTING partner so
+          // findRootUnion can climb the full blood-family tree to the real root.
+          individuals = relayoutFamily(
+            { individuals, partnerships, parentChildLinks: state.document.parentChildLinks },
+            existingId ?? partner.id,
           );
           return {
             document: {
@@ -950,13 +916,11 @@ export const usePedigreeStore = create<PedigreeState>()(
             ...state.document.partnerships,
             [partnershipId]: updatedPartnership,
           };
-          individuals = applyMoves(
-            individuals,
-            centerParentsOverChildren(individuals, updatedPartnership),
+          // Re-tidy the family so the new parents are centred over their children.
+          individuals = relayoutFamily(
+            { individuals, partnerships, parentChildLinks: state.document.parentChildLinks },
+            parent1.id,
           );
-          if (parent1.generation !== undefined) {
-            individuals = applyGenerationRespacing(individuals, partnerships, parent1.generation);
-          }
           return {
             document: {
               ...state.document,
