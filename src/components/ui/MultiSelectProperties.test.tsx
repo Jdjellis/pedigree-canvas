@@ -304,3 +304,27 @@ describe('MultiSelectProperties — twins', () => {
     expect(screen.queryByText('Twins')).not.toBeInTheDocument();
   });
 });
+
+describe('MultiSelectProperties — write discipline', () => {
+  it('does not write to the document when a Mixed selection is rendered without interaction', () => {
+    const doc = createDefaultDocument();
+    doc.individuals['a'] = createDefaultIndividual({
+      id: 'a', genderIdentity: GenderIdentity.Man, vitalStatus: VitalStatus.Alive,
+    });
+    doc.individuals['b'] = createDefaultIndividual({
+      id: 'b', genderIdentity: GenderIdentity.Woman, vitalStatus: VitalStatus.Deceased,
+    });
+    act(() => usePedigreeStore.getState().setDocument(doc));
+    selectPeople(['a', 'b']);
+
+    const before = usePedigreeStore.getState().document;
+    render(<PropertiesPanel />);
+    const after = usePedigreeStore.getState().document;
+
+    // No control was touched, so no store write should have occurred — the
+    // document object is referentially identical.
+    expect(after).toBe(before);
+    expect(after.individuals.a.genderIdentity).toBe(GenderIdentity.Man);
+    expect(after.individuals.b.genderIdentity).toBe(GenderIdentity.Woman);
+  });
+});
