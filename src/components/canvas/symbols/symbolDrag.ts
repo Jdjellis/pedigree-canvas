@@ -49,10 +49,13 @@ export function commitSymbolDrag(
   startPos: Position,
   endPos: Position,
 ): void {
-  const { moveIndividual } = usePedigreeStore.getState();
+  const { moveIndividual, commitDragWithRelayout } = usePedigreeStore.getState();
+  // Restore the pre-drag position while history is still paused (untracked) so
+  // zundo records it as the undo target, then resume and commit the drop +
+  // relayout as a single tracked step.
   moveIndividual(id, startPos);
   usePedigreeStore.temporal.getState().resume();
-  moveIndividual(id, endPos);
+  commitDragWithRelayout(id, endPos);
 }
 
 /**

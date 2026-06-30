@@ -109,3 +109,32 @@ describe('symbolDrag orchestration (issue #13)', () => {
     expect(positionOf(PARTNER_A)).toEqual(endPos);
   });
 });
+
+it('relayouts the family on drop so an overlapping drop is separated', () => {
+  // Two siblings under a sole parent; drop sibling B exactly onto sibling A.
+  const a = createDefaultIndividual({ id: 'a', generation: 1, position: { x: -80, y: 150 } });
+  const b = createDefaultIndividual({ id: 'b', generation: 1, position: { x: 80, y: 150 } });
+  const p = createDefaultIndividual({ id: 'p', generation: 0, position: { x: 0, y: 0 } });
+  usePedigreeStore.setState({
+    document: {
+      ...usePedigreeStore.getState().document,
+      individuals: { a, b, p },
+      partnerships: { u: { id: 'u', type: RelationshipType.Partnership, partner1Id: 'p', partner2Id: undefined, childrenIds: ['a', 'b'] } },
+      parentChildLinks: {
+        la: { id: 'la', type: RelationshipType.ParentChild, parentPartnershipId: 'u', childId: 'a', isAdoptive: false },
+        lb: { id: 'lb', type: RelationshipType.ParentChild, parentPartnershipId: 'u', childId: 'b', isAdoptive: false },
+      },
+    },
+  });
+  usePedigreeStore.temporal.getState().clear();
+
+  // Drop B onto A's x (-80). Relayout must re-separate them.
+  commitSymbolDrag('b', { x: 80, y: 150 }, { x: -80, y: 150 });
+
+  const out = usePedigreeStore.getState().document.individuals;
+  expect(Math.abs(out.a.position.x - out.b.position.x)).toBeGreaterThanOrEqual(80);
+
+  // And the whole drag is one undo step back to the pre-drag layout.
+  usePedigreeStore.temporal.getState().undo();
+  expect(usePedigreeStore.getState().document.individuals.b.position.x).toBe(80);
+});
