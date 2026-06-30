@@ -14,6 +14,7 @@ import type {
 import {
   GenderIdentity,
   VitalStatus,
+  TwinType,
 } from '../types/enums';
 import { generateId } from '../utils/idGenerator';
 import { genderForSex, type DefaultSex } from '../utils/sex';
@@ -25,6 +26,7 @@ import {
   makeRoomForPartner,
 } from '../utils/respacing';
 import { MIN_GENERATION_NODE_SPACING } from '../utils/constants';
+import { commonSibshipId } from '../utils/sibship';
 
 /**
  * Return a new individuals map with `moved` (id -> new x) applied immutably.
@@ -224,6 +226,20 @@ interface PedigreeState {
   addTwinGroup: (tg: TwinGroup) => void;
   updateTwinGroup: (id: string, patch: Partial<TwinGroup>) => void;
   removeTwinGroup: (id: string) => void;
+  /**
+   * Unite the given individuals into a single twin group, in one undo step.
+   * All ids must belong to the same sibship (see {@link commonSibshipId}),
+   * otherwise this is a no-op returning `null`.
+   *
+   * - No selected id is already grouped → create a new group with `twinType`.
+   * - Some are already grouped → merge all selected ids (and the members of any
+   *   touched groups) into one group. The surviving group's zygosity is kept
+   *   (the largest touched group wins; ties resolve to the lexicographically-
+   *   first group id); `twinType` is used only when creating a fresh group.
+   *
+   * @returns the resulting twin-group id, or `null` if not grouping-eligible.
+   */
+  groupTwins: (ids: string[], twinType: TwinType) => string | null;
 
   // Text annotation actions
   addTextAnnotation: (annotation: TextAnnotation) => void;
@@ -715,6 +731,64 @@ export const usePedigreeStore = create<PedigreeState>()(
             },
           };
         }),
+
+      groupTwins: (ids, twinType) => {
+        let resultId: string | null = null;
+        set((state) => {
+          const sibshipId = commonSibshipId(state.document, ids);
+          if (!sibshipId) return state;
+
+          const groups = { ...state.document.twinGroups };
+          const touched = Object.values(groups).filter((g) =>
+            g.individualIds.some((m) => ids.includes(m)),
+          );
+
+          const members = new Set<string>(ids);
+          for (const g of touched) g.individualIds.forEach((m) => members.add(m));
+
+          // Largest touched group wins; ties resolve to the lexicographically-smallest id.
+          const target = touched
+            .slice()
+            .sort(
+              (a, b) =>
+                b.individualIds.length - a.individualIds.length ||
+                (a.id < b.id ? -1 : 1),
+            )[0];
+
+          if (target) {
+            for (const g of touched) {
+              if (g.id !== target.id) delete groups[g.id];
+            }
+            groups[target.id] = {
+              ...target,
+              individualIds: [...members],
+              parentPartnershipId: sibshipId,
+            };
+            resultId = target.id;
+          } else {
+            const id = generateId();
+            groups[id] = {
+              id,
+              twinType,
+              individualIds: [...members],
+              parentPartnershipId: sibshipId,
+            };
+            resultId = id;
+          }
+
+          return {
+            document: {
+              ...state.document,
+              metadata: {
+                ...state.document.metadata,
+                updatedAt: new Date().toISOString(),
+              },
+              twinGroups: groups,
+            },
+          };
+        });
+        return resultId;
+      },
 
       addTextAnnotation: (annotation) =>
         set((state) => ({
