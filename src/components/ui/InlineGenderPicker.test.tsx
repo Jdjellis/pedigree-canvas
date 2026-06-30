@@ -1,6 +1,6 @@
 // src/components/ui/InlineGenderPicker.test.tsx
 import { describe, it, expect, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { InlineGenderPicker } from './InlineGenderPicker';
 import { useUIStore } from '../../stores/uiStore';
 import { usePedigreeStore, createDefaultIndividual } from '../../stores/pedigreeStore';
@@ -68,5 +68,21 @@ describe('InlineGenderPicker', () => {
     useUIStore.getState().toggleEditingLocked();
     const { container } = render(<InlineGenderPicker />);
     expect(container).toBeEmptyDOMElement();
+  });
+
+  it('tears down the keydown listener when the target individual is removed', () => {
+    useUIStore.getState().showGenderPicker(TARGET);
+    render(<InlineGenderPicker />);
+
+    // Remove the individual while the picker is still open.
+    act(() => {
+      usePedigreeStore.getState().removeIndividual(TARGET);
+    });
+
+    // M keystroke must NOT trigger commitGenderPick / hideGenderPicker.
+    fireEvent.keyDown(window, { key: 'm' });
+
+    // genderPicker.targetId is still TARGET — the stale listener didn't fire.
+    expect(useUIStore.getState().genderPicker.targetId).toBe(TARGET);
   });
 });

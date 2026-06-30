@@ -45,7 +45,7 @@ export function InlineGenderPicker(): React.JSX.Element | null {
   // Capture-phase listener so M/F/N/U/Esc/Enter resolve the picker before any
   // global shortcut sees them.
   useEffect(() => {
-    if (!targetId || editingLocked) return;
+    if (!targetId || !target || editingLocked) return;
     const onKeyDown = (e: KeyboardEvent): void => {
       const gender = KEY_TO_GENDER[e.key.toLowerCase()];
       if (gender !== undefined) {
@@ -60,7 +60,7 @@ export function InlineGenderPicker(): React.JSX.Element | null {
     };
     window.addEventListener('keydown', onKeyDown, true);
     return () => window.removeEventListener('keydown', onKeyDown, true);
-  }, [targetId, editingLocked]);
+  }, [targetId, target, editingLocked]);
 
   if (!targetId || !target || editingLocked) return null;
 
