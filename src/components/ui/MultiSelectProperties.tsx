@@ -3,6 +3,7 @@ import { usePedigreeStore } from '../../stores/pedigreeStore';
 import { useUIStore } from '../../stores/uiStore';
 import { GenderIdentity, SexAssignedAtBirth, VitalStatus, TwinType } from '../../types/enums';
 import { commonSibshipId } from '../../utils/sibship';
+import { twinGroupsTouching, pickSurvivingTwinGroup } from '../../utils/twinGrouping';
 import type { Individual, LegendEntry } from '../../types/pedigree';
 import { GenderIconButtons } from './GenderIconButtons';
 import { SegmentedControl } from './SegmentedControl';
@@ -82,16 +83,12 @@ export function MultiSelectProperties() {
   );
 
   const sibshipId = commonSibshipId({ parentChildLinks }, ids);
-  const touchedGroups = Object.values(twinGroups).filter((g) =>
-    g.individualIds.some((m) => ids.includes(m)),
+  // Existing group whose zygosity would survive a merge (largest, stable
+  // tiebreak) — shared with the groupTwins store action so the displayed
+  // zygosity always matches the type the merge would keep.
+  const survivingGroup = pickSurvivingTwinGroup(
+    twinGroupsTouching(twinGroups, ids),
   );
-  // Existing group whose zygosity would survive a merge (largest, stable tiebreak).
-  const survivingGroup = touchedGroups
-    .slice()
-    .sort(
-      (a, b) =>
-        b.individualIds.length - a.individualIds.length || (a.id < b.id ? -1 : 1),
-    )[0];
 
   return (
     <div className={styles.panel}>

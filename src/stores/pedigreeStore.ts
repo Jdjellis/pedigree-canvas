@@ -27,6 +27,7 @@ import {
 } from '../utils/respacing';
 import { MIN_GENERATION_NODE_SPACING } from '../utils/constants';
 import { commonSibshipId } from '../utils/sibship';
+import { twinGroupsTouching, pickSurvivingTwinGroup } from '../utils/twinGrouping';
 
 /**
  * Return a new individuals map with `moved` (id -> new x) applied immutably.
@@ -741,21 +742,13 @@ export const usePedigreeStore = create<PedigreeState>()(
           if (!sibshipId) return state;
 
           const groups = { ...state.document.twinGroups };
-          const touched = Object.values(groups).filter((g) =>
-            g.individualIds.some((m) => ids.includes(m)),
-          );
+          const touched = twinGroupsTouching(groups, ids);
 
           const members = new Set<string>(ids);
           for (const g of touched) g.individualIds.forEach((m) => members.add(m));
 
           // Largest touched group wins; ties resolve to the lexicographically-smallest id.
-          const target = touched
-            .slice()
-            .sort(
-              (a, b) =>
-                b.individualIds.length - a.individualIds.length ||
-                (a.id < b.id ? -1 : 1),
-            )[0];
+          const target = pickSurvivingTwinGroup(touched);
 
           if (target) {
             for (const g of touched) {
