@@ -112,6 +112,11 @@ export function createSeededDocument(
   const doc = createDefaultDocument();
   const seed = createDefaultIndividual({
     genderIdentity: genderForSex(sex),
+    // The founder anchors the generation coordinate system at 0: every relative
+    // derives its generation from the seed (partner inherits it, parents step to
+    // -1, children to +1). Leaving it undefined lets that gap propagate to a
+    // spouse, where the layout maps the missing value onto the wrong row.
+    generation: 0,
     position: { x: Math.round(position.x), y: Math.round(position.y) },
   });
   doc.individuals[seed.id] = seed;

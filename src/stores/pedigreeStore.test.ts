@@ -1,8 +1,13 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { usePedigreeStore, createDefaultIndividual, createDefaultDocument } from './pedigreeStore';
+import {
+  usePedigreeStore,
+  createDefaultIndividual,
+  createDefaultDocument,
+  createSeededDocument,
+} from './pedigreeStore';
 import { generateId } from '../utils/idGenerator';
-import { RelationshipType } from '../types/enums';
-import { MIN_GENERATION_NODE_SPACING, GENERATION_SPACING } from '../utils/constants';
+import { RelationshipType, GenderIdentity } from '../types/enums';
+import { MIN_GENERATION_NODE_SPACING, GENERATION_SPACING, PARTNER_SPACING } from '../utils/constants';
 import type {
   TextAnnotation,
   PartnershipRelationship,
@@ -1319,6 +1324,85 @@ describe('3-generation layout integration (#55 FIX 4)', () => {
 
     // Gen 1: two children — must be ≥ 80 apart.
     expect(childXs[childXs.length - 1] - childXs[0]).toBeGreaterThanOrEqual(80);
+  });
+});
+
+describe('seed → add partner → add parents to partner (regression)', () => {
+  beforeEach(() => {
+    usePedigreeStore.temporal.getState().clear();
+  });
+
+  // Reproduces the exact two-action bug report: from a freshly seeded pedigree,
+  // (1) add a partner to the founder, then (2) add parents to that new partner.
+  // The partner and the founder are spouses and MUST stay on the same row; the
+  // partner's parents sit exactly one generation above them. The bug: the seed
+  // had no `generation`, so the partner inherited `undefined`, the relayout
+  // mapped that to the parents' row, and the founder was yanked up onto its
+  // in-laws' row while the partner dropped a generation.
+  it('keeps the founder and partner on one row with parents directly above', () => {
+    const store = usePedigreeStore.getState();
+    store.setDocument(createSeededDocument('unknown', { x: 800, y: 500 }));
+
+    const seed = Object.values(usePedigreeStore.getState().document.individuals)[0];
+
+    // Action 1 — mirror RadialMenu.handleAddPartner (founder has no union yet).
+    const partner = createDefaultIndividual({
+      generation: seed.generation,
+      position: { x: seed.position.x + PARTNER_SPACING, y: seed.position.y },
+    });
+    const union: PartnershipRelationship = {
+      id: generateId(),
+      type: RelationshipType.Partnership,
+      partner1Id: seed.id,
+      partner2Id: partner.id,
+      childrenIds: [],
+    };
+    store.addPartnerToIndividual(partner, union);
+
+    // Action 2 — mirror RadialMenu.handleAddParent case C (no parent union yet),
+    // targeting the newly created partner.
+    const target = usePedigreeStore.getState().document.individuals[partner.id];
+    const childGeneration = target.generation ?? 0;
+    const parentGeneration = childGeneration - 1;
+    const parentY = target.position.y - GENERATION_SPACING;
+    const dad = createDefaultIndividual({
+      genderIdentity: GenderIdentity.Man,
+      generation: parentGeneration,
+      position: { x: target.position.x - PARTNER_SPACING / 2, y: parentY },
+    });
+    const mum = createDefaultIndividual({
+      genderIdentity: GenderIdentity.Woman,
+      generation: parentGeneration,
+      position: { x: target.position.x + PARTNER_SPACING / 2, y: parentY },
+    });
+    const parentUnion: PartnershipRelationship = {
+      id: generateId(),
+      type: RelationshipType.Partnership,
+      partner1Id: dad.id,
+      partner2Id: mum.id,
+      childrenIds: [target.id],
+    };
+    store.addParentsForChild(
+      dad,
+      mum,
+      parentUnion,
+      {
+        id: generateId(),
+        type: RelationshipType.ParentChild,
+        parentPartnershipId: parentUnion.id,
+        childId: target.id,
+      },
+      target.id,
+      childGeneration,
+    );
+
+    const ind = usePedigreeStore.getState().document.individuals;
+
+    // Founder and partner are spouses: same row.
+    expect(ind[seed.id].position.y).toBe(ind[partner.id].position.y);
+    // Parents sit exactly one generation above the couple's row.
+    expect(ind[dad.id].position.y).toBe(ind[mum.id].position.y);
+    expect(ind[dad.id].position.y).toBe(ind[partner.id].position.y - GENERATION_SPACING);
   });
 });
 

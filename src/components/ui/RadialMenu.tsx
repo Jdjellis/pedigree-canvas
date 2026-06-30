@@ -78,7 +78,7 @@ export function RadialMenu() {
   const handleAddParent = useCallback(() => {
     if (!target || !targetId) return;
 
-    const childGeneration = target.generation ?? 1;
+    const childGeneration = target.generation ?? 0;
     const parentGeneration = childGeneration - 1;
     const parentY = target.position.y - GENERATION_SPACING;
 
