@@ -207,6 +207,12 @@ interface PedigreeState {
    * @returns the resulting twin-group id, or `null` if not grouping-eligible.
    */
   groupTwins: (ids: string[], twinType: TwinType) => string | null;
+  /**
+   * Dissolve every twin group that any of the given individuals belongs to, in
+   * one undo step. The inverse of {@link groupTwins}. A no-op when the selection
+   * touches no twin group.
+   */
+  ungroupTwins: (ids: string[]) => void;
 
   // Text annotation actions
   addTextAnnotation: (annotation: TextAnnotation) => void;
@@ -775,6 +781,24 @@ export const usePedigreeStore = create<PedigreeState>()(
         });
         return resultId;
       },
+
+      ungroupTwins: (ids) =>
+        set((state) => {
+          const touched = twinGroupsTouching(state.document.twinGroups, ids);
+          if (touched.length === 0) return state;
+          const groups = { ...state.document.twinGroups };
+          for (const g of touched) delete groups[g.id];
+          return {
+            document: {
+              ...state.document,
+              metadata: {
+                ...state.document.metadata,
+                updatedAt: new Date().toISOString(),
+              },
+              twinGroups: groups,
+            },
+          };
+        }),
 
       addTextAnnotation: (annotation) =>
         set((state) => ({

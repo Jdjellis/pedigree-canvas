@@ -54,6 +54,7 @@ export function MultiSelectProperties() {
   const parentChildLinks = usePedigreeStore((s) => s.document.parentChildLinks);
   const twinGroups = usePedigreeStore((s) => s.document.twinGroups);
   const groupTwins = usePedigreeStore((s) => s.groupTwins);
+  const ungroupTwins = usePedigreeStore((s) => s.ungroupTwins);
 
   const ids = useMemo(
     () => Array.from(selectedIds).filter((id) => individuals[id]),
@@ -83,12 +84,24 @@ export function MultiSelectProperties() {
   );
 
   const sibshipId = commonSibshipId({ parentChildLinks }, ids);
+  // Twin groups any selected sibling already belongs to. Drives which controls
+  // the Twins section shows.
+  const touchedGroups = twinGroupsTouching(twinGroups, ids);
   // Existing group whose zygosity would survive a merge (largest, stable
   // tiebreak) — shared with the groupTwins store action so the displayed
   // zygosity always matches the type the merge would keep.
-  const survivingGroup = pickSurvivingTwinGroup(
-    twinGroupsTouching(twinGroups, ids),
-  );
+  const survivingGroup = pickSurvivingTwinGroup(touchedGroups);
+  // The whole selection sits inside a single existing twin group: there is
+  // nothing to add (every selected person is already grouped together), so we
+  // offer only "Ungroup twins" — not the no-op "Add to twin group".
+  const fullyGroupedInOne =
+    touchedGroups.length === 1 &&
+    ids.every((id) => touchedGroups[0].individualIds.includes(id));
+  // Mixed selection (ungrouped siblings alongside a group, or spanning 2+
+  // groups): "Add to twin group" extends/merges, and "Ungroup twins" dissolves
+  // the touched group(s) — both are meaningful, so show both.
+  const showAddToGroup = touchedGroups.length > 0 && !fullyGroupedInOne;
+  const showUngroup = touchedGroups.length > 0;
 
   return (
     <div className={styles.panel}>
@@ -107,16 +120,38 @@ export function MultiSelectProperties() {
               <div className={styles.sectionTitle}>Twins</div>
               {survivingGroup ? (
                 <div className={styles.field}>
-                  <button
-                    type="button"
-                    className={styles.twinAddButton}
-                    onClick={() => groupTwins(ids, survivingGroup.twinType)}
-                  >
-                    Add to twin group
-                  </button>
-                  <p className={styles.hint}>
-                    Joins the existing {ZYGOSITY_LABELS[survivingGroup.twinType]} twin group.
-                  </p>
+                  {showAddToGroup && (
+                    <>
+                      <button
+                        type="button"
+                        className={styles.twinAddButton}
+                        onClick={() => groupTwins(ids, survivingGroup.twinType)}
+                      >
+                        Add to twin group
+                      </button>
+                      <p className={styles.hint}>
+                        Joins the existing {ZYGOSITY_LABELS[survivingGroup.twinType]} twin group.
+                      </p>
+                    </>
+                  )}
+                  {showUngroup && (
+                    <>
+                      <button
+                        type="button"
+                        className={styles.twinAddButton}
+                        onClick={() => ungroupTwins(ids)}
+                      >
+                        Ungroup twins
+                      </button>
+                      <p className={styles.hint}>
+                        {fullyGroupedInOne
+                          ? `Dissolves the ${ZYGOSITY_LABELS[survivingGroup.twinType]} twin group.`
+                          : touchedGroups.length > 1
+                            ? 'Dissolves the selected twin groups.'
+                            : 'Dissolves the existing twin group.'}
+                      </p>
+                    </>
+                  )}
                 </div>
               ) : (
                 <div className={styles.field}>

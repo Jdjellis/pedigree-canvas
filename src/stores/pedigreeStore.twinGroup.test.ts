@@ -54,3 +54,59 @@ describe('updateTwinGroup', () => {
     );
   });
 });
+
+describe('ungroupTwins', () => {
+  it('dissolves every twin group any selected member belongs to', () => {
+    const store = usePedigreeStore.getState();
+    store.addTwinGroup(group); // { a, b }
+    store.addTwinGroup({
+      id: 'tg2',
+      twinType: TwinType.Monozygotic,
+      individualIds: ['c', 'd'],
+      parentPartnershipId: 'u1',
+    });
+
+    // Selection touches both groups (one member of each).
+    store.ungroupTwins(['a', 'c']);
+
+    expect(usePedigreeStore.getState().document.twinGroups).toEqual({});
+  });
+
+  it('leaves untouched groups intact', () => {
+    const store = usePedigreeStore.getState();
+    store.addTwinGroup(group); // { a, b }
+    store.addTwinGroup({
+      id: 'tg2',
+      twinType: TwinType.Monozygotic,
+      individualIds: ['c', 'd'],
+      parentPartnershipId: 'u1',
+    });
+
+    store.ungroupTwins(['a']);
+
+    const groups = usePedigreeStore.getState().document.twinGroups;
+    expect(groups.tg1).toBeUndefined();
+    expect(groups.tg2).toBeDefined();
+  });
+
+  it('is a no-op (no history entry) when the selection touches no group', () => {
+    const store = usePedigreeStore.getState();
+    store.addTwinGroup(group);
+    const before = usePedigreeStore.getState().document;
+
+    store.ungroupTwins(['nobody']);
+
+    expect(usePedigreeStore.getState().document).toBe(before);
+  });
+
+  it('records a single undoable step', () => {
+    const store = usePedigreeStore.getState();
+    store.addTwinGroup(group);
+
+    store.ungroupTwins(['a', 'b']);
+    expect(usePedigreeStore.getState().document.twinGroups.tg1).toBeUndefined();
+
+    usePedigreeStore.temporal.getState().undo();
+    expect(usePedigreeStore.getState().document.twinGroups.tg1).toBeDefined();
+  });
+});

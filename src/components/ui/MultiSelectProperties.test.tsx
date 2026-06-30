@@ -287,6 +287,55 @@ describe('MultiSelectProperties — twins', () => {
     expect(tg.twinType).toBe(TwinType.Monozygotic);
   });
 
+  it('mixed selection (grouped + ungrouped) offers both add and ungroup', () => {
+    const doc = siblingDoc(['a', 'b', 'c']);
+    doc.twinGroups['tg1'] = {
+      id: 'tg1',
+      twinType: TwinType.Monozygotic,
+      individualIds: ['a', 'b'],
+      parentPartnershipId: 'union1',
+    };
+    act(() => usePedigreeStore.getState().setDocument(doc));
+    selectPeople(['b', 'c']); // b is grouped, c is not
+
+    render(<PropertiesPanel />);
+    expect(screen.getByRole('button', { name: 'Add to twin group' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Ungroup twins' })).toBeInTheDocument();
+  });
+
+  it('selecting an entire existing twin group offers only Ungroup (no no-op Add)', () => {
+    const doc = siblingDoc(['a', 'b']);
+    doc.twinGroups['tg1'] = {
+      id: 'tg1',
+      twinType: TwinType.Dizygotic,
+      individualIds: ['a', 'b'],
+      parentPartnershipId: 'union1',
+    };
+    act(() => usePedigreeStore.getState().setDocument(doc));
+    selectPeople(['a', 'b']);
+
+    render(<PropertiesPanel />);
+    expect(screen.getByRole('button', { name: 'Ungroup twins' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Add to twin group' })).not.toBeInTheDocument();
+  });
+
+  it('Ungroup twins dissolves the group the selection belongs to', () => {
+    const doc = siblingDoc(['a', 'b', 'c']);
+    doc.twinGroups['tg1'] = {
+      id: 'tg1',
+      twinType: TwinType.Monozygotic,
+      individualIds: ['a', 'b'],
+      parentPartnershipId: 'union1',
+    };
+    act(() => usePedigreeStore.getState().setDocument(doc));
+    selectPeople(['a', 'b']);
+
+    render(<PropertiesPanel />);
+    act(() => fireEvent.click(screen.getByRole('button', { name: 'Ungroup twins' })));
+
+    expect(Object.values(usePedigreeStore.getState().document.twinGroups)).toHaveLength(0);
+  });
+
   it('hides the twins section when selected siblings are in different sibships', () => {
     const doc = createDefaultDocument();
     doc.partnerships['u1'] = { id: 'u1', type: RelationshipType.Partnership, childrenIds: ['a'] };
