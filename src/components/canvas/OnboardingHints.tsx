@@ -152,7 +152,7 @@ export function OnboardingHints(): ReactElement | null {
 
       {/* ── Caption anchored just below the seed person ── */}
       <div className={styles.caption}>
-        <h1 className={styles.wordmark}>Pedigree</h1>
+        <h1 className={styles.wordmark}>Pedigree Canvas</h1>
         <p className={styles.reassurance}>Your work is saved only in this browser.</p>
         <p className={styles.cue}>
           Hover to add relatives — use ▢ ● ◇ to set their sex.

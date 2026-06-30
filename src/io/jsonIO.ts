@@ -53,8 +53,16 @@ export function migrateAdoption(doc: PedigreeDocument): PedigreeDocument {
 // File format wrapper
 // ---------------------------------------------------------------------------
 
+/**
+ * Current file-envelope tag. Files exported before the rename to Pedigree
+ * Canvas carried `'PedigreeEditor'`; that tag is still accepted on read so
+ * existing saved files keep opening.
+ */
+const APP_TAG = 'PedigreeCanvas';
+const ACCEPTED_APP_TAGS: readonly string[] = [APP_TAG, 'PedigreeEditor'];
+
 interface PedigreeFileFormat {
-  app: 'PedigreeEditor';
+  app: typeof APP_TAG;
   formatVersion: '1.0' | '2.0';
   document: PedigreeDocument;
 }
@@ -69,7 +77,7 @@ interface PedigreeFileFormat {
  */
 export function serializeDocument(doc: PedigreeDocument): string {
   const wrapper: PedigreeFileFormat = {
-    app: 'PedigreeEditor',
+    app: APP_TAG,
     formatVersion: '2.0',
     document: doc,
   };
@@ -97,7 +105,9 @@ export function deserializeDocument(json: string): PedigreeDocument {
   // Accept both the wrapped format and a raw PedigreeDocument.
   const record = parsed as Record<string, unknown>;
   const doc: unknown =
-    record.app === 'PedigreeEditor' && record.document != null
+    typeof record.app === 'string' &&
+    ACCEPTED_APP_TAGS.includes(record.app) &&
+    record.document != null
       ? record.document
       : record;
 

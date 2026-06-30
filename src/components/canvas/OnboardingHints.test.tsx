@@ -11,9 +11,9 @@ beforeEach(() => {
 });
 
 describe('OnboardingHints with 0 individuals', () => {
-  test('renders the Pedigree wordmark', () => {
+  test('renders the Pedigree Canvas wordmark', () => {
     render(<OnboardingHints />);
-    expect(screen.getByText('Pedigree')).toBeInTheDocument();
+    expect(screen.getByText('Pedigree Canvas')).toBeInTheDocument();
   });
 
   test('renders the browser-local save reassurance', () => {
@@ -48,7 +48,7 @@ describe('OnboardingHints with 1 individual (seed)', () => {
     usePedigreeStore.getState().addIndividual(individual);
 
     render(<OnboardingHints />);
-    expect(screen.getByText('Pedigree')).toBeInTheDocument();
+    expect(screen.getByText('Pedigree Canvas')).toBeInTheDocument();
   });
 
   test('renders the hover-to-add-relatives cue', () => {
