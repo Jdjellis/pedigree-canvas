@@ -14,8 +14,14 @@ import { usePedigreeStore } from '../../../stores/pedigreeStore';
 import { useUIStore } from '../../../stores/uiStore';
 import { useEditorActions } from '../../../commands/useEditorActions';
 import { DocumentDetails } from '../DocumentDetails';
+import { SegmentedControl } from '../SegmentedControl';
+import { THEME_ORDER, THEME_LABELS, type ThemeId } from '../../../theme/themes';
 import { Island } from './Island';
 import styles from './MenuIsland.module.css';
+
+const THEME_OPTIONS: { value: ThemeId; label: string }[] = THEME_ORDER.map(
+  (id) => ({ value: id, label: THEME_LABELS[id] }),
+);
 
 const PLACEHOLDER_TITLE = 'Untitled Pedigree';
 
@@ -116,6 +122,8 @@ export function MenuIsland(): React.JSX.Element {
 
   const lastSavedAt = useUIStore((s) => s.lastSavedAt);
   const storagePersistent = useUIStore((s) => s.storagePersistent);
+  const theme = useUIStore((s) => s.theme);
+  const setTheme = useUIStore((s) => s.setTheme);
 
   const actions = useEditorActions();
 
@@ -381,6 +389,18 @@ export function MenuIsland(): React.JSX.Element {
               label="Document details"
               onClick={openDetails}
             />
+            <div className={styles.menuSeparator} role="separator" />
+            {/* Theme picker. Not a menuitem (operated by click), and left open
+                after a change so the user can preview Light / Warm / Dim. */}
+            <div className={styles.themeSection}>
+              <span className={styles.themeLabel}>Theme</span>
+              <SegmentedControl
+                options={THEME_OPTIONS}
+                value={theme}
+                onChange={setTheme}
+                ariaLabel="Editor theme"
+              />
+            </div>
             <div className={styles.menuSeparator} role="separator" />
             <MenuItemButton
               icon={<Command size={16} />}

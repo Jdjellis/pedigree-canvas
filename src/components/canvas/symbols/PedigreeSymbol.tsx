@@ -53,6 +53,12 @@ export interface PedigreeSymbolProps {
    * mutation interactions (erase, radial menu) are blocked.
    */
   editingLocked?: boolean;
+  /**
+   * The active theme's "paper" fill for open/unaffected symbols. Defaults to
+   * the light constant. The symbol *stroke* and the "affected" condition fills
+   * stay dark in every theme — only this surface follows the theme.
+   */
+  symbolFill?: string;
 }
 
 const SELECTION_STROKE_WIDTH = 2;
@@ -245,6 +251,7 @@ export const PedigreeSymbol: React.FC<PedigreeSymbolProps> = React.memo(
     panMode = false,
     eraseOnHover = false,
     editingLocked = false,
+    symbolFill = SYMBOL_FILL,
   }) => {
     // Position of the symbol when a drag began. Captured so the whole drag can
     // be committed as a single undo step on drag end (see handleDragEnd).
@@ -413,7 +420,7 @@ export const PedigreeSymbol: React.FC<PedigreeSymbolProps> = React.memo(
         {/* Base shape */}
         <BaseShape
           individual={individual}
-          fill={SYMBOL_FILL}
+          fill={symbolFill}
           strokeColor={strokeColor}
         />
 

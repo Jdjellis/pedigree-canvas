@@ -31,11 +31,17 @@ invert-everything sense. A true inverted-dark canvas is explicitly out of scope.
 |------|------|----------------|--------|
 | `light` | Current default | bright (`#f7f7f9`) | light |
 | `warm` | Cozy paper / reduced blue light | warm cream (`#f2e9d8`) | light, warm-tinted |
-| `dim` | Focus / dark surround, dimmed document | dimmed warm-grey (`#d6d3cd`) | dark |
+| `dim` | Low-glare / dark-room | dimmed cool-grey (`#d6d3cd`) | light, dimmed cool-grey |
 
-`warm` keeps everything light and warm. `dim` pairs a **dark chrome** (toolbars,
-panels, menus) with a **dimmed-but-still-light canvas** — the well-established
-"dark UI, light document" model (Figma, PDF readers). Both keep symbols dark-on-light.
+`warm` shifts colour *temperature* (cosy cream); `dim` shifts *luminance* (a
+cooler, lower-brightness "dimmed paper"). Both keep the whole app **light with
+dark text** — symbols dark-on-light, and crucially no light-on-light text.
+
+A "dark chrome around a light canvas" variant was prototyped and rejected: any
+text painted on the canvas background (e.g. the onboarding hints, which use
+`--color-text`) would have been light-on-light. Keeping one coherent
+text-on-light model across canvas *and* chrome avoids that whole class of bug,
+and still fully serves the goal (a dimmer, lower-glare surface).
 
 ## Architecture
 

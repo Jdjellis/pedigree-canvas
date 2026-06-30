@@ -25,6 +25,7 @@ import { computeBounds } from '../../utils/boundsCalculation';
 import { collectInvestigations } from '../../utils/investigations';
 import type { ActiveQuarter } from './symbols/ConditionOverlay';
 import type { Individual } from '../../types/pedigree';
+import { THEME_CANVAS_PALETTES } from '../../theme/themes';
 import {
   MIN_ZOOM,
   MAX_ZOOM,
@@ -89,6 +90,11 @@ export const CanvasContainer = forwardRef<CanvasContainerHandle>(
     const updateDragLinkCursor = useUIStore((s) => s.updateDragLinkCursor);
     const endDragLink = useUIStore((s) => s.endDragLink);
     const editingLocked = useUIStore((s) => s.editingLocked);
+    // Resolve the active theme's canvas palette here (react-dom), then pass the
+    // colours down to the Konva layers as props — react-konva's reconciler does
+    // not reliably propagate store subscriptions into canvas children.
+    const theme = useUIStore((s) => s.theme);
+    const canvasPalette = THEME_CANVAS_PALETTES[theme];
 
     // Lift store subscriptions to react-dom context so Konva layers re-render
     const individuals = usePedigreeStore((s) => s.document.individuals);
@@ -502,6 +508,8 @@ export const CanvasContainer = forwardRef<CanvasContainerHandle>(
               height={dimensions.height}
               scale={scale}
               position={position}
+              gridColor={canvasPalette.gridColor}
+              generationLineColor={canvasPalette.generationLineColor}
             />
 
             <ConnectionsLayer
@@ -524,6 +532,7 @@ export const CanvasContainer = forwardRef<CanvasContainerHandle>(
                   panMode={isSpaceHeld || activeTool === 'hand'}
                   eraseOnHover={isErasing}
                   editingLocked={editingLocked}
+                  symbolFill={canvasPalette.symbolFill}
                 />
               ))}
             </Layer>

@@ -26,6 +26,7 @@ import { PrivacyBadge } from './components/ui/PrivacyBadge';
 import { useUIStore } from './stores/uiStore';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useAutoSave } from './hooks/useAutoSave';
+import { useApplyTheme } from './hooks/useApplyTheme';
 import styles from './App.module.css';
 
 function App() {
@@ -34,6 +35,7 @@ function App() {
 
   useKeyboardShortcuts();
   useAutoSave();
+  useApplyTheme();
 
   const getStage = useCallback(() => {
     return canvasRef.current?.getStage() ?? null;

@@ -37,6 +37,57 @@
     0 4px 10px -4px rgba(15, 15, 25, 0.08);
 }
 
+/*
+ * Comfort themes. These re-tint the application chrome and the CSS-painted
+ * canvas background (which shows through the transparent Konva Stage). The
+ * pedigree symbols themselves stay dark-on-light in every theme — their themed
+ * colours are threaded into Konva from CanvasContainer, not set here. See
+ * docs/superpowers/specs/2026-06-30-comfort-themes-design.md.
+ *
+ * `light` needs no block: the data-theme="light" attribute simply falls back to
+ * the :root values above.
+ */
+
+/* Warm — cosy cream paper, warm-tinted light chrome. Reduces blue light. */
+[data-theme='warm'] {
+  --color-bg: #f2e9d8;
+  --color-surface: #fbf5e9;
+  --color-border: #e3d6bd;
+  --color-text: #3a3326;
+  --color-text-secondary: #756a50;
+  --color-primary-soft: rgba(105, 101, 219, 0.12);
+  --color-primary-soft-strong: rgba(105, 101, 219, 0.18);
+  --color-primary-border: rgba(105, 101, 219, 0.32);
+
+  --shadow-sm: 0 1px 2px rgba(60, 45, 20, 0.08);
+  --shadow-md: 0 4px 12px -2px rgba(60, 45, 20, 0.12),
+    0 2px 4px -2px rgba(60, 45, 20, 0.08);
+  --shadow-lg: 0 12px 28px -6px rgba(60, 45, 20, 0.18),
+    0 4px 10px -4px rgba(60, 45, 20, 0.1);
+}
+
+/*
+ * Dim — a low-luminance, cool-grey "dimmed paper" theme for low-glare / dark-room
+ * work. It lowers overall brightness rather than inverting anything: the canvas
+ * and chrome stay light with dark text, so symbols keep their affected/unaffected
+ * meaning and every surface keeps comfortable dark-on-light contrast (no
+ * light-on-light text anywhere on the canvas). Distinct from `warm`, which shifts
+ * colour temperature; `dim` shifts luminance.
+ */
+[data-theme='dim'] {
+  --color-bg: #d6d3cd;
+  --color-surface: #e2e0db;
+  --color-border: #c3c0b9;
+  --color-text: #2d2b27;
+  --color-text-secondary: #5d594f;
+
+  --shadow-sm: 0 1px 2px rgba(40, 38, 32, 0.1);
+  --shadow-md: 0 4px 12px -2px rgba(40, 38, 32, 0.14),
+    0 2px 4px -2px rgba(40, 38, 32, 0.1);
+  --shadow-lg: 0 12px 28px -6px rgba(40, 38, 32, 0.2),
+    0 4px 10px -4px rgba(40, 38, 32, 0.12);
+}
+
 html,
 body,
 #root {

@@ -7,14 +7,24 @@ export interface GridLayerProps {
   height: number;
   scale: number;
   position: { x: number; y: number };
+  /** Grid-dot colour for the active theme. Defaults to the light constant. */
+  gridColor?: string;
+  /** Generation guide-line colour for the active theme. */
+  generationLineColor?: string;
 }
 
 const DOT_RADIUS = 1;
-const GENERATION_LINE_COLOR = '#d4d4d4';
 const GENERATION_LINE_DASH = [4, 6];
 
 export const GridLayer: React.FC<GridLayerProps> = React.memo(
-  ({ width, height, scale, position }) => {
+  ({
+    width,
+    height,
+    scale,
+    position,
+    gridColor = GRID_COLOR,
+    generationLineColor = '#d4d4d4',
+  }) => {
     const dots = useMemo(() => {
       // Convert viewport bounds to canvas (world) coordinates
       const viewLeft = -position.x / scale;
@@ -69,7 +79,7 @@ export const GridLayer: React.FC<GridLayerProps> = React.memo(
           <Line
             key={`gen-${i}`}
             points={[line.x1, line.y, line.x2, line.y]}
-            stroke={GENERATION_LINE_COLOR}
+            stroke={generationLineColor}
             strokeWidth={1 / scale}
             dash={GENERATION_LINE_DASH}
             opacity={0.5}
@@ -81,7 +91,7 @@ export const GridLayer: React.FC<GridLayerProps> = React.memo(
             x={dot.x}
             y={dot.y}
             radius={DOT_RADIUS / scale}
-            fill={GRID_COLOR}
+            fill={gridColor}
           />
         ))}
       </Layer>
