@@ -44,6 +44,9 @@ interface UIState {
     pinned: boolean;
   };
 
+  /** The individual whose gender is being chosen via the inline picker, or `null`. */
+  genderPicker: { targetId: string | null };
+
   dragLink: {
     active: boolean;
     sourceId: string | null;
@@ -103,6 +106,10 @@ interface UIState {
     canvasPos: { x: number; y: number }
   ) => void;
   hideRadialMenu: () => void;
+  /** Open the inline gender picker on the given individual. */
+  showGenderPicker: (id: string) => void;
+  /** Close the inline gender picker (keeps the individual's current shape). */
+  hideGenderPicker: () => void;
   /** Pin the radial menu open so it survives the pointer leaving the hot-zone. */
   pinRadialMenu: () => void;
   /** Release a pinned radial menu (it then follows hover rules again). */
@@ -153,6 +160,8 @@ export const useUIStore = create<UIState>()((set) => ({
     canvasPosition: { x: 0, y: 0 },
     pinned: false,
   },
+
+  genderPicker: { targetId: null },
 
   dragLink: {
     active: false,
@@ -235,6 +244,10 @@ export const useUIStore = create<UIState>()((set) => ({
         pinned: false,
       },
     }),
+
+  showGenderPicker: (id) => set({ genderPicker: { targetId: id } }),
+
+  hideGenderPicker: () => set({ genderPicker: { targetId: null } }),
 
   pinRadialMenu: () =>
     set((state) => ({ radialMenu: { ...state.radialMenu, pinned: true } })),
