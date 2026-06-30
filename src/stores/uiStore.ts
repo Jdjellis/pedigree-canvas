@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import type { DefaultSex } from '../utils/sex';
 import { ONBOARDED_STORAGE_KEY } from '../components/canvas/onboarding';
 import * as safeStorage from '../utils/safeStorage';
 
@@ -64,8 +63,6 @@ interface UIState {
   propertiesPanelOpen: boolean;
   activeModal: ActiveModal;
   activeTool: ActiveTool;
-  /** The sex applied to singly-added people (seed + radial +Partner/+Child/+Sibling). */
-  defaultSex: DefaultSex;
 
   /** When true, the pedigree is read-only: no structural or property edits. */
   editingLocked: boolean;
@@ -121,8 +118,6 @@ interface UIState {
   showLinkPopup: (sourceId: string, targetId: string, screenPos: { x: number; y: number }) => void;
   hideLinkPopup: () => void;
   setActiveTool: (tool: ActiveTool) => void;
-  /** Set the default sex used for singly-added people. */
-  setDefaultSex: (sex: DefaultSex) => void;
   /** Toggle whether the pedigree is locked against editing. */
   toggleEditingLocked: () => void;
   openModal: (modal: ActiveModal) => void;
@@ -180,7 +175,6 @@ export const useUIStore = create<UIState>()((set) => ({
   propertiesPanelOpen: false,
   activeModal: null,
   activeTool: 'select',
-  defaultSex: 'unknown',
   editingLocked: false,
   commandPaletteOpen: false,
   editingAnnotationId: null,
@@ -287,8 +281,6 @@ export const useUIStore = create<UIState>()((set) => ({
     }),
 
   setActiveTool: (activeTool) => set({ activeTool }),
-
-  setDefaultSex: (defaultSex) => set({ defaultSex }),
 
   toggleEditingLocked: () =>
     set((state) => ({ editingLocked: !state.editingLocked })),

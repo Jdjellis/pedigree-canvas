@@ -44,13 +44,6 @@ describe('ToolIsland', () => {
     );
   });
 
-  it('renders the default-sex control buttons', () => {
-    render(<ToolIsland />);
-    for (const label of ['Male', 'Female', 'Unknown']) {
-      expect(screen.getByRole('button', { name: label })).toBeInTheDocument();
-    }
-  });
-
   describe('edit-lock disables Text and Eraser buttons', () => {
     it('Text and Eraser have the disabled attribute when editingLocked is true', () => {
       useUIStore.setState({ editingLocked: true });

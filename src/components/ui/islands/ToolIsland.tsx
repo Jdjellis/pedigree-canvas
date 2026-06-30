@@ -3,13 +3,12 @@ import { useUIStore } from '../../../stores/uiStore';
 import { useEditorActions } from '../../../commands/useEditorActions';
 import { Island } from './Island';
 import { ToolButton } from './ToolButton';
-import { DefaultSexControl } from './DefaultSexControl';
 import styles from './islands.module.css';
 
 /**
- * Floating tool island: edit-lock and hand helpers, then Select with its
- * default-sex control, then Text and Eraser. Reads `activeTool`/`editingLocked`
- * reactively — safe here because this lives in the react-dom tree.
+ * Floating tool island: edit-lock and hand helpers, then Select, then Text and
+ * Eraser. Reads `activeTool`/`editingLocked` reactively — safe here because
+ * this lives in the react-dom tree.
  */
 export function ToolIsland(): React.JSX.Element {
   const activeTool = useUIStore((s) => s.activeTool);
@@ -39,7 +38,6 @@ export function ToolIsland(): React.JSX.Element {
         active={activeTool === 'select'}
         onClick={actions.selectTool}
       />
-      <DefaultSexControl />
       <span className={styles.toolDivider} aria-hidden="true" />
       <ToolButton
         label="Text"

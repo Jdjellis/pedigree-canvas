@@ -76,7 +76,7 @@ describe('useAutoSave', () => {
       const people = Object.values(usePedigreeStore.getState().document.individuals);
       expect(people).toHaveLength(1);
       expect(people[0].isProband).toBe(false);
-      expect(people[0].genderIdentity).toBe(GenderIdentity.Unknown); // defaultSex is 'unknown'
+      expect(people[0].genderIdentity).toBe(GenderIdentity.Unknown);
     });
 
     it('seeds a fresh person when the stored payload is not a document', () => {
@@ -89,7 +89,7 @@ describe('useAutoSave', () => {
       const people = Object.values(usePedigreeStore.getState().document.individuals);
       expect(people).toHaveLength(1);
       expect(people[0].isProband).toBe(false);
-      expect(people[0].genderIdentity).toBe(GenderIdentity.Unknown); // defaultSex is 'unknown'
+      expect(people[0].genderIdentity).toBe(GenderIdentity.Unknown);
     });
   });
 
