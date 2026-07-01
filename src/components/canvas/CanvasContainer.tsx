@@ -23,6 +23,7 @@ import { TextAnnotationLayer } from './TextAnnotationLayer';
 import { BoundsLayer } from './BoundsLayer';
 import { computeBounds } from '../../utils/boundsCalculation';
 import { collectInvestigations } from '../../utils/investigations';
+import { clearCanvasCursor } from '../../utils/canvasCursor';
 import type { ActiveQuarter } from './symbols/ConditionOverlay';
 import type { Individual } from '../../types/pedigree';
 import { THEME_CANVAS_PALETTES } from '../../theme/themes';
@@ -237,14 +238,10 @@ export const CanvasContainer = forwardRef<CanvasContainerHandle>(
     // mouseenter) so the container's tool cursor — the default arrow in select
     // mode — takes over. Konva captures the pointer during an alt-drag, so the
     // source symbol's `pointer` cursor never gets reset by a mouseleave; we do it
-    // explicitly when the drag-link gesture ends.
+    // explicitly when the drag-link gesture ends. Scoped to this stage.
     const resetLayerCursors = useCallback(() => {
-      stageRef.current
-        ?.container()
-        .querySelectorAll('canvas')
-        .forEach((c) => {
-          (c as HTMLElement).style.cursor = '';
-        });
+      const container = stageRef.current?.container();
+      if (container) clearCanvasCursor(container);
     }, []);
 
     // --------------- Eraser drag: safety-net stop when mouse releases off-canvas ---------------
