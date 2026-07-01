@@ -18,3 +18,46 @@
   border-radius: 8px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
 }
+
+/* "Make twins" section: a divided row under the gender buttons letting the
+   just-created person become a twin without visiting the properties panel. */
+.twinSection {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid #ececf0;
+}
+
+.twinLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b6b75;
+  letter-spacing: 0.2px;
+}
+
+.twinButtons {
+  display: flex;
+  gap: 4px;
+}
+
+.twinButton {
+  min-width: 30px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #3a3a44;
+  background: #f4f4f6;
+  border: 1px solid #d4d4d8;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.12s, border-color 0.12s, color 0.12s;
+}
+
+.twinButton:hover {
+  background: #6965db;
+  border-color: #6965db;
+  color: #ffffff;
+}

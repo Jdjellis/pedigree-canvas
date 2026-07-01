@@ -5,12 +5,28 @@ import { usePedigreeStore, createDefaultIndividual } from '../../stores/pedigree
 import { getPresentPartners, findPartnerships } from '../../utils/graphTraversal';
 import { addChildToUnion } from './addChild';
 import { addTwinChildrenToUnion, buildTwinChildrenViaNewUnion } from './addTwinChildren';
+import { addTwinOf } from './addTwin';
 import { generateId } from '../../utils/idGenerator';
 import { RelationshipType, GenderIdentity, TwinType } from '../../types/enums';
 import { PARTNER_SPACING, GENERATION_SPACING, SIBLING_SPACING } from '../../utils/constants';
-import type { PartnershipRelationship, ParentChildRelationship, TwinGroup } from '../../types/pedigree';
+import type { PartnershipRelationship, ParentChildRelationship } from '../../types/pedigree';
 import styles from './RadialMenu.module.css';
 import clsx from 'clsx';
+
+/**
+ * A tiny persistent ⌥ badge shown on the Sibling and Child buttons, advertising
+ * the "hold ⌥ for twins" shortcut at a glance. Aria-hidden so the button keeps
+ * its plain accessible name ("Sibling"/"Child") — the `title` stays the
+ * screen-reader affordance — and it fades out with its button once ⌥ (or a
+ * dwell) reveals the twins.
+ */
+function TwinBadge() {
+  return (
+    <span className={styles.altBadge} aria-hidden="true">
+      ⌥
+    </span>
+  );
+}
 
 export function RadialMenu() {
   const { visible, targetId } = useUIStore((s) => s.radialMenu);
@@ -34,7 +50,6 @@ export function RadialMenu() {
   const addChildViaNewUnion = usePedigreeStore((s) => s.addChildViaNewUnion);
   const fillUnionPartner = usePedigreeStore((s) => s.fillUnionPartner);
   const addParentsToParentlessUnion = usePedigreeStore((s) => s.addParentsToParentlessUnion);
-  const addTwinGroup = usePedigreeStore((s) => s.addTwinGroup);
   const addTwinChildren = usePedigreeStore((s) => s.addTwinChildren);
 
   const [altMod, setAltMod] = useState(false);
@@ -373,63 +388,11 @@ export function RadialMenu() {
   const handleAddTwin = useCallback((twinType: TwinType) => {
     if (!target || !targetId) return;
     setGhostGroup(null); // clicking closes the menu; drop any dwell-revealed ghosts
-
-    const parentLink = Object.values(doc.parentChildLinks).find((l) => l.childId === targetId);
-
-    if (parentLink) {
-      const partnership = doc.partnerships[parentLink.parentPartnershipId];
-      if (!partnership) return;
-      const siblings = partnership.childrenIds.map((id) => doc.individuals[id]).filter(Boolean);
-      const maxX = Math.max(...siblings.map((s) => s.position.x));
-      const twin = createDefaultIndividual({
-        generation: target.generation,
-        position: { x: maxX + SIBLING_SPACING, y: target.position.y },
-      });
-      const link: ParentChildRelationship = {
-        id: generateId(), type: RelationshipType.ParentChild,
-        parentPartnershipId: partnership.id, childId: twin.id,
-      };
-      const twinGroup: TwinGroup = {
-        id: generateId(), twinType,
-        individualIds: [targetId, twin.id], parentPartnershipId: partnership.id,
-      };
-      addChildToFamily(twin, partnership.id, link);
-      addTwinGroup(twinGroup);
-      hideRadialMenu();
-      select(twin.id);
-      showGenderPicker(twin.id);
-      return;
-    }
-
-    // No parents: create a 0-partner sibship then mark the pair as twins.
-    const partnershipId = generateId();
-    const twin = createDefaultIndividual({
-      genderIdentity: GenderIdentity.Unknown,
-      generation: target.generation,
-      position: { x: target.position.x + SIBLING_SPACING, y: target.position.y },
-    });
-    const partnership: PartnershipRelationship = {
-      id: partnershipId, type: RelationshipType.Partnership,
-      childrenIds: [target.id, twin.id],
-    };
-    const targetLink: ParentChildRelationship = {
-      id: generateId(), type: RelationshipType.ParentChild,
-      parentPartnershipId: partnershipId, childId: target.id,
-    };
-    const siblingLink: ParentChildRelationship = {
-      id: generateId(), type: RelationshipType.ParentChild,
-      parentPartnershipId: partnershipId, childId: twin.id,
-    };
-    const twinGroup: TwinGroup = {
-      id: generateId(), twinType,
-      individualIds: [targetId, twin.id], parentPartnershipId: partnershipId,
-    };
-    addSiblingViaNewUnion(target, twin, partnership, targetLink, siblingLink);
-    addTwinGroup(twinGroup);
     hideRadialMenu();
-    select(twin.id);
-    showGenderPicker(twin.id);
-  }, [target, targetId, doc, showGenderPicker, addChildToFamily, addSiblingViaNewUnion, addTwinGroup, hideRadialMenu, select]);
+    // Shared with the gender popup's "make twins" section (addTwin.ts) so both
+    // routes create an identical twin structure.
+    addTwinOf(doc, target, twinType);
+  }, [target, targetId, doc, hideRadialMenu]);
 
   if (!visible || !target || editingLocked || genderPicker.targetId) return null;
 
@@ -465,6 +428,7 @@ export function RadialMenu() {
           title="Add Child (hold ⌥ or dwell for MZ / DZ twin children)"
         >
           Child
+          <TwinBadge />
         </button>
         <button
           className={clsx(
@@ -502,6 +466,7 @@ export function RadialMenu() {
           title="Add Sibling (hold ⌥ or dwell for MZ / DZ twin)"
         >
           Sibling
+          <TwinBadge />
         </button>
         <button
           className={clsx(
