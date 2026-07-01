@@ -70,11 +70,12 @@ export const THEME_CANVAS_PALETTES: Record<ThemeId, CanvasPalette> = {
     gridColor: '#e5e5e5',
     generationLineColor: '#d4d4d4',
   },
-  // Warm cream "paper": reduced blue light, everything stays light.
+  // Pale amber "paper" from Excalidraw's Light Yellow (#fff3bf): reduced blue
+  // light, much lighter than the old cream, everything stays clearly light.
   warm: {
-    symbolFill: '#fbf5e9',
-    gridColor: '#ddcdae',
-    generationLineColor: '#d2c09c',
+    symbolFill: '#fffdf6',
+    gridColor: '#e8ddc0',
+    generationLineColor: '#ddd0a8',
   },
   // Low-luminance cool-grey "dimmed paper" for low-glare / dark-room work. Still
   // clearly light so dark symbols keep their meaning; the symbol fill sits a

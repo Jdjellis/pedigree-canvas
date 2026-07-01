@@ -48,11 +48,12 @@
  * the :root values above.
  */
 
-/* Warm — cosy cream paper, warm-tinted light chrome. Reduces blue light. */
+/* Warm — pale amber canvas, warm-tinted light chrome. Reduces blue light.
+   Background derived from Excalidraw's Light Yellow (#fff3bf) at low opacity. */
 [data-theme='warm'] {
-  --color-bg: #f2e9d8;
-  --color-surface: #fbf5e9;
-  --color-border: #e3d6bd;
+  --color-bg: #fff8e1;
+  --color-surface: #fffdf6;
+  --color-border: #ede5c8;
   --color-text: #3a3326;
   --color-text-secondary: #756a50;
   --color-primary-soft: rgba(105, 101, 219, 0.12);
