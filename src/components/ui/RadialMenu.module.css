@@ -47,11 +47,13 @@
 
 /*
  * All positions are measured from the menu center (= symbol center).
- * The symbol radius is ~20px; 66px clears it on every cardinal axis.
+ * The symbol radius is ~20px; the cardinal buttons orbit at 56px (inner edge
+ * ~40px) so they clear the symbol while sitting close enough that "Sibling"
+ * (west) no longer lands on an adjacent sibling ~80px away.
  *
  * "Child" sits at the cardinal south (6 o'clock) — the natural generational
- * direction — but is pushed to 72px to give the number/name label (which
- * starts ~48px below center) as much breathing room as possible.
+ * direction — and stays at 72px to give the number/name label (which starts
+ * ~48px below center) as much breathing room as possible.
  *
  * "Sibling" sits at the cardinal west (9 o'clock). Holding ⌥ fades it out
  * and reveals "MZ" (monozygotic) and "DZ" (dizygotic) twin buttons that
@@ -60,19 +62,19 @@
 .top {
   left: 50%;
   top: 50%;
-  transform: translate(-50%, -50%) translate(0px, -66px);
+  transform: translate(-50%, -50%) translate(0px, -56px);
 }
 .top:hover {
-  transform: translate(-50%, -50%) translate(0px, -66px) scale(1.1);
+  transform: translate(-50%, -50%) translate(0px, -56px) scale(1.1);
 }
 
 .right {
   left: 50%;
   top: 50%;
-  transform: translate(-50%, -50%) translate(66px, 0px);
+  transform: translate(-50%, -50%) translate(56px, 0px);
 }
 .right:hover {
-  transform: translate(-50%, -50%) translate(66px, 0px) scale(1.1);
+  transform: translate(-50%, -50%) translate(56px, 0px) scale(1.1);
 }
 
 /* Cardinal south: child goes straight down in the generational direction. */
@@ -89,16 +91,16 @@
 .left {
   left: 50%;
   top: 50%;
-  transform: translate(-50%, -50%) translate(-66px, 0px);
+  transform: translate(-50%, -50%) translate(-56px, 0px);
   opacity: 1;
 }
 .left:hover {
-  transform: translate(-50%, -50%) translate(-66px, 0px) scale(1.1);
+  transform: translate(-50%, -50%) translate(-56px, 0px) scale(1.1);
 }
 .left.altActive {
   opacity: 0;
   pointer-events: none;
-  transform: translate(-50%, -50%) translate(-66px, 0px) scale(0.7);
+  transform: translate(-50%, -50%) translate(-56px, 0px) scale(0.7);
 }
 
 /*
@@ -109,33 +111,33 @@
 .leftUpper {
   left: 50%;
   top: 50%;
-  transform: translate(-50%, -50%) translate(-66px, 0px) scale(0.7);
+  transform: translate(-50%, -50%) translate(-56px, 0px) scale(0.7);
   opacity: 0;
   pointer-events: none;
 }
 .leftUpper.altActive {
-  transform: translate(-50%, -50%) translate(-66px, -22px);
+  transform: translate(-50%, -50%) translate(-56px, -22px);
   opacity: 1;
   pointer-events: auto;
 }
 .leftUpper.altActive:hover {
-  transform: translate(-50%, -50%) translate(-66px, -22px) scale(1.1);
+  transform: translate(-50%, -50%) translate(-56px, -22px) scale(1.1);
 }
 
 .leftLower {
   left: 50%;
   top: 50%;
-  transform: translate(-50%, -50%) translate(-66px, 0px) scale(0.7);
+  transform: translate(-50%, -50%) translate(-56px, 0px) scale(0.7);
   opacity: 0;
   pointer-events: none;
 }
 .leftLower.altActive {
-  transform: translate(-50%, -50%) translate(-66px, 22px);
+  transform: translate(-50%, -50%) translate(-56px, 22px);
   opacity: 1;
   pointer-events: auto;
 }
 .leftLower.altActive:hover {
-  transform: translate(-50%, -50%) translate(-66px, 22px) scale(1.1);
+  transform: translate(-50%, -50%) translate(-56px, 22px) scale(1.1);
 }
 
 .disabled {

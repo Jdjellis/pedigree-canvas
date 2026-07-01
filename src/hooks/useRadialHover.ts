@@ -17,9 +17,13 @@ import {
  *
  *   - opens the menu when the pointer comes within ENTER radius of a person
  *     (a more generous target than the symbol itself);
- *   - retargets to a nearer person when the pointer moves over a different one;
+ *   - then locks onto that person: once open, proximity no longer retargets the
+ *     menu to a nearer symbol, so an adjacent sibling can't steal it while the
+ *     pointer travels out to an orbiting option (an option can sit almost on top
+ *     of a neighbouring symbol, which used to hand the menu off mid-gesture);
  *   - keeps the menu open until the pointer leaves the larger EXIT radius — so
- *     you can travel out to an orbiting option without it disappearing.
+ *     you can travel out to an orbiting option without it disappearing, after
+ *     which a fresh symbol can open its own.
  *
  * Pinned menus ignore proximity entirely (they close only via Escape or an
  * empty-canvas click). The controller is inert while editing is locked, while a
@@ -53,7 +57,21 @@ export function useRadialHover(panMode: boolean): void {
       const { canvasToScreen } = useViewportStore.getState();
       const individuals = usePedigreeStore.getState().document.individuals;
 
-      // Find the person nearest the pointer, in screen space.
+      if (radialMenu.visible) {
+        // Lock-on-open: proximity no longer retargets an open menu to a nearer
+        // person. Keep it anchored to its target until the pointer clears the
+        // EXIT radius (computed from the target's canvas position so pan/drag
+        // stays correct); only then does the block below open a fresh menu.
+        const anchorScreen = radialMenu.targetId
+          ? canvasToScreen(individuals[radialMenu.targetId]?.position ?? radialMenu.canvasPosition)
+          : canvasToScreen(radialMenu.canvasPosition);
+        const anchorDist = Math.hypot(px - anchorScreen.x, py - anchorScreen.y);
+        if (anchorDist > RADIAL_HOVER_EXIT_RADIUS) ui.hideRadialMenu();
+        return;
+      }
+
+      // Menu closed: open it when the pointer comes within ENTER radius of the
+      // nearest person, in screen space.
       let nearestId: string | null = null;
       let nearestCanvasPos: { x: number; y: number } | null = null;
       let nearestDist = Infinity;
@@ -67,25 +85,7 @@ export function useRadialHover(panMode: boolean): void {
         }
       }
 
-      if (radialMenu.visible) {
-        // Hand off to a nearer person the pointer has moved onto.
-        if (
-          nearestId &&
-          nearestCanvasPos &&
-          nearestId !== radialMenu.targetId &&
-          nearestDist <= RADIAL_HOVER_ENTER_RADIUS
-        ) {
-          ui.showRadialMenu(nearestId, nearestCanvasPos);
-          return;
-        }
-        // Otherwise keep it open until the pointer clears the EXIT radius of the
-        // current anchor. Compute from canvas position so pan/drag stays correct.
-        const anchorScreen = radialMenu.targetId
-          ? canvasToScreen(individuals[radialMenu.targetId]?.position ?? radialMenu.canvasPosition)
-          : canvasToScreen(radialMenu.canvasPosition);
-        const anchorDist = Math.hypot(px - anchorScreen.x, py - anchorScreen.y);
-        if (anchorDist > RADIAL_HOVER_EXIT_RADIUS) ui.hideRadialMenu();
-      } else if (nearestId && nearestCanvasPos && nearestDist <= RADIAL_HOVER_ENTER_RADIUS) {
+      if (nearestId && nearestCanvasPos && nearestDist <= RADIAL_HOVER_ENTER_RADIUS) {
         ui.showRadialMenu(nearestId, nearestCanvasPos);
       }
     };
