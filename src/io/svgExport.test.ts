@@ -617,4 +617,38 @@ describe('childless-union rendering', () => {
     // Only the single lower bar — no upper (y=113) bar for the by-choice marker.
     expect(svg).not.toContain('<line x1="152" y1="113" x2="168" y2="113"');
   });
+
+  it('suppresses the childless marks once the union has a child', () => {
+    const a = person('a', 100, 100);
+    const b = person('b', 220, 100);
+    const c = person('c', 160, 250);
+    const doc = minimalDoc(
+      { a, b, c },
+      {
+        u1: {
+          id: 'u1',
+          type: RelationshipType.Partnership,
+          partner1Id: 'a',
+          partner2Id: 'b',
+          // Contradictory state: a childless marker set, but a child exists.
+          childrenIds: ['c'],
+          childlessStatus: 'infertility',
+          childlessReason: 'azoospermia',
+        },
+      },
+      {
+        pc1: {
+          id: 'pc1',
+          type: RelationshipType.ParentChild,
+          parentPartnershipId: 'u1',
+          childId: 'c',
+        },
+      },
+    );
+    const svg = buildPedigreeSvg(doc);
+    // No cross-bars and no cause — the marker would contradict the sibship.
+    expect(svg).not.toContain('<line x1="152" y1="113" x2="168" y2="113"');
+    expect(svg).not.toContain('<line x1="152" y1="118" x2="168" y2="118"');
+    expect(svg).not.toContain('>azoospermia</text>');
+  });
 });

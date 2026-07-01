@@ -105,7 +105,7 @@ describe('ConnectionProperties via PropertiesPanel', () => {
     expect(screen.queryByPlaceholderText('e.g. 1st cousins')).not.toBeInTheDocument();
   });
 
-  it('shows the childless control with a cause input for an infertile childless union', () => {
+  it('shows the cause field and double-bar hint for an infertile union (no children)', () => {
     const doc = createDefaultDocument();
     doc.partnerships['union1'] = {
       ...makePartnership('union1', RelationshipType.Partnership),
@@ -123,12 +123,35 @@ describe('ConnectionProperties via PropertiesPanel', () => {
 
     render(<PropertiesPanel />);
     expect(screen.getByRole('group', { name: 'Childless status' })).toBeInTheDocument();
-    // Enabled when the union has no children.
+    // Enabled and marked pressed when the union has no children.
     expect(screen.getByRole('button', { name: 'Infertility' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Infertility' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByDisplayValue('azoospermia')).toBeInTheDocument();
+    expect(screen.getByText(/double cross-bar/i)).toBeInTheDocument();
   });
 
-  it('disables the childless control when the union has children', () => {
+  it('shows the single-bar hint and no cause field for "no children"', () => {
+    const doc = createDefaultDocument();
+    doc.partnerships['union1'] = {
+      ...makePartnership('union1', RelationshipType.Partnership),
+      childlessStatus: 'noChildren',
+    };
+
+    act(() => {
+      usePedigreeStore.getState().setDocument(doc);
+      useUIStore.setState({
+        selectedConnection: { kind: 'partnership', id: 'union1' },
+        propertiesPanelOpen: true,
+      });
+    });
+
+    render(<PropertiesPanel />);
+    expect(screen.getByRole('button', { name: 'No children' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByText(/single cross-bar/i)).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText('e.g. azoospermia')).not.toBeInTheDocument();
+  });
+
+  it('disables the childless control and hides the cause when the union has children', () => {
     const doc = createDefaultDocument();
     doc.individuals['child'] = createDefaultIndividual({ id: 'child' });
     doc.partnerships['union1'] = {

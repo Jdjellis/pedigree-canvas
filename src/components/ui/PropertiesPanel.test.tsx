@@ -7,11 +7,11 @@
  *
  * Store state is reset in `beforeEach` so tests are fully independent.
  */
-import { render, screen, act } from '@testing-library/react';
+import { render, screen, act, fireEvent } from '@testing-library/react';
 import { beforeEach, describe, it, expect } from 'vitest';
 import { usePedigreeStore, createDefaultDocument, createDefaultIndividual } from '../../stores/pedigreeStore';
 import { useUIStore } from '../../stores/uiStore';
-import { RelationshipType } from '../../types/enums';
+import { RelationshipType, VitalStatus } from '../../types/enums';
 import type { ParentChildRelationship, PartnershipRelationship } from '../../types/pedigree';
 import { PropertiesPanel } from './PropertiesPanel';
 
@@ -114,4 +114,57 @@ describe('PropertiesPanel adoption control', () => {
   // individual cannot belong to more than one parent partnership until
   // multi-parentage (#64) is implemented. RTL coverage is intentionally
   // deferred to that issue.
+});
+
+describe('PropertiesPanel stillbirth gestational age', () => {
+  function seedStillborn() {
+    const ind = createDefaultIndividual({ id: 'sb-1', displayName: 'Baby' });
+    ind.vitalStatus = VitalStatus.Stillborn;
+    ind.gestationalAge = '20 wk';
+    const doc = createDefaultDocument();
+    doc.individuals['sb-1'] = ind;
+
+    act(() => {
+      usePedigreeStore.getState().setDocument(doc);
+      useUIStore.setState({
+        selectedIds: new Set(['sb-1']),
+        propertiesPanelOpen: true,
+      });
+    });
+  }
+
+  it('replaces the Age field with Gestational age when the status is Stillborn', () => {
+    seedStillborn();
+    render(<PropertiesPanel />);
+    // Gestational age is shown; the Age input is not (GA takes its place).
+    expect(screen.getByDisplayValue('20 wk')).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText('Age')).not.toBeInTheDocument();
+  });
+
+  it('clears a stale age when the status changes to Stillborn', () => {
+    const ind = createDefaultIndividual({ id: 'p-1', displayName: 'Kid' });
+    ind.vitalStatus = VitalStatus.Alive;
+    ind.age = 30;
+    const doc = createDefaultDocument();
+    doc.individuals['p-1'] = ind;
+
+    act(() => {
+      usePedigreeStore.getState().setDocument(doc);
+      useUIStore.setState({
+        selectedIds: new Set(['p-1']),
+        propertiesPanelOpen: true,
+      });
+    });
+
+    render(<PropertiesPanel />);
+    // Age is shown for a living person…
+    expect(screen.getByPlaceholderText('Age')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Stillborn' }));
+
+    // …and dropped on the switch to Stillborn, so no "d. <age>" can render.
+    expect(usePedigreeStore.getState().document.individuals['p-1'].age).toBeUndefined();
+    expect(screen.queryByPlaceholderText('Age')).not.toBeInTheDocument();
+    expect(screen.getByPlaceholderText('e.g. 20 wk')).toBeInTheDocument();
+  });
 });

@@ -534,8 +534,10 @@ function renderPartnershipLine(
   const mid = partnershipMidpoint(p1.position, p2.position);
 
   // Childless-union marks (infertility / no children), appended for any type.
+  // Suppressed once the union has children on the canvas: a childless marker
+  // would contradict the sibship it hangs over (mirrors PartnershipLine.tsx).
   const childless = ((): string => {
-    if (!partnership.childlessStatus) return '';
+    if (!partnership.childlessStatus || partnership.childrenIds.length > 0) return '';
     const { stub, bars } = childlessMarks(mid, partnership.childlessStatus, {
       stub: CHILDLESS_STUB,
       barHalf: CHILDLESS_BAR_HALF,

@@ -634,28 +634,41 @@ export function PropertiesPanel() {
           <SegmentedControl
             options={VITAL_STATUS_OPTIONS}
             value={individual.vitalStatus}
-            onChange={(v) => update({ vitalStatus: v })}
+            onChange={(v) =>
+              update({
+                vitalStatus: v,
+                // A stillbirth is dated by gestational age, not age — the Age
+                // field is replaced by Gestational age below. Clear a stale age
+                // on the switch so the symbol never shows a nonsensical
+                // "d. <age>" for a stillborn.
+                ...(v === VitalStatus.Stillborn && individual.age != null
+                  ? { age: undefined }
+                  : {}),
+              })
+            }
             ariaLabel="Vital status"
           />
         </div>
 
-        <div className={styles.field}>
-          <label className={styles.label}>Age</label>
-          <input
-            className={styles.input}
-            type="number"
-            value={individual.age ?? ''}
-            onChange={(e) =>
-              update({
-                age: e.target.value
-                  ? parseInt(e.target.value, 10)
-                  : undefined,
-              })
-            }
-            placeholder="Age"
-            min={0}
-          />
-        </div>
+        {individual.vitalStatus !== VitalStatus.Stillborn && (
+          <div className={styles.field}>
+            <label className={styles.label}>Age</label>
+            <input
+              className={styles.input}
+              type="number"
+              value={individual.age ?? ''}
+              onChange={(e) =>
+                update({
+                  age: e.target.value
+                    ? parseInt(e.target.value, 10)
+                    : undefined,
+                })
+              }
+              placeholder="Age"
+              min={0}
+            />
+          </div>
+        )}
 
         {individual.vitalStatus === VitalStatus.Deceased && (
           <div className={styles.field}>
@@ -687,8 +700,9 @@ export function PropertiesPanel() {
               placeholder="e.g. 20 wk"
             />
             <p className={styles.hint}>
-              Drawn as the sex symbol with a slash and “SB” label, per standard —
-              a stillbirth is not a triangle (that’s for earlier pregnancy loss).
+              Replaces age for a stillbirth. Drawn as the sex symbol with a slash
+              and “SB” label, per standard — a stillbirth is not a triangle
+              (that’s for earlier pregnancy loss).
             </p>
           </div>
         )}

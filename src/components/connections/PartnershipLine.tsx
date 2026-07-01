@@ -30,13 +30,17 @@ import {
  * the relationship-line midpoint. Rendered for any relationship type, so it is
  * computed once and appended after the base line. Non-interactive: selection is
  * driven by the base line's hit area.
+ *
+ * Suppressed once the union has children on the canvas: a childless marker would
+ * contradict the sibship it hangs over, and the panel control is disabled there,
+ * so a stale marker would otherwise be unremovable (mirrors svgExport.ts).
  */
 function childlessMarkElements(
   partnership: PartnershipRelationship,
   mid: { x: number; y: number },
   stroke: string,
 ): JSX.Element[] {
-  if (!partnership.childlessStatus) return [];
+  if (!partnership.childlessStatus || partnership.childrenIds.length > 0) return [];
   const { stub, bars } = childlessMarks(mid, partnership.childlessStatus, {
     stub: CHILDLESS_STUB,
     barHalf: CHILDLESS_BAR_HALF,
