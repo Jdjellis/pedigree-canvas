@@ -281,7 +281,22 @@ export const PedigreeSymbol: React.FC<PedigreeSymbolProps> = React.memo(
 
         const { select, toggleSelection, hideRadialMenu } = ui;
         const evt = e.evt;
-        if ('shiftKey' in evt && (evt.shiftKey || evt.metaKey || evt.ctrlKey)) {
+        if (
+          'altKey' in evt &&
+          evt.altKey &&
+          tool === 'select' &&
+          !ui.editingLocked
+        ) {
+          // Alt-click jumps straight to the gender picker, skipping the radial
+          // menu. (Alt-drag-start is a separate gesture — the drag-link — but a
+          // click is a mouseup with no movement, so the two don't collide.)
+          hideRadialMenu();
+          select(individual.id);
+          ui.showGenderPicker(individual.id);
+        } else if (
+          'shiftKey' in evt &&
+          (evt.shiftKey || evt.metaKey || evt.ctrlKey)
+        ) {
           hideRadialMenu();
           toggleSelection(individual.id);
         } else {
