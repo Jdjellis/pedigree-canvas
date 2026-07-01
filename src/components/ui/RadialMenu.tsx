@@ -12,6 +12,26 @@ import type { PartnershipRelationship, ParentChildRelationship, TwinGroup } from
 import styles from './RadialMenu.module.css';
 import clsx from 'clsx';
 
+/**
+ * Persistent ⌥ badge + hover tooltip shown on the Sibling and Child buttons to
+ * advertise the "hold ⌥ for twins" shortcut before the user discovers it. Both
+ * spans are aria-hidden so the button keeps its plain accessible name
+ * ("Sibling"/"Child") and the `title` attribute stays the screen-reader
+ * affordance; they fade out with their parent button when ⌥ reveals the twins.
+ */
+function TwinHint() {
+  return (
+    <>
+      <span className={styles.altBadge} aria-hidden="true">
+        ⌥
+      </span>
+      <span className={styles.altTip} aria-hidden="true">
+        Hold ⌥ for twins
+      </span>
+    </>
+  );
+}
+
 export function RadialMenu() {
   const { visible, targetId } = useUIStore((s) => s.radialMenu);
   const hideRadialMenu = useUIStore((s) => s.hideRadialMenu);
@@ -415,6 +435,7 @@ export function RadialMenu() {
           title="Add Child (hold ⌥ for MZ / DZ twin children)"
         >
           Child
+          <TwinHint />
         </button>
         <button
           className={clsx(styles.option, styles.bottomLeft, altMod && styles.altActive)}
@@ -436,6 +457,7 @@ export function RadialMenu() {
           title="Add Sibling (hold ⌥ for MZ / DZ twin)"
         >
           Sibling
+          <TwinHint />
         </button>
         <button
           className={clsx(styles.option, styles.leftUpper, altMod && styles.altActive)}

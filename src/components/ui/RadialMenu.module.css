@@ -191,3 +191,66 @@
   cursor: default;
   pointer-events: none;
 }
+
+/*
+ * Twins-discovery affordance (Sibling & Child buttons only):
+ *   .altBadge — a tiny persistent ⌥ glyph clipped to the button's top-right,
+ *               a standing reminder that a modifier unlocks more options.
+ *   .altTip   — a "Hold ⌥ for twins" tooltip that fades in on hover.
+ * Both are aria-hidden decorations; the button's `title` remains the a11y hint.
+ * They live inside the button so they inherit its ⌥-fade when the twins reveal.
+ */
+.altBadge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 11px;
+  height: 11px;
+  padding: 0 2px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 1;
+  border-radius: 6px;
+  background: var(--color-primary-soft-strong);
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary-border);
+  pointer-events: none;
+}
+.option:hover .altBadge {
+  background: var(--color-surface);
+  color: var(--color-primary);
+  border-color: var(--color-surface);
+}
+
+.altTip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%) translateY(2px);
+  white-space: nowrap;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.1px;
+  padding: 3px 6px;
+  border-radius: 5px;
+  background: var(--color-text);
+  color: var(--color-surface);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.22);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s, transform 0.12s;
+  z-index: 1;
+}
+.option:hover .altTip {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+/* When ⌥ is held the twins are already revealed, so suppress the reminder. */
+.option.altActive .altBadge,
+.option.altActive .altTip {
+  opacity: 0;
+}
