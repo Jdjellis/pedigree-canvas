@@ -71,6 +71,27 @@ describe('buildChildForUnion', () => {
     expect(child.position.x).toBe(160);
   });
 
+  it('places the child a generation below the LOWEST partner for a cross-generation union, regardless of entry point', () => {
+    // Consanguineous union spanning generations: partner A on gen 0, partner B one row down.
+    const a = person({ id: 'a', generation: 0, position: { x: 0, y: 0 } });
+    const b = person({ id: 'b', generation: 1, position: { x: 0, y: 150 } });
+    const union: PartnershipRelationship = {
+      id: 'u', type: RelationshipType.Partnership,
+      partner1Id: 'a', partner2Id: 'b', childrenIds: [],
+    };
+    const doc = docWith([a, b], union);
+
+    // Initiating from the upper partner (gen 0) must still land the child at gen 2.
+    const fromA = buildChildForUnion(doc, a, union);
+    expect(fromA.child.generation).toBe(2);
+    expect(fromA.child.position.y).toBe(300); // below partner B (y 150) + GENERATION_SPACING
+
+    // Initiating from the lower partner yields the same placement — no entry-point dependence.
+    const fromB = buildChildForUnion(doc, b, union);
+    expect(fromB.child.generation).toBe(2);
+    expect(fromB.child.position.y).toBe(300);
+  });
+
   it('falls back to the target x when the union has no present partners', () => {
     const target = person({ id: 't', generation: 0, position: { x: 42, y: 0 } });
     const union: PartnershipRelationship = {

@@ -32,12 +32,26 @@ export function buildChildForUnion(
     : target.position.x;
   const existingChildren = partnership.childrenIds.length;
 
+  // Anchor the child a full generation below the union's LOWEST (most-descendant)
+  // partner, not below whichever partner the menu was opened on. For a
+  // cross-generation union (e.g. consanguineous aunt/uncle × niece/nephew) the
+  // partners live on different rows, so deriving from `target` would place the
+  // child on the same row as the lower partner when initiated from the upper one.
+  // Fall back to the target when the union has no present partners (a 0-partner
+  // sibship), where there is no cross-generation ambiguity.
+  const lowestPartnerGeneration = partners.length
+    ? Math.max(...partners.map((p) => p.generation ?? 0))
+    : target.generation ?? 0;
+  const lowestPartnerY = partners.length
+    ? Math.max(...partners.map((p) => p.position.y))
+    : target.position.y;
+
   const child = createDefaultIndividual({
     genderIdentity: GenderIdentity.Unknown,
-    generation: (target.generation ?? 0) + 1,
+    generation: lowestPartnerGeneration + 1,
     position: {
       x: midX + existingChildren * SIBLING_SPACING,
-      y: target.position.y + GENERATION_SPACING,
+      y: lowestPartnerY + GENERATION_SPACING,
     },
   });
   const link: ParentChildRelationship = {
