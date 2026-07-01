@@ -23,7 +23,7 @@ import { ActionsIsland } from './components/ui/islands/ActionsIsland';
 import { ZoomIsland } from './components/ui/islands/ZoomIsland';
 import { HistoryIsland } from './components/ui/islands/HistoryIsland';
 import { HelpIsland } from './components/ui/islands/HelpIsland';
-import { ZenModeExit } from './components/ui/islands/ZenModeExit';
+import { ViewModeBadge } from './components/ui/islands/ViewModeBadge';
 import { PrivacyBadge } from './components/ui/PrivacyBadge';
 import { useUIStore } from './stores/uiStore';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
@@ -35,6 +35,7 @@ function App() {
   const canvasRef = useRef<CanvasContainerHandle>(null);
   const propertiesPanelOpen = useUIStore((s) => s.propertiesPanelOpen);
   const zenMode = useUIStore((s) => s.zenMode);
+  const editingLocked = useUIStore((s) => s.editingLocked);
 
   useKeyboardShortcuts();
   useAutoSave();
@@ -63,6 +64,7 @@ function App() {
       </div>
 
       <div className={styles.slotTopCenter}>
+        <ViewModeBadge />
         <ToolIsland />
         <ToolHint />
       </div>
@@ -82,11 +84,9 @@ function App() {
       </div>
 
       {/* Floating properties panel — overlays the canvas, does not reflow it.
-          Suppressed in zen mode along with the rest of the editing chrome. */}
-      {propertiesPanelOpen && !zenMode && <PropertiesPanel />}
-
-      {/* Zen-mode exit affordance — renders only while zen mode is active */}
-      <ZenModeExit />
+          Suppressed in zen mode (distraction-free) and in view mode, where the
+          panel is an editing surface and selecting a person is read-only. */}
+      {propertiesPanelOpen && !zenMode && !editingLocked && <PropertiesPanel />}
 
       {/* Modal/overlay components */}
       <ImportExportModal getStage={getStage} />

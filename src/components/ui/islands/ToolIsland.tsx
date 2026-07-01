@@ -11,6 +11,9 @@ import styles from './islands.module.css';
  * this lives in the react-dom tree.
  *
  * Hidden entirely in zen mode (distraction-free canvas) — it's edit chrome.
+ * In view (read-only) mode the edit-only tools (Text, Eraser) are tucked away
+ * entirely rather than merely disabled, so the toolbar itself reads read-only;
+ * only the navigation tools and the view-mode toggle remain.
  */
 export function ToolIsland(): React.JSX.Element | null {
   const activeTool = useUIStore((s) => s.activeTool);
@@ -43,23 +46,25 @@ export function ToolIsland(): React.JSX.Element | null {
         active={activeTool === 'select'}
         onClick={actions.selectTool}
       />
-      <span className={styles.toolDivider} aria-hidden="true" />
-      <ToolButton
-        label="Text"
-        shortcut="2"
-        icon={<Type size={19} />}
-        active={activeTool === 'text'}
-        onClick={actions.textTool}
-        disabled={editingLocked}
-      />
-      <ToolButton
-        label="Eraser"
-        shortcut="3"
-        icon={<Eraser size={19} />}
-        active={activeTool === 'eraser'}
-        onClick={actions.eraserTool}
-        disabled={editingLocked}
-      />
+      {!editingLocked && (
+        <>
+          <span className={styles.toolDivider} aria-hidden="true" />
+          <ToolButton
+            label="Text"
+            shortcut="2"
+            icon={<Type size={19} />}
+            active={activeTool === 'text'}
+            onClick={actions.textTool}
+          />
+          <ToolButton
+            label="Eraser"
+            shortcut="3"
+            icon={<Eraser size={19} />}
+            active={activeTool === 'eraser'}
+            onClick={actions.eraserTool}
+          />
+        </>
+      )}
     </Island>
   );
 }

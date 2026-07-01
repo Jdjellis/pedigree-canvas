@@ -25,6 +25,7 @@ export function ActionsIsland(): React.JSX.Element | null {
   const { exportDocument } = useEditorActions();
   const propertiesPanelOpen = useUIStore((s) => s.propertiesPanelOpen);
   const zenMode = useUIStore((s) => s.zenMode);
+  const editingLocked = useUIStore((s) => s.editingLocked);
 
   const handleToggleProperties = (): void => {
     useUIStore.getState().togglePropertiesPanel();
@@ -44,16 +45,21 @@ export function ActionsIsland(): React.JSX.Element | null {
         Export
       </button>
 
-      <button
-        type="button"
-        className={`${styles.button} ${propertiesPanelOpen ? styles.buttonActive : ''}`}
-        onClick={handleToggleProperties}
-        aria-pressed={propertiesPanelOpen}
-        aria-label="Toggle properties panel"
-        title="Toggle properties panel"
-      >
-        &#x25A5;
-      </button>
+      {/* The properties panel is an editing surface and is suppressed in view
+          mode, so its toggle is tucked away there too. Export stays — a
+          read-only pedigree is exactly what you'd want to share/export. */}
+      {!editingLocked && (
+        <button
+          type="button"
+          className={`${styles.button} ${propertiesPanelOpen ? styles.buttonActive : ''}`}
+          onClick={handleToggleProperties}
+          aria-pressed={propertiesPanelOpen}
+          aria-label="Toggle properties panel"
+          title="Toggle properties panel"
+        >
+          &#x25A5;
+        </button>
+      )}
     </Island>
   );
 }

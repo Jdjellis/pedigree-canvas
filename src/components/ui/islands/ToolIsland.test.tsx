@@ -51,15 +51,15 @@ describe('ToolIsland', () => {
     );
   });
 
-  describe('edit-lock disables Text and Eraser buttons', () => {
-    it('Text and Eraser have the disabled attribute when editingLocked is true', () => {
+  describe('view mode (edit-lock) tucks away the edit-only tools', () => {
+    it('Text and Eraser are not rendered when editingLocked is true', () => {
       useUIStore.setState({ editingLocked: true });
       render(<ToolIsland />);
-      expect(screen.getByRole('button', { name: 'Text' })).toBeDisabled();
-      expect(screen.getByRole('button', { name: 'Eraser' })).toBeDisabled();
+      expect(screen.queryByRole('button', { name: 'Text' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Eraser' })).not.toBeInTheDocument();
     });
 
-    it('Select, Hand, and Lock buttons remain enabled when editingLocked is true', () => {
+    it('Select, Hand, and Lock buttons remain when editingLocked is true', () => {
       useUIStore.setState({ editingLocked: true });
       render(<ToolIsland />);
       expect(screen.getByRole('button', { name: 'Select' })).not.toBeDisabled();
@@ -67,14 +67,7 @@ describe('ToolIsland', () => {
       expect(screen.getByRole('button', { name: 'Lock editing' })).not.toBeDisabled();
     });
 
-    it('clicking Text while locked leaves activeTool unchanged', () => {
-      useUIStore.setState({ activeTool: 'select', editingLocked: true });
-      render(<ToolIsland />);
-      screen.getByRole('button', { name: 'Text' }).click();
-      expect(useUIStore.getState().activeTool).toBe('select');
-    });
-
-    it('Text and Eraser are NOT disabled when editingLocked is false', () => {
+    it('Text and Eraser are present and enabled when editingLocked is false', () => {
       useUIStore.setState({ editingLocked: false });
       render(<ToolIsland />);
       expect(screen.getByRole('button', { name: 'Text' })).not.toBeDisabled();

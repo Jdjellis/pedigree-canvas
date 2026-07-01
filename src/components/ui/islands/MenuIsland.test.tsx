@@ -298,26 +298,47 @@ test('the View mode toggle mirrors editingLocked and flips it on click', () => {
   expect(viewItem).toHaveAttribute('aria-checked', 'true');
 });
 
-test('clicking Zen mode turns zen mode on (which unmounts the island)', () => {
+test('clicking Zen mode turns zen mode on but keeps the ☰ button discoverable', () => {
   render(<MenuIsland />);
 
   fireEvent.click(screen.getByRole('button', { name: /open document menu/i }));
   fireEvent.click(screen.getByRole('menuitemcheckbox', { name: /zen mode/i }));
 
   expect(useUIStore.getState().zenMode).toBe(true);
-  // Zen mode hides the whole menu island.
+  // The ☰ button stays so the menu (and Preferences → Zen mode to exit) is
+  // still reachable, but the title/save-status column collapses away.
   expect(
-    screen.queryByRole('button', { name: /open document menu/i })
+    screen.getByRole('button', { name: /open document menu/i })
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByRole('button', { name: /untitled pedigree/i })
   ).not.toBeInTheDocument();
 });
 
-test('the menu island renders nothing while zen mode is active', () => {
+test('zen mode collapses to just the ☰ button (no title/status column)', () => {
   useUIStore.setState({ zenMode: true });
   render(<MenuIsland />);
 
   expect(
-    screen.queryByRole('button', { name: /open document menu/i })
+    screen.getByRole('button', { name: /open document menu/i })
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByRole('button', { name: /untitled pedigree/i })
   ).not.toBeInTheDocument();
+  expect(screen.queryByText(/saved locally/i)).not.toBeInTheDocument();
+});
+
+test('the ☰ menu still opens in zen mode, exposing Preferences to exit', () => {
+  useUIStore.setState({ zenMode: true });
+  render(<MenuIsland />);
+
+  fireEvent.click(screen.getByRole('button', { name: /open document menu/i }));
+
+  const zenToggle = screen.getByRole('menuitemcheckbox', { name: /zen mode/i });
+  expect(zenToggle).toHaveAttribute('aria-checked', 'true');
+
+  fireEvent.click(zenToggle);
+  expect(useUIStore.getState().zenMode).toBe(false);
 });
 
 test('local-data notice is never rendered (notice removed)', () => {

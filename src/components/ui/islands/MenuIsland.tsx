@@ -164,7 +164,8 @@ function MenuToggleItem({
  * - A "Saved locally" save-status indicator, updated on a 15-second tick.
  *
  * Lives in the react-dom tree, so Zustand subscriptions are safe here.
- * Hidden entirely in zen mode (distraction-free canvas) — it's edit chrome.
+ * In zen mode it collapses to just the ☰ button (title/save-status hidden) so
+ * the menu — and the Preferences → Zen mode exit — stays discoverable.
  *
  * @example
  * ```tsx
@@ -409,10 +410,6 @@ export function MenuIsland(): React.JSX.Element | null {
     useUIStore.getState().openModal('shortcuts');
   };
 
-  // Zen mode hides all editing chrome — the menu island included. Placed after
-  // every hook so hook order stays stable across renders.
-  if (zenMode) return null;
-
   return (
     <Island aria-label="Document menu" className={styles.root}>
       {/* ☰ Menu button */}
@@ -535,7 +532,10 @@ export function MenuIsland(): React.JSX.Element | null {
         )}
       </div>
 
-      {/* Title + save-status column */}
+      {/* Title + save-status column. Collapsed in zen mode so only the ☰ button
+          remains — the menu stays discoverable (and offers Preferences → Zen
+          mode to exit) without reintroducing the full editing chrome. */}
+      {!zenMode && (
       <div className={styles.docColumn}>
         {isEditingTitle ? (
           <input
@@ -573,6 +573,7 @@ export function MenuIsland(): React.JSX.Element | null {
           {saveStatusText}
         </span>
       </div>
+      )}
 
     </Island>
   );
