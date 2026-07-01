@@ -186,6 +186,58 @@
   transform: translate(-50%, -50%) translate(-66px, 22px) scale(1.1);
 }
 
+/*
+ * Ghost twin previews (dwell-to-discover). The same MZ/DZ buttons, revealed
+ * WITHOUT ⌥ after hovering the primary for ~0.8 s. The primary stays visible, so
+ * the ghosts flank it at a wider ±34px offset (clearing the 32px primary) and
+ * render faded with a dashed outline to read as a preview. Hovering a ghost
+ * solidifies it. Suppressed while ⌥ is held (the solid split takes over).
+ */
+.leftUpper.ghostActive {
+  transform: translate(-50%, -50%) translate(-66px, -34px);
+  opacity: 0.5;
+  pointer-events: auto;
+  border-style: dashed;
+}
+.leftUpper.ghostActive:hover {
+  transform: translate(-50%, -50%) translate(-66px, -34px) scale(1.1);
+  opacity: 1;
+  border-style: solid;
+}
+.leftLower.ghostActive {
+  transform: translate(-50%, -50%) translate(-66px, 34px);
+  opacity: 0.5;
+  pointer-events: auto;
+  border-style: dashed;
+}
+.leftLower.ghostActive:hover {
+  transform: translate(-50%, -50%) translate(-66px, 34px) scale(1.1);
+  opacity: 1;
+  border-style: solid;
+}
+.bottomLeft.ghostActive {
+  transform: translate(-50%, -50%) translate(-34px, 72px);
+  opacity: 0.5;
+  pointer-events: auto;
+  border-style: dashed;
+}
+.bottomLeft.ghostActive:hover {
+  transform: translate(-50%, -50%) translate(-34px, 72px) scale(1.1);
+  opacity: 1;
+  border-style: solid;
+}
+.bottomRight.ghostActive {
+  transform: translate(-50%, -50%) translate(34px, 72px);
+  opacity: 0.5;
+  pointer-events: auto;
+  border-style: dashed;
+}
+.bottomRight.ghostActive:hover {
+  transform: translate(-50%, -50%) translate(34px, 72px) scale(1.1);
+  opacity: 1;
+  border-style: solid;
+}
+
 .disabled {
   opacity: 0.3;
   cursor: default;

@@ -40,6 +40,45 @@ export function RadialMenu() {
   const [altMod, setAltMod] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
+  // Twins-discovery via dwell: hovering the Sibling or Child button for ~0.8 s
+  // reveals faded "ghost" MZ/DZ options flanking it, so users find twins without
+  // knowing about ⌥. `null` = no ghosts shown.
+  const [ghostGroup, setGhostGroup] = useState<'sibling' | 'child' | null>(null);
+  const showTimer = useRef<number | undefined>(undefined);
+  const hideTimer = useRef<number | undefined>(undefined);
+
+  // Arm the dwell timer when the pointer enters a group's primary button. A
+  // short hide timer (started on leave) is cancelled here so moving between the
+  // primary and its ghosts keeps them alive.
+  const armGhost = useCallback((group: 'sibling' | 'child') => {
+    window.clearTimeout(hideTimer.current);
+    setGhostGroup((current) => {
+      if (current === group) return current;
+      window.clearTimeout(showTimer.current);
+      showTimer.current = window.setTimeout(() => setGhostGroup(group), 800);
+      return current;
+    });
+  }, []);
+  // Hovering a revealed ghost keeps the group open (cancels any pending hide).
+  const keepGhost = useCallback(() => {
+    window.clearTimeout(hideTimer.current);
+  }, []);
+  // Leaving the group: cancel a not-yet-fired dwell and fade the ghosts after a
+  // short grace period (so a quick hop primary→ghost doesn't dismiss them).
+  const disarmGhost = useCallback(() => {
+    window.clearTimeout(showTimer.current);
+    window.clearTimeout(hideTimer.current);
+    hideTimer.current = window.setTimeout(() => setGhostGroup(null), 140);
+  }, []);
+
+  // Cancel any pending dwell/hide timers whenever the menu hides, so a reveal
+  // can't fire onto a closed menu.
+  useEffect(() => {
+    if (visible) return;
+    window.clearTimeout(showTimer.current);
+    window.clearTimeout(hideTimer.current);
+  }, [visible]);
+
   const target = targetId ? doc.individuals[targetId] : null;
 
   // Derive screen position from the live canvas position + live viewport so the
@@ -66,7 +105,10 @@ export function RadialMenu() {
     if (!visible) return;
 
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') hideRadialMenu();
+      if (e.key === 'Escape') {
+        setGhostGroup(null);
+        hideRadialMenu();
+      }
       setAltMod(e.altKey);
     };
     const onKeyUp = (e: KeyboardEvent) => setAltMod(e.altKey);
@@ -81,6 +123,7 @@ export function RadialMenu() {
 
   const handleAddParent = useCallback(() => {
     if (!target || !targetId) return;
+    setGhostGroup(null); // clicking closes the menu; drop any dwell-revealed ghosts
 
     const childGeneration = target.generation ?? 0;
     const parentGeneration = childGeneration - 1;
@@ -153,6 +196,7 @@ export function RadialMenu() {
 
   const handleAddPartner = useCallback(() => {
     if (!target || !targetId) return;
+    setGhostGroup(null); // clicking closes the menu; drop any dwell-revealed ghosts
 
     // If the target is the sole partner of a 1-partner union, the new partner
     // becomes the co-parent of its existing children.
@@ -191,6 +235,7 @@ export function RadialMenu() {
 
   const handleAddChild = useCallback(() => {
     if (!target || !targetId) return;
+    setGhostGroup(null); // clicking closes the menu; drop any dwell-revealed ghosts
 
     const partnershipIds = findPartnerships(doc, targetId);
 
@@ -238,6 +283,7 @@ export function RadialMenu() {
   // pair grouped by zygosity rather than a single child.
   const handleAddChildTwin = useCallback((twinType: TwinType) => {
     if (!target || !targetId) return;
+    setGhostGroup(null); // clicking closes the menu; drop any dwell-revealed ghosts
 
     const partnershipIds = findPartnerships(doc, targetId);
 
@@ -272,6 +318,7 @@ export function RadialMenu() {
 
   const handleAddSibling = useCallback(() => {
     if (!target || !targetId) return;
+    setGhostGroup(null); // clicking closes the menu; drop any dwell-revealed ghosts
 
     const parentLink = Object.values(doc.parentChildLinks).find((l) => l.childId === targetId);
 
@@ -325,6 +372,7 @@ export function RadialMenu() {
 
   const handleAddTwin = useCallback((twinType: TwinType) => {
     if (!target || !targetId) return;
+    setGhostGroup(null); // clicking closes the menu; drop any dwell-revealed ghosts
 
     const parentLink = Object.values(doc.parentChildLinks).find((l) => l.childId === targetId);
 
@@ -412,20 +460,36 @@ export function RadialMenu() {
         <button
           className={clsx(styles.option, styles.bottom, altMod && styles.altActive)}
           onClick={handleAddChild}
-          title="Add Child (hold ⌥ for MZ / DZ twin children)"
+          onMouseEnter={() => armGhost('child')}
+          onMouseLeave={disarmGhost}
+          title="Add Child (hold ⌥ or dwell for MZ / DZ twin children)"
         >
           Child
         </button>
         <button
-          className={clsx(styles.option, styles.bottomLeft, altMod && styles.altActive)}
+          className={clsx(
+            styles.option,
+            styles.bottomLeft,
+            altMod && styles.altActive,
+            !altMod && ghostGroup === 'child' && styles.ghostActive,
+          )}
           onClick={() => handleAddChildTwin(TwinType.Monozygotic)}
+          onMouseEnter={keepGhost}
+          onMouseLeave={disarmGhost}
           title="Add Monozygotic (MZ) twin children"
         >
           MZ
         </button>
         <button
-          className={clsx(styles.option, styles.bottomRight, altMod && styles.altActive)}
+          className={clsx(
+            styles.option,
+            styles.bottomRight,
+            altMod && styles.altActive,
+            !altMod && ghostGroup === 'child' && styles.ghostActive,
+          )}
           onClick={() => handleAddChildTwin(TwinType.Dizygotic)}
+          onMouseEnter={keepGhost}
+          onMouseLeave={disarmGhost}
           title="Add Dizygotic (DZ) twin children"
         >
           DZ
@@ -433,20 +497,36 @@ export function RadialMenu() {
         <button
           className={clsx(styles.option, styles.left, altMod && styles.altActive)}
           onClick={handleAddSibling}
-          title="Add Sibling (hold ⌥ for MZ / DZ twin)"
+          onMouseEnter={() => armGhost('sibling')}
+          onMouseLeave={disarmGhost}
+          title="Add Sibling (hold ⌥ or dwell for MZ / DZ twin)"
         >
           Sibling
         </button>
         <button
-          className={clsx(styles.option, styles.leftUpper, altMod && styles.altActive)}
+          className={clsx(
+            styles.option,
+            styles.leftUpper,
+            altMod && styles.altActive,
+            !altMod && ghostGroup === 'sibling' && styles.ghostActive,
+          )}
           onClick={() => handleAddTwin(TwinType.Monozygotic)}
+          onMouseEnter={keepGhost}
+          onMouseLeave={disarmGhost}
           title="Add Monozygotic twin (MZ)"
         >
           MZ
         </button>
         <button
-          className={clsx(styles.option, styles.leftLower, altMod && styles.altActive)}
+          className={clsx(
+            styles.option,
+            styles.leftLower,
+            altMod && styles.altActive,
+            !altMod && ghostGroup === 'sibling' && styles.ghostActive,
+          )}
           onClick={() => handleAddTwin(TwinType.Dizygotic)}
+          onMouseEnter={keepGhost}
+          onMouseLeave={disarmGhost}
           title="Add Dizygotic twin (DZ)"
         >
           DZ
