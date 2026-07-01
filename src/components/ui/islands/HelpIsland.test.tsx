@@ -3,28 +3,24 @@ import { useUIStore } from '../../../stores/uiStore';
 import { HelpIsland } from './HelpIsland';
 
 beforeEach(() => {
-  // Reset UI store to initial state before each test.
   useUIStore.getState().closeModal();
 });
 
-test('renders the ? button by accessible name', () => {
+test('renders the help button by accessible name', () => {
   render(<HelpIsland />);
-
-  expect(screen.getByRole('button', { name: 'Keyboard shortcuts' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Help & About' })).toBeInTheDocument();
 });
 
-test('clicking the button opens the shortcuts modal', () => {
+test('clicking the button opens the help modal', () => {
   render(<HelpIsland />);
-
-  const btn = screen.getByRole('button', { name: 'Keyboard shortcuts' });
-  fireEvent.click(btn);
-
-  expect(useUIStore.getState().activeModal).toBe('shortcuts');
+  fireEvent.click(screen.getByRole('button', { name: 'Help & About' }));
+  expect(useUIStore.getState().activeModal).toBe('help');
 });
 
 test('button has correct title attribute', () => {
   render(<HelpIsland />);
-
-  const btn = screen.getByRole('button', { name: 'Keyboard shortcuts' });
-  expect(btn).toHaveAttribute('title', 'Keyboard shortcuts');
+  expect(screen.getByRole('button', { name: 'Help & About' })).toHaveAttribute(
+    'title',
+    'Help & About',
+  );
 });

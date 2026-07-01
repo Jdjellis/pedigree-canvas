@@ -3,11 +3,8 @@ import { Island } from './Island';
 import styles from './islands.module.css';
 
 /**
- * Floating help island containing a keyboard shortcuts button.
- *
- * Renders a single `?` button that opens the shortcuts modal overlay.
- * The overlay component itself is implemented separately; this component
- * only handles the button and store interaction.
+ * Floating help island. Renders a single `?` button that opens the
+ * Help & About panel (`HelpOverlay`).
  *
  * @example
  * ```tsx
@@ -16,7 +13,7 @@ import styles from './islands.module.css';
  */
 export function HelpIsland(): React.JSX.Element {
   const handleHelpClick = (): void => {
-    useUIStore.getState().openModal('shortcuts');
+    useUIStore.getState().openModal('help');
   };
 
   return (
@@ -25,8 +22,8 @@ export function HelpIsland(): React.JSX.Element {
         type="button"
         className={styles.button}
         onClick={handleHelpClick}
-        title="Keyboard shortcuts"
-        aria-label="Keyboard shortcuts"
+        title="Help & About"
+        aria-label="Help & About"
       >
         ?
       </button>

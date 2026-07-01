@@ -65,7 +65,7 @@ export function OnboardingHints(): ReactElement | null {
   const { openDocument, importPed } = useEditorActions();
 
   const handleHelp = (): void => {
-    useUIStore.getState().openModal('shortcuts');
+    useUIStore.getState().openModal('help');
   };
 
   if (!shouldShowOnboarding(individualCount, onboarded)) {

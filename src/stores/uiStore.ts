@@ -10,7 +10,14 @@ import * as safeStorage from '../utils/safeStorage';
  */
 export type ActiveTool = 'select' | 'hand' | 'text' | 'eraser';
 /** The modal dialog currently open, or `null` when no modal is shown. */
-export type ActiveModal = 'import' | 'export' | 'settings' | 'legendEditor' | 'shortcuts' | null;
+export type ActiveModal =
+  | 'import'
+  | 'export'
+  | 'settings'
+  | 'legendEditor'
+  | 'shortcuts'
+  | 'help'
+  | null;
 
 /** What kind of connection an id in {@link ConnectionSelection} refers to. */
 export type ConnectionKind = 'partnership' | 'parentChild' | 'twin';

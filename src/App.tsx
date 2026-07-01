@@ -14,6 +14,7 @@ import { LegendOverlay } from './components/ui/LegendOverlay';
 import { AnnotationEditor } from './components/ui/AnnotationEditor';
 import { CommandPalette } from './components/ui/CommandPalette';
 import { ShortcutsOverlay } from './components/ui/ShortcutsOverlay';
+import { HelpOverlay } from './components/ui/HelpOverlay';
 import { MenuIsland } from './components/ui/islands/MenuIsland';
 import { ToolIsland } from './components/ui/islands/ToolIsland';
 import { ToolHint } from './components/ui/islands/ToolHint';
@@ -83,6 +84,7 @@ function App() {
       <LinkTypePopup />
       <CommandPalette />
       <ShortcutsOverlay />
+      <HelpOverlay />
     </div>
   );
 }
