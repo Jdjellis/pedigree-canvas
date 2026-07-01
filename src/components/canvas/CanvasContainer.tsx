@@ -86,6 +86,7 @@ export const CanvasContainer = forwardRef<CanvasContainerHandle>(
     const hoveredId = useUIStore((s) => s.hoveredId);
     const editingAnnotationId = useUIStore((s) => s.editingAnnotationId);
     const selectedConnection = useUIStore((s) => s.selectedConnection);
+    const hoveredConnection = useUIStore((s) => s.hoveredConnection);
     const dragLink = useUIStore((s) => s.dragLink);
     const updateDragLinkCursor = useUIStore((s) => s.updateDragLinkCursor);
     const endDragLink = useUIStore((s) => s.endDragLink);
@@ -550,6 +551,7 @@ export const CanvasContainer = forwardRef<CanvasContainerHandle>(
               twinGroups={twinGroups}
               individuals={individuals}
               selectedConnection={selectedConnection}
+              hoveredConnection={hoveredConnection}
             />
 
             <Layer>

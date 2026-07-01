@@ -32,6 +32,17 @@ export const SELECTION_COLOR = '#6965db';
 export const CONSANGUINITY_GAP = 4;
 export const DASH_PATTERN = [8, 4];
 
+// Connection hover/selection affordance (canvas-only; excluded from SVG export).
+// A soft translucent halo drawn *beneath* a relationship line signals that the
+// line is interactive when hovered and clearly "selected and editable" when
+// selected — the line-level analogue of the symbol HoverHighlight.
+/** Stroke width of the halo drawn beneath a hovered/selected connection line. */
+export const CONNECTION_HALO_WIDTH = LINE_WIDTH + 8;
+/** Halo opacity when a connection is hovered but not selected. */
+export const CONNECTION_HOVER_OPACITY = 0.15;
+/** Halo opacity when a connection is selected (stronger than hover). */
+export const CONNECTION_SELECTED_OPACITY = 0.3;
+
 // Childless-union marks (infertility / no children by choice). A short vertical
 // stub descends from the relationship-line midpoint, terminated by one bar
 // ("no children") or two parallel bars (infertility), per NSGC/Bennett.

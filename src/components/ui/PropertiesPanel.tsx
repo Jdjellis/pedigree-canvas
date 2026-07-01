@@ -221,7 +221,8 @@ export function PropertiesPanel() {
     return (
       <div className={styles.panel}>
         <div className={styles.empty}>
-          Select an individual to edit their properties
+          Select an individual — or click a relationship line — to edit its
+          properties
         </div>
       </div>
     );

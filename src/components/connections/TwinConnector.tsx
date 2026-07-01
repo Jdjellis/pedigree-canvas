@@ -19,12 +19,15 @@ import { useUIStore } from '../../stores/uiStore';
 import type { ConnectionSelection } from '../../stores/uiStore';
 import { getPresentPartners } from '../../utils/graphTraversal';
 import { computeSibshipY } from './parentChildGeometry';
+import { ConnectionHalo } from './ConnectionHalo';
+import { connectionEmphasis } from './connectionHighlight';
 
 interface TwinConnectorProps {
   twinGroup: TwinGroup;
   individuals: Record<string, Individual>;
   partnerships: Record<string, PartnershipRelationship>;
   selectedConnection?: ConnectionSelection | null;
+  hoveredConnection?: ConnectionSelection | null;
 }
 
 export function TwinConnector({
@@ -32,6 +35,7 @@ export function TwinConnector({
   individuals,
   partnerships,
   selectedConnection,
+  hoveredConnection,
 }: TwinConnectorProps) {
   const twins = twinGroup.individualIds
     .map((id) => individuals[id])
@@ -66,6 +70,9 @@ export function TwinConnector({
 
   const isSelected =
     selectedConnection?.kind === 'twin' && selectedConnection.id === twinGroup.id;
+  const isHovered =
+    hoveredConnection?.kind === 'twin' && hoveredConnection.id === twinGroup.id;
+  const emphasis = connectionEmphasis(isSelected, isHovered);
   const stroke = isSelected ? SELECTION_COLOR : LINE_COLOR;
 
   const setCursor = (cursor: string) => {
@@ -82,18 +89,30 @@ export function TwinConnector({
     hitStrokeWidth: 12,
     onClick: selectGroup,
     onTap: selectGroup,
-    onMouseEnter: () => setCursor('pointer'),
-    onMouseLeave: () => setCursor('default'),
+    onMouseEnter: () => {
+      setCursor('pointer');
+      useUIStore.getState().setHoveredConnection({ kind: 'twin', id: twinGroup.id });
+    },
+    onMouseLeave: () => {
+      setCursor('default');
+      useUIStore.getState().setHoveredConnection(null);
+    },
   };
 
+  // Halos are collected separately so they all paint beneath every twin stroke.
+  const halos: JSX.Element[] = [];
   const elements: JSX.Element[] = [];
 
   // V-shaped lines from branch point to each twin
   for (const twin of twins) {
+    const points = [twinMidX, sibshipY, twin.position.x, twin.position.y];
+    halos.push(
+      <ConnectionHalo key={`twin-halo-${twin.id}`} points={points} emphasis={emphasis} />
+    );
     elements.push(
       <Line
         key={`twin-line-${twin.id}`}
-        points={[twinMidX, sibshipY, twin.position.x, twin.position.y]}
+        points={points}
         stroke={stroke}
         strokeWidth={LINE_WIDTH}
         {...interactive}
@@ -117,6 +136,13 @@ export function TwinConnector({
       return twinMidX + dx * ratio;
     }));
 
+    halos.push(
+      <ConnectionHalo
+        key={`twin-bar-halo-${twinGroup.id}`}
+        points={[leftX, barY, rightX, barY]}
+        emphasis={emphasis}
+      />
+    );
     elements.push(
       <Line
         key={`twin-bar-${twinGroup.id}`}
@@ -148,5 +174,5 @@ export function TwinConnector({
     );
   }
 
-  return <>{elements}</>;
+  return <>{[...halos, ...elements]}</>;
 }

@@ -17,6 +17,8 @@ import {
   computeParentChildSegments,
   computeParentlessSibshipSegments,
 } from './parentChildGeometry';
+import { ConnectionHalo } from './ConnectionHalo';
+import { connectionEmphasis } from './connectionHighlight';
 
 interface ParentChildLineProps {
   partnership: PartnershipRelationship;
@@ -24,6 +26,7 @@ interface ParentChildLineProps {
   parentChildLinks: Record<string, ParentChildRelationship>;
   twinGroups: Record<string, TwinGroup>;
   selectedConnection?: ConnectionSelection | null;
+  hoveredConnection?: ConnectionSelection | null;
 }
 
 export function ParentChildLine({
@@ -32,6 +35,7 @@ export function ParentChildLine({
   parentChildLinks,
   twinGroups,
   selectedConnection,
+  hoveredConnection,
 }: ParentChildLineProps) {
   const setCursor = useCallback((cursor: string) => {
     const stage = document.querySelector('canvas');
@@ -104,6 +108,21 @@ export function ParentChildLine({
       !!link &&
       selectedConnection?.kind === 'parentChild' &&
       selectedConnection.id === link.id;
+    const isHovered =
+      !!link &&
+      hoveredConnection?.kind === 'parentChild' &&
+      hoveredConnection.id === link.id;
+    // A halo beneath the drop signals the line of descent is clickable (hover)
+    // or selected — only for links that are actually interactive.
+    if (link) {
+      lines.push(
+        <ConnectionHalo
+          key={`drop-halo-${child.id}`}
+          points={childDrops[i]}
+          emphasis={connectionEmphasis(isSelected, isHovered)}
+        />,
+      );
+    }
     // Dash the line of descent only for an adoptive (non-biological) edge, per
     // NSGC/Bennett. Brackets on the child are handled separately in the symbol.
     lines.push(
@@ -118,8 +137,14 @@ export function ParentChildLine({
               hitStrokeWidth: 12,
               onClick: (e: KonvaEventObject<MouseEvent>) => selectLink(e, link.id),
               onTap: (e: KonvaEventObject<TouchEvent>) => selectLink(e, link.id),
-              onMouseEnter: () => setCursor('pointer'),
-              onMouseLeave: () => setCursor('default'),
+              onMouseEnter: () => {
+                setCursor('pointer');
+                useUIStore.getState().setHoveredConnection({ kind: 'parentChild', id: link.id });
+              },
+              onMouseLeave: () => {
+                setCursor('default');
+                useUIStore.getState().setHoveredConnection(null);
+              },
             }
           : {})}
       />,

@@ -48,6 +48,13 @@ interface UIState {
    */
   selectedConnection: ConnectionSelection | null;
   hoveredId: string | null;
+  /**
+   * The connection (partnership / line-of-descent / twin connector) currently
+   * under the pointer, or `null`. Purely a hover affordance: it drives the
+   * on-canvas halo that signals a line is interactive. Kept separate from
+   * `selectedConnection` so hovering never disturbs the actual selection.
+   */
+  hoveredConnection: ConnectionSelection | null;
 
   radialMenu: {
     visible: boolean;
@@ -121,6 +128,8 @@ interface UIState {
   clearSelection: () => void;
   toggleSelection: (id: string) => void;
   setHovered: (id: string | null) => void;
+  /** Set (or clear) the connection currently hovered, for the line halo. */
+  setHoveredConnection: (sel: ConnectionSelection | null) => void;
   showRadialMenu: (
     targetId: string,
     canvasPos: { x: number; y: number }
@@ -184,6 +193,7 @@ export const useUIStore = create<UIState>()((set) => ({
   selectedIds: new Set<string>(),
   selectedConnection: null,
   hoveredId: null,
+  hoveredConnection: null,
 
   radialMenu: {
     visible: false,
@@ -260,6 +270,8 @@ export const useUIStore = create<UIState>()((set) => ({
     }),
 
   setHovered: (id) => set({ hoveredId: id }),
+
+  setHoveredConnection: (sel) => set({ hoveredConnection: sel }),
 
   showRadialMenu: (targetId, canvasPosition) =>
     set({

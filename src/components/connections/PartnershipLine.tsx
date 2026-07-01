@@ -24,6 +24,8 @@ import {
   consanguinityLines,
   partnershipMidpoint,
 } from '../../utils/partnershipGeometry';
+import { ConnectionHalo } from './ConnectionHalo';
+import { connectionEmphasis } from './connectionHighlight';
 
 /**
  * Marks for a childless union (infertility / no children by choice), hung below
@@ -88,9 +90,15 @@ interface PartnershipLineProps {
   partnership: PartnershipRelationship;
   individuals: Record<string, Individual>;
   selectedConnection?: ConnectionSelection | null;
+  hoveredConnection?: ConnectionSelection | null;
 }
 
-export function PartnershipLine({ partnership, individuals, selectedConnection }: PartnershipLineProps) {
+export function PartnershipLine({
+  partnership,
+  individuals,
+  selectedConnection,
+  hoveredConnection,
+}: PartnershipLineProps) {
   const p1 = partnership.partner1Id ? individuals[partnership.partner1Id] : undefined;
   const p2 = partnership.partner2Id ? individuals[partnership.partner2Id] : undefined;
 
@@ -107,12 +115,25 @@ export function PartnershipLine({ partnership, individuals, selectedConnection }
     if (stage) stage.style.cursor = cursor;
   }, []);
 
+  const handleEnter = useCallback(() => {
+    setCursor('pointer');
+    useUIStore.getState().setHoveredConnection({ kind: 'partnership', id: partnership.id });
+  }, [setCursor, partnership.id]);
+
+  const handleLeave = useCallback(() => {
+    setCursor('default');
+    useUIStore.getState().setHoveredConnection(null);
+  }, [setCursor]);
+
   if (!p1 || !p2) return null;
 
   const mid = partnershipMidpoint(p1.position, p2.position);
 
   const isSelected =
     selectedConnection?.kind === 'partnership' && selectedConnection.id === partnership.id;
+  const isHovered =
+    hoveredConnection?.kind === 'partnership' && hoveredConnection.id === partnership.id;
+  const emphasis = connectionEmphasis(isSelected, isHovered);
 
   const lineProps = {
     stroke: isSelected ? SELECTION_COLOR : LINE_COLOR,
@@ -120,8 +141,8 @@ export function PartnershipLine({ partnership, individuals, selectedConnection }
     hitStrokeWidth: 12,
     onClick: selectLine,
     onTap: selectLine,
-    onMouseEnter: () => setCursor('pointer'),
-    onMouseLeave: () => setCursor('default'),
+    onMouseEnter: handleEnter,
+    onMouseLeave: handleLeave,
   };
 
   const markStroke = isSelected ? SELECTION_COLOR : LINE_COLOR;
@@ -133,6 +154,8 @@ export function PartnershipLine({ partnership, individuals, selectedConnection }
     const labelBoxWidth = 200;
     return (
       <>
+        <ConnectionHalo points={a} emphasis={emphasis} />
+        <ConnectionHalo points={b} emphasis={emphasis} />
         <Line points={a} {...lineProps} />
         <Line points={b} {...lineProps} />
         {degree && (
@@ -157,6 +180,10 @@ export function PartnershipLine({ partnership, individuals, selectedConnection }
     const hashSize = 6;
     return (
       <>
+        <ConnectionHalo
+          points={[p1.position.x, p1.position.y, p2.position.x, p2.position.y]}
+          emphasis={emphasis}
+        />
         <Line
           points={[p1.position.x, p1.position.y, p2.position.x, p2.position.y]}
           {...lineProps}
@@ -177,6 +204,10 @@ export function PartnershipLine({ partnership, individuals, selectedConnection }
   // Standard partnership - solid line
   return (
     <>
+      <ConnectionHalo
+        points={[p1.position.x, p1.position.y, p2.position.x, p2.position.y]}
+        emphasis={emphasis}
+      />
       <Line
         points={[p1.position.x, p1.position.y, p2.position.x, p2.position.y]}
         {...lineProps}
