@@ -1,5 +1,6 @@
 import type {
   Individual,
+  PartnershipRelationship,
   PedigreeDocument,
 } from '../types/pedigree';
 import { SIBLING_SPACING, PARTNER_SPACING, GENERATION_SPACING } from './constants';
@@ -402,6 +403,117 @@ function inLawClearanceShift(
 }
 
 /**
+ * Collect the laid-out descendants of `union` that live in the frame: its
+ * children, each child's in-frame partner, and everything below, walking down
+ * partnerships and stopping at the frame boundary. The union's own partners are
+ * excluded — only the descent hanging below the couple is returned.
+ *
+ * @remarks
+ * Used by {@link centerChildrenUnderWideCouples} to slide a whole sibship (and
+ * its subtrees) sideways as one block, keeping every descent line below the
+ * couple vertical.
+ */
+function collectUnionDescendants(
+  doc: LayoutDoc,
+  union: PartnershipRelationship,
+  inFrame: (id: string) => boolean,
+): Set<string> {
+  const descendants = new Set<string>();
+  const queue: string[] = [];
+  const visit = (id: string): void => {
+    if (inFrame(id) && !descendants.has(id)) {
+      descendants.add(id);
+      queue.push(id);
+    }
+  };
+  union.childrenIds.forEach(visit);
+  while (queue.length) {
+    const cur = queue.pop() as string;
+    for (const p of Object.values(doc.partnerships)) {
+      if (p.partner1Id !== cur && p.partner2Id !== cur) continue;
+      // Pull the partner along (it moves with the couple block) but don't walk
+      // up into the partner's own family; then descend into this union's kids.
+      for (const pid of [p.partner1Id, p.partner2Id]) {
+        if (pid && pid !== cur && inFrame(pid)) descendants.add(pid);
+      }
+      p.childrenIds.forEach(visit);
+    }
+  }
+  return descendants;
+}
+
+/**
+ * Re-centre the sibship of every "wide couple" so it sits under the couple's
+ * midpoint. A wide couple is a union with a present partner that is pinned (a
+ * load-bearing in-law on its own branch, absent from the frame): the tidy layout
+ * centres only the placeable blood partner over the children, so the sibship ends
+ * up under that one partner while the descent line — drawn from the couple
+ * midpoint — skews across to the far-away in-law (issue #105). For each such
+ * union this slides the whole sibship subtree so its centre lands on the midpoint
+ * between the couple's final positions, keeping the descent vertical.
+ *
+ * @remarks
+ * Mutates `finalX` in place. Unions are processed top-down (by generation) so a
+ * shifted blood partner is already in its final spot before a lower wide couple
+ * re-centres against it — this ordering is a correctness requirement, not a
+ * heuristic: shifting a lower couple first and letting the higher shift translate
+ * it would double-count half the upper shift. A no-op for ordinary couples (both
+ * partners placed), where the sibship centre already equals the couple midpoint.
+ *
+ * KNOWN LIMITATION (tracked in #115): the sub-block is translated *after*
+ * `packBlocks` and {@link inLawClearanceShift} have run, with no re-separation
+ * and no collision check. When a wide couple sits next to an ordinary sibling
+ * whose sibship stays put, the shift can drive the two cousin sibships on top of
+ * each other — an exact node-on-node overlap in the coincident case, or crossed
+ * descent lines in the general case. Resolving it needs a per-row separation pass
+ * (or a constraint-based layout) after the recenter; see #115.
+ */
+function centerChildrenUnderWideCouples(
+  doc: LayoutDoc,
+  finalX: Record<string, number>,
+): void {
+  const inFrame = (id: string): boolean => id in finalX;
+  const xOf = (id: string): number | null =>
+    id in finalX ? finalX[id] : doc.individuals[id]?.position.x ?? null;
+
+  const unions = Object.values(doc.partnerships)
+    .map((u) => {
+      const present = [u.partner1Id, u.partner2Id].filter(
+        (id): id is string => !!id && !!doc.individuals[id],
+      );
+      const gen = Math.min(
+        ...present.map((id) => doc.individuals[id].generation ?? 0),
+        Infinity,
+      );
+      return { u, present, gen };
+    })
+    // Top-down: a higher couple settles before a lower one re-centres on it.
+    .sort((a, b) => a.gen - b.gen);
+
+  for (const { u, present } of unions) {
+    if (present.length === 0) continue;
+    // Only wide couples need re-centring: at least one present partner pinned
+    // (load-bearing in-law, outside the frame).
+    if (present.every(inFrame)) continue;
+    const childrenInFrame = u.childrenIds.filter(inFrame);
+    if (childrenInFrame.length === 0) continue;
+
+    const coupleXs = present.map((id) => xOf(id));
+    if (coupleXs.some((v) => v === null)) continue;
+    const coupleMid =
+      (coupleXs as number[]).reduce((s, v) => s + v, 0) / coupleXs.length;
+    const childXs = childrenInFrame.map((id) => finalX[id]);
+    const sibCenter = (Math.min(...childXs) + Math.max(...childXs)) / 2;
+    const shift = coupleMid - sibCenter;
+    if (Math.abs(shift) < 1e-6) continue;
+
+    for (const id of collectUnionDescendants(doc, u, inFrame)) {
+      finalX[id] += shift;
+    }
+  }
+}
+
+/**
  * Compute tidy x and per-generation-row y for every node in the blood family
  * rooted at `rootUnionId`, plus its married-in partners. Anchored so the root
  * union's centre keeps its current x (the canvas does not jump), then shifted if
@@ -451,11 +563,17 @@ export function computeTreeLayout(
   const dxFinal =
     dx + inLawClearanceShift(doc, frame.positions, dx, genOf, spacing.siblingSpacing);
 
-  const result: Record<string, { x: number; y: number }> = {};
+  // Absolute x for every laid-out node, then slide any wide couple's sibship
+  // under the couple midpoint so its descent line stays vertical (issue #105).
+  const finalX: Record<string, number> = {};
   for (const [id, fx] of Object.entries(frame.positions)) {
+    if (doc.individuals[id]) finalX[id] = fx + dxFinal;
+  }
+  centerChildrenUnderWideCouples(doc, finalX);
+
+  const result: Record<string, { x: number; y: number }> = {};
+  for (const [id, x] of Object.entries(finalX)) {
     const node = doc.individuals[id];
-    if (!node) continue;
-    const x = fx + dxFinal;
     const gen = node.generation ?? rootGen;
     const y = rootY + (gen - rootGen) * spacing.generationSpacing;
     if (node.position.x !== x || node.position.y !== y) result[id] = { x, y };

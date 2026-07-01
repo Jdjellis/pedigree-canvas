@@ -243,6 +243,131 @@ describe('computeTreeLayout — clearance & cross-sibship', () => {
     expect((x('d1') + x('m1')) / 2).toBe(x('s1'));
   });
 
+  it('centres a single child under a wide couple with one load-bearing in-law (#105)', () => {
+    // p (blood, gen 1) married to inlaw (load-bearing — its parent ilp sits
+    // above it). Their single child must sit at the COUPLE MIDPOINT so the
+    // descent line (drawn from the couple midpoint) stays vertical, rather than
+    // hanging directly under p.
+    const individuals = {
+      p: ind('p', 0, 1), inlaw: ind('inlaw', 300, 1),
+      ilp: ind('ilp', 300, 0),             // in-law's parent (founder)
+      kid: ind('kid', 0, 2),
+    };
+    const partnerships = {
+      mar: union('mar', 'p', 'inlaw', ['kid']),
+      ilUnion: union('ilUnion', 'ilp', undefined, ['inlaw']),
+    };
+    const parentChildLinks = {
+      a: link('a', 'mar', 'kid'),
+      b: link('b', 'ilUnion', 'inlaw'),
+    };
+    const moved = computeTreeLayout({ individuals, partnerships, parentChildLinks }, 'mar');
+    const x = (id: keyof typeof individuals) => moved[id]?.x ?? individuals[id].position.x;
+    // Child centred at the couple midpoint (descent stays vertical).
+    expect(x('kid')).toBe((x('p') + x('inlaw')) / 2);
+    // The load-bearing in-law is not relocated.
+    expect(moved.inlaw).toBeUndefined();
+  });
+
+  it('centres the child of a cross-branch couple when the relayout roots in one branch (#105)', () => {
+    // The reported case: s1 descends from a LEFT branch (gp1+gp2), s2 descends
+    // from a RIGHT in-law (ilp). They marry (both load-bearing) and have a
+    // child. findRootUnion(child) climbs into the left branch, so the couple is
+    // laid out deep in the tree with s1 as the blood partner and s2 pinned far
+    // to the right. The child must still centre between s1 and s2.
+    const individuals = {
+      gp1: ind('gp1', -60, 0), gp2: ind('gp2', 60, 0),
+      s1: ind('s1', 0, 1), s2: ind('s2', 600, 1),
+      ilp: ind('ilp', 600, 0),
+      child: ind('child', 0, 2),
+    };
+    const partnerships = {
+      leftRoot: union('leftRoot', 'gp1', 'gp2', ['s1']),
+      ilUnion: union('ilUnion', 'ilp', undefined, ['s2']),
+      couple: union('couple', 's1', 's2', ['child']),
+    };
+    const parentChildLinks = {
+      l1: link('l1', 'leftRoot', 's1'),
+      l2: link('l2', 'ilUnion', 's2'),
+      l3: link('l3', 'couple', 'child'),
+    };
+    const d = { individuals, partnerships, parentChildLinks };
+    // Sanity: the relayout roots in the left branch, not at the couple.
+    expect(findRootUnion(d, 'child')).toBe('leftRoot');
+    const moved = computeTreeLayout(d, 'leftRoot');
+    const x = (id: keyof typeof individuals) => moved[id]?.x ?? individuals[id].position.x;
+    // Child sits at the couple midpoint between the two far-apart branches.
+    expect(x('child')).toBe((x('s1') + x('s2')) / 2);
+    // The right in-law is pinned (not relocated).
+    expect(moved.s2).toBeUndefined();
+  });
+
+  it('centres a multi-child sibship under a wide couple, preserving spacing (#105)', () => {
+    // Same wide couple as above but with THREE children. The whole sibship must
+    // slide as one block so its centre lands on the couple midpoint, and the
+    // sibling spacing is preserved (not squashed).
+    const individuals = {
+      p: ind('p', 0, 1), inlaw: ind('inlaw', 400, 1),
+      ilp: ind('ilp', 400, 0),
+      k1: ind('k1', 0, 2), k2: ind('k2', 80, 2), k3: ind('k3', 160, 2),
+    };
+    const partnerships = {
+      mar: union('mar', 'p', 'inlaw', ['k1', 'k2', 'k3']),
+      ilUnion: union('ilUnion', 'ilp', undefined, ['inlaw']),
+    };
+    const parentChildLinks = {
+      a: link('a', 'mar', 'k1'), b: link('b', 'mar', 'k2'), c: link('c', 'mar', 'k3'),
+      d: link('d', 'ilUnion', 'inlaw'),
+    };
+    const moved = computeTreeLayout({ individuals, partnerships, parentChildLinks }, 'mar');
+    const x = (id: keyof typeof individuals) => moved[id]?.x ?? individuals[id].position.x;
+    // Sibship centre lands on the couple midpoint: mid = (0 + 400) / 2 = 200.
+    const sibCentre = (x('k1') + x('k3')) / 2;
+    expect(sibCentre).toBe((x('p') + x('inlaw')) / 2);
+    // Sibling spacing is uniform (the block moved rigidly, not squashed).
+    expect(x('k2') - x('k1')).toBe(x('k3') - x('k2'));
+    // The load-bearing in-law is not relocated.
+    expect(moved.inlaw).toBeUndefined();
+  });
+
+  it('centres each generation of chained wide couples on its own shifted midpoint (#105)', () => {
+    // A wide couple's child (m1) is itself a partner in a lower wide couple.
+    // Processing must be top-down: m1 is re-centred under couple1 FIRST, then
+    // g1 re-centres under couple2 using m1's ALREADY-SHIFTED x (not its original
+    // position) — otherwise g1 picks up an extra half-shift.
+    const individuals = {
+      gp1: ind('gp1', -60, 0), gp2: ind('gp2', 60, 0),
+      p1: ind('p1', 0, 1),
+      inlaw1: ind('inlaw1', 500, 1), ilp1: ind('ilp1', 500, 0),
+      m1: ind('m1', 0, 2),
+      inlaw2: ind('inlaw2', 900, 2), ilp2: ind('ilp2', 900, 1),
+      g1: ind('g1', 0, 3),
+    };
+    const partnerships = {
+      top: union('top', 'gp1', 'gp2', ['p1']),
+      couple1: union('couple1', 'p1', 'inlaw1', ['m1']),
+      ilUnion1: union('ilUnion1', 'ilp1', undefined, ['inlaw1']),
+      couple2: union('couple2', 'm1', 'inlaw2', ['g1']),
+      ilUnion2: union('ilUnion2', 'ilp2', undefined, ['inlaw2']),
+    };
+    const parentChildLinks = {
+      a: link('a', 'top', 'p1'),
+      b: link('b', 'couple1', 'm1'),
+      c: link('c', 'ilUnion1', 'inlaw1'),
+      d: link('d', 'couple2', 'g1'),
+      e: link('e', 'ilUnion2', 'inlaw2'),
+    };
+    const d = { individuals, partnerships, parentChildLinks };
+    // The relayout roots at the top of the left blood line.
+    expect(findRootUnion(d, 'g1')).toBe('top');
+    const moved = computeTreeLayout(d, 'top');
+    const x = (id: keyof typeof individuals) => moved[id]?.x ?? individuals[id].position.x;
+    // m1 centres under couple1: (p1 + inlaw1) / 2 = (0 + 500) / 2 = 250.
+    expect(x('m1')).toBe((x('p1') + x('inlaw1')) / 2);
+    // g1 centres under couple2 using m1's shifted x: (250 + 900) / 2 = 575.
+    expect(x('g1')).toBe((x('m1') + x('inlaw2')) / 2);
+  });
+
   it('does not relocate a load-bearing in-law', () => {
     // p (blood) married to inlaw, who has their own parents (load-bearing).
     const individuals = {
