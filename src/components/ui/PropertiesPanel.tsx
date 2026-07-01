@@ -30,6 +30,7 @@ import {
   parentCoupleLabel,
   type AdoptionMode,
 } from '../../utils/adoption';
+import { individualHasChildren } from '../../utils/childlessness';
 import type {
   FillPatternType,
   Individual,
@@ -89,6 +90,28 @@ const ADOPTION_OPTIONS: { value: AdoptionMode; label: string }[] = [
   { value: 'in', label: 'Adopted in' },
   { value: 'out', label: 'Adopted out' },
 ];
+
+type ChildlessValue = 'none' | 'noChildren' | 'infertility';
+
+const CHILDLESS_OPTIONS: { value: ChildlessValue; label: string }[] = [
+  { value: 'none', label: 'None' },
+  { value: 'noChildren', label: 'No children' },
+  { value: 'infertility', label: 'Infertility' },
+];
+
+/** Plain-language description of the marker each childless status draws. */
+const CHILDLESS_HINT: Record<'noChildren' | 'infertility', string> = {
+  noChildren:
+    'Draws a single cross-bar below the individual (with the cause, if given) — no children by choice or reason unknown.',
+  infertility:
+    'Draws a double cross-bar below the individual (with the cause, if given), per standard.',
+};
+
+/** Placeholder for the free-text cause, tuned to the childless status. */
+const CHILDLESS_CAUSE_PLACEHOLDER: Record<'noChildren' | 'infertility', string> = {
+  noChildren: 'e.g. vasectomy',
+  infertility: 'e.g. azoospermia',
+};
 
 export function PropertiesPanel() {
   const selectedIds = useUIStore((s) => s.selectedIds);
@@ -247,6 +270,8 @@ export function PropertiesPanel() {
   const twinGroup = Object.values(twinGroups).find((tg) =>
     tg.individualIds.includes(individual.id),
   );
+
+  const hasChildren = individualHasChildren(partnerships, individual.id);
 
   const toggleCondition = (entryId: string) => {
     const current = individual.conditionIds ?? [];
@@ -891,6 +916,54 @@ export function PropertiesPanel() {
             </div>
           );
         })()}
+      </div>
+
+      <div className={styles.divider} />
+
+      {/* Childlessness Section — no-partner analogue of the partnership marker */}
+      <div className={styles.section}>
+        <div className={styles.sectionTitle}>Childlessness</div>
+        <div className={styles.field}>
+          <SegmentedControl
+            options={CHILDLESS_OPTIONS}
+            value={individual.childlessStatus ?? 'none'}
+            disabled={hasChildren}
+            onChange={(v) =>
+              update({
+                childlessStatus: v === 'none' ? undefined : v,
+                // Keep the cause across no-children/infertility; drop it only
+                // when clearing the childless status entirely.
+                childlessReason: v === 'none' ? undefined : individual.childlessReason,
+              })
+            }
+            ariaLabel="Individual childless status"
+          />
+          {hasChildren ? (
+            <p className={styles.hint}>
+              A childless marker doesn’t apply — this person has children on the
+              canvas. Detach them first to mark this individual childless.
+            </p>
+          ) : (
+            <>
+              {individual.childlessStatus && (
+                <p className={styles.hint}>{CHILDLESS_HINT[individual.childlessStatus]}</p>
+              )}
+              {individual.childlessStatus && (
+                <>
+                  <label className={styles.label}>Cause</label>
+                  <input
+                    className={styles.input}
+                    value={individual.childlessReason ?? ''}
+                    onChange={(e) =>
+                      update({ childlessReason: e.target.value || undefined })
+                    }
+                    placeholder={CHILDLESS_CAUSE_PLACEHOLDER[individual.childlessStatus]}
+                  />
+                </>
+              )}
+            </>
+          )}
+        </div>
       </div>
 
       {twinGroup && (

@@ -118,6 +118,25 @@ export interface Individual {
    */
   adopted?: boolean;
 
+  /**
+   * Documented childlessness of this individual, as an alternative to marking a
+   * partnership childless when there is no partner drawn. Drawn per NSGC/Bennett
+   * as a vertical line dropping from the symbol terminated by cross-bar(s),
+   * identical to the partnership marker ({@link PartnershipRelationship.childlessStatus}):
+   *   - `'infertility'` → a double cross-bar;
+   *   - `'noChildren'` → a single cross-bar.
+   * Either may be annotated with a free-text {@link childlessReason}. Suppressed
+   * once the individual has children on the canvas (a marker would contradict the
+   * descent line).
+   */
+  childlessStatus?: 'infertility' | 'noChildren';
+  /**
+   * Free-text cause/description for this individual's childlessness (e.g.
+   * "vasectomy", "azoospermia"). Meaningful for either {@link childlessStatus}
+   * value.
+   */
+  childlessReason?: string;
+
   // Annotations
   investigations: Investigation[];
   annotations: Annotation[];
@@ -143,17 +162,17 @@ export interface PartnershipRelationship {
    * Documented childlessness of this union, drawn as marks hanging below the
    * relationship line per NSGC/Bennett. Orthogonal to {@link type} (an infertile
    * couple may also be consanguineous or separated):
-   *   - `'infertility'` → a double cross-bar, optionally annotated with
-   *     {@link childlessReason} (e.g. "azoospermia");
+   *   - `'infertility'` → a double cross-bar (e.g. cause "azoospermia");
    *   - `'noChildren'` → a single cross-bar ("no children by choice or reason
-   *     unknown").
+   *     unknown", e.g. cause "vasectomy").
+   * Either may be annotated with a free-text {@link childlessReason}.
    * Absent → an ordinary union that draws no childless marks.
    */
   childlessStatus?: 'infertility' | 'noChildren';
   /**
-   * Free-text cause for an infertile union (e.g. "azoospermia",
-   * "endometriosis"), rendered below the marks. Only meaningful when
-   * {@link childlessStatus} is `'infertility'`.
+   * Free-text cause/description for a childless union (e.g. "azoospermia",
+   * "endometriosis", "vasectomy"), rendered below the marks. Meaningful for
+   * either {@link childlessStatus} value.
    */
   childlessReason?: string;
 }

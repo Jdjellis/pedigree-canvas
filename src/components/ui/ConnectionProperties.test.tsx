@@ -130,11 +130,12 @@ describe('ConnectionProperties via PropertiesPanel', () => {
     expect(screen.getByText(/double cross-bar/i)).toBeInTheDocument();
   });
 
-  it('shows the single-bar hint and no cause field for "no children"', () => {
+  it('shows the single-bar hint and a cause field for "no children"', () => {
     const doc = createDefaultDocument();
     doc.partnerships['union1'] = {
       ...makePartnership('union1', RelationshipType.Partnership),
       childlessStatus: 'noChildren',
+      childlessReason: 'vasectomy',
     };
 
     act(() => {
@@ -148,7 +149,9 @@ describe('ConnectionProperties via PropertiesPanel', () => {
     render(<PropertiesPanel />);
     expect(screen.getByRole('button', { name: 'No children' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByText(/single cross-bar/i)).toBeInTheDocument();
-    expect(screen.queryByPlaceholderText('e.g. azoospermia')).not.toBeInTheDocument();
+    // "No children" now carries a free-text cause (e.g. vasectomy).
+    expect(screen.getByDisplayValue('vasectomy')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('e.g. vasectomy')).toBeInTheDocument();
   });
 
   it('disables the childless control and hides the cause when the union has children', () => {

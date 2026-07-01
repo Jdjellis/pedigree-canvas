@@ -67,7 +67,7 @@ function childlessMarkElements(
     )),
   ];
   const reason = partnership.childlessReason?.trim();
-  if (partnership.childlessStatus === 'infertility' && reason) {
+  if (reason) {
     els.push(
       <Text
         key={`cl-reason-${partnership.id}`}

@@ -32,9 +32,15 @@ const CHILDLESS_OPTIONS: { value: ChildlessValue; label: string }[] = [
 /** Plain-language description of the marker each childless status draws. */
 const CHILDLESS_HINT: Record<'noChildren' | 'infertility', string> = {
   noChildren:
-    'Draws a single cross-bar below the couple’s line — no children by choice or reason unknown.',
+    'Draws a single cross-bar below the couple’s line (with the cause, if given) — no children by choice or reason unknown.',
   infertility:
     'Draws a double cross-bar below the couple’s line (with the cause, if given), per standard.',
+};
+
+/** Placeholder for the free-text cause, tuned to the childless status. */
+const CHILDLESS_CAUSE_PLACEHOLDER: Record<'noChildren' | 'infertility', string> = {
+  noChildren: 'e.g. vasectomy',
+  infertility: 'e.g. azoospermia',
 };
 
 /**
@@ -108,8 +114,9 @@ export function ConnectionProperties() {
               onChange={(v) =>
                 updatePartnership(p.id, {
                   childlessStatus: v === 'none' ? undefined : v,
-                  // Drop any stale cause when leaving the infertility state.
-                  childlessReason: v === 'infertility' ? p.childlessReason : undefined,
+                  // Keep the cause across no-children/infertility; drop it only
+                  // when clearing the childless status entirely.
+                  childlessReason: v === 'none' ? undefined : p.childlessReason,
                 })
               }
               ariaLabel="Childless status"
@@ -126,7 +133,7 @@ export function ConnectionProperties() {
                 {p.childlessStatus && (
                   <p className={styles.hint}>{CHILDLESS_HINT[p.childlessStatus]}</p>
                 )}
-                {p.childlessStatus === 'infertility' && (
+                {p.childlessStatus && (
                   <>
                     <label className={styles.label}>Cause</label>
                     <input
@@ -137,7 +144,7 @@ export function ConnectionProperties() {
                           childlessReason: e.target.value || undefined,
                         })
                       }
-                      placeholder="e.g. azoospermia"
+                      placeholder={CHILDLESS_CAUSE_PLACEHOLDER[p.childlessStatus]}
                     />
                   </>
                 )}

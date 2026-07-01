@@ -47,6 +47,12 @@ import {
   partnershipMidpoint,
 } from '../utils/partnershipGeometry';
 import {
+  individualChildlessAnchor,
+  individualHasChildren,
+  childlessMarksActive,
+  CHILDLESS_LABEL_OFFSET,
+} from '../utils/childlessness';
+import {
   PADDING as LEGEND_PADDING,
   SWATCH_SIZE as LEGEND_SWATCH_SIZE,
   legendSwatchWidth,
@@ -297,9 +303,18 @@ function computeIndividualNumbers(individuals: Individual[]): Map<string, number
  * Build the centred name/age/condition label lines for an individual, matching
  * `SymbolLabel.tsx`. The individual number is rendered separately at the
  * symbol's bottom-right corner and is therefore not included here.
+ *
+ * When `childlessActive` the childless cause is folded in as the first line
+ * (directly under the cross-bars), mirroring the Konva label; the marks
+ * themselves are drawn by {@link renderIndividualChildlessLine}.
  */
-function buildLabelLines(individual: Individual): string[] {
+function buildLabelLines(individual: Individual, childlessActive = false): string[] {
   const lines: string[] = [];
+
+  const childlessReason = individual.childlessReason?.trim();
+  if (childlessActive && childlessReason) {
+    lines.push(childlessReason);
+  }
 
   if (individual.displayName) {
     lines.push(individual.displayName);
@@ -357,6 +372,7 @@ function renderIndividual(
   individual: Individual,
   individualNumber: number | undefined,
   entries: LegendEntry[],
+  childlessActive = false,
 ): string {
   const half = SYMBOL_SIZE / 2;
   const parts: string[] = [];
@@ -454,10 +470,12 @@ function renderIndividual(
     );
   }
 
-  // Text labels (centred under the symbol).
-  const lines = buildLabelLines(individual);
+  // Text labels (centred under the symbol). Pushed below the childless marks
+  // when they are drawn so name / investigations / cause clear the cross-bars.
+  const lines = buildLabelLines(individual, childlessActive);
   if (lines.length > 0) {
-    const startY = SYMBOL_SIZE / 2 + LABEL_OFFSET_Y;
+    const startY =
+      SYMBOL_SIZE / 2 + LABEL_OFFSET_Y + (childlessActive ? CHILDLESS_LABEL_OFFSET : 0);
     const textParts = lines
       .map((line, index) => {
         // Konva Text positions y at the top of the line; SVG baseline sits at
@@ -553,7 +571,7 @@ function renderPartnershipLine(
       ...bars.map((b) => line(b[0], b[1], b[2], b[3])),
     ];
     const reason = partnership.childlessReason?.trim();
-    if (partnership.childlessStatus === 'infertility' && reason) {
+    if (reason) {
       const baselineY = mid.y + CHILDLESS_STUB + RELATIONSHIP_LABEL_OFFSET + LABEL_FONT_SIZE;
       parts.push(
         `<text x="${num(mid.x)}" y="${num(
@@ -593,6 +611,31 @@ function renderPartnershipLine(
   }
 
   return line(p1.position.x, p1.position.y, p2.position.x, p2.position.y) + childless;
+}
+
+/**
+ * Render an individual's childless marks (no-partner analogue of a childless
+ * union), matching `IndividualChildlessLine.tsx`. Suppressed once the individual
+ * has children on the canvas. The cause text is folded into the label stack (see
+ * {@link buildLabelLines}), not drawn here.
+ */
+function renderIndividualChildlessLine(
+  individual: Individual,
+  partnerships: Record<string, PartnershipRelationship>,
+): string {
+  if (!individual.childlessStatus) return '';
+  if (individualHasChildren(partnerships, individual.id)) return '';
+
+  const anchor = individualChildlessAnchor(individual);
+  const { stub, bars } = childlessMarks(anchor, individual.childlessStatus, {
+    stub: CHILDLESS_STUB,
+    barHalf: CHILDLESS_BAR_HALF,
+    barGap: CHILDLESS_BAR_GAP,
+  });
+  return [
+    line(stub[0], stub[1], stub[2], stub[3]),
+    ...bars.map((b) => line(b[0], b[1], b[2], b[3])),
+  ].join('');
 }
 
 /** Render parent-child / sibship lines, matching `ParentChildLine.tsx`. */
@@ -976,10 +1019,20 @@ export function buildPedigreeSvg(doc: PedigreeDocument, title = ''): string {
       renderTwinConnector(twinGroup, doc.individuals, doc.partnerships),
     );
   }
+  for (const ind of individuals) {
+    connectionMarkup.push(renderIndividualChildlessLine(ind, doc.partnerships));
+  }
 
   const symbolMarkup: string[] = [];
   for (const ind of individuals) {
-    symbolMarkup.push(renderIndividual(ind, individualNumbers.get(ind.id), entries));
+    symbolMarkup.push(
+      renderIndividual(
+        ind,
+        individualNumbers.get(ind.id),
+        entries,
+        childlessMarksActive(ind, doc.partnerships),
+      ),
+    );
   }
 
   // ---- Free-text annotations --------------------------------------------
@@ -1022,17 +1075,27 @@ export function buildPedigreeSvg(doc: PedigreeDocument, title = ''): string {
     const reach = half + DECEASED_SLASH_OVERSHOOT + 22;
     expand(extent, ind.position.x - reach, ind.position.y - half);
     expand(extent, ind.position.x + reach, ind.position.y + half);
-    // Label lines extend below the symbol.
-    const lines = buildLabelLines(ind);
+    const childlessActive = childlessMarksActive(ind, doc.partnerships);
+    // Label lines extend below the symbol — pushed down past the childless marks
+    // when those are drawn (the cause is folded in as the first line).
+    const lines = buildLabelLines(ind, childlessActive);
     if (lines.length > 0) {
       const labelBottom =
         ind.position.y +
         SYMBOL_SIZE / 2 +
         LABEL_OFFSET_Y +
+        (childlessActive ? CHILDLESS_LABEL_OFFSET : 0) +
         lines.length * LABEL_LINE_HEIGHT +
         LABEL_FONT_SIZE;
       expand(extent, ind.position.x - 60, labelBottom);
       expand(extent, ind.position.x + 60, labelBottom);
+    }
+    // The childless stub + cross-bars hang below the symbol; cover them for the
+    // case where no label lines otherwise reach that far.
+    if (childlessActive) {
+      const markBottom = individualChildlessAnchor(ind).y + CHILDLESS_STUB;
+      expand(extent, ind.position.x - CHILDLESS_BAR_HALF, markBottom);
+      expand(extent, ind.position.x + CHILDLESS_BAR_HALF, markBottom);
     }
   }
 

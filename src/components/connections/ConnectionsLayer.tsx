@@ -9,6 +9,7 @@ import type { ConnectionSelection } from '../../stores/uiStore';
 import { PartnershipLine } from './PartnershipLine';
 import { ParentChildLine } from './ParentChildLine';
 import { TwinConnector } from './TwinConnector';
+import { IndividualChildlessLine } from './IndividualChildlessLine';
 
 interface ConnectionsLayerProps {
   partnerships: Record<string, PartnershipRelationship>;
@@ -64,6 +65,13 @@ export function ConnectionsLayer({
           partnerships={partnerships}
           selectedConnection={selectedConnection}
           hoveredConnection={hoveredConnection}
+        />
+      ))}
+      {Object.values(individuals).map((individual) => (
+        <IndividualChildlessLine
+          key={`icl-${individual.id}`}
+          individual={individual}
+          partnerships={partnerships}
         />
       ))}
     </Layer>
