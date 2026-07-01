@@ -5,10 +5,19 @@ import * as safeStorage from '../utils/safeStorage';
 /**
  * The currently active canvas tool. `select`/`hand` are modal helpers
  * (pointer/marquee and pan); `text` places a text annotation at the click point;
- * `eraser` deletes nodes/connections under the pointer. People are added only
- * via the radial menu, so there are no person-placement tools.
+ * `eraser` deletes nodes/connections under the pointer; `connect` links two
+ * existing people (click a source, then a target). People are added only via
+ * the radial menu, so there are no person-placement tools.
  */
-export type ActiveTool = 'select' | 'hand' | 'text' | 'eraser';
+export type ActiveTool = 'select' | 'hand' | 'text' | 'eraser' | 'connect';
+
+/**
+ * How an in-progress connect gesture is being driven, which decides how it
+ * ends: a `drag` link (alt-drag, or a drag with the connect tool) commits when
+ * the pointer is *released* over a target; a `click` link (connect tool) commits
+ * on the *next click*, so pointer-up must NOT tear it down.
+ */
+export type DragLinkMode = 'drag' | 'click';
 /** The modal dialog currently open, or `null` when no modal is shown. */
 export type ActiveModal = 'import' | 'export' | 'settings' | 'legendEditor' | 'shortcuts' | null;
 
@@ -51,6 +60,7 @@ interface UIState {
     sourceId: string | null;
     targetId: string | null;
     cursorPos: { x: number; y: number };
+    mode: DragLinkMode;
   };
 
   linkPopup: {
@@ -111,7 +121,7 @@ interface UIState {
   pinRadialMenu: () => void;
   /** Release a pinned radial menu (it then follows hover rules again). */
   unpinRadialMenu: () => void;
-  startDragLink: (sourceId: string) => void;
+  startDragLink: (sourceId: string, mode?: DragLinkMode) => void;
   updateDragLinkCursor: (pos: { x: number; y: number }) => void;
   setDragLinkTarget: (targetId: string | null) => void;
   endDragLink: () => void;
@@ -163,6 +173,7 @@ export const useUIStore = create<UIState>()((set) => ({
     sourceId: null,
     targetId: null,
     cursorPos: { x: 0, y: 0 },
+    mode: 'drag',
   },
 
   linkPopup: {
@@ -249,9 +260,9 @@ export const useUIStore = create<UIState>()((set) => ({
   unpinRadialMenu: () =>
     set((state) => ({ radialMenu: { ...state.radialMenu, pinned: false } })),
 
-  startDragLink: (sourceId) =>
+  startDragLink: (sourceId, mode = 'drag') =>
     set({
-      dragLink: { active: true, sourceId, targetId: null, cursorPos: { x: 0, y: 0 } },
+      dragLink: { active: true, sourceId, targetId: null, cursorPos: { x: 0, y: 0 }, mode },
     }),
 
   updateDragLinkCursor: (pos) =>
@@ -266,13 +277,13 @@ export const useUIStore = create<UIState>()((set) => ({
 
   endDragLink: () =>
     set({
-      dragLink: { active: false, sourceId: null, targetId: null, cursorPos: { x: 0, y: 0 } },
+      dragLink: { active: false, sourceId: null, targetId: null, cursorPos: { x: 0, y: 0 }, mode: 'drag' },
     }),
 
   showLinkPopup: (sourceId, targetId, screenPosition) =>
     set({
       linkPopup: { visible: true, sourceId, targetId, screenPosition },
-      dragLink: { active: false, sourceId: null, targetId: null, cursorPos: { x: 0, y: 0 } },
+      dragLink: { active: false, sourceId: null, targetId: null, cursorPos: { x: 0, y: 0 }, mode: 'drag' },
     }),
 
   hideLinkPopup: () =>
@@ -280,7 +291,17 @@ export const useUIStore = create<UIState>()((set) => ({
       linkPopup: { visible: false, sourceId: null, targetId: null, screenPosition: { x: 0, y: 0 } },
     }),
 
-  setActiveTool: (activeTool) => set({ activeTool }),
+  // Switching tools abandons any in-progress connect gesture, so a half-drawn
+  // link (and its dashed preview) never survives into another tool.
+  setActiveTool: (activeTool) =>
+    set((state) =>
+      state.dragLink.active
+        ? {
+            activeTool,
+            dragLink: { active: false, sourceId: null, targetId: null, cursorPos: { x: 0, y: 0 }, mode: 'drag' },
+          }
+        : { activeTool },
+    ),
 
   toggleEditingLocked: () =>
     set((state) => ({ editingLocked: !state.editingLocked })),

@@ -14,7 +14,7 @@ import { openDocumentAction, deleteSelectedAction } from '../commands/editorActi
  * - Cmd/Ctrl+S: Save to JSON
  * - Cmd/Ctrl+O: Open JSON file
  * - Cmd/Ctrl+E: Open export modal
- * - 1/V select, 2/T text, 3/E eraser, H hand, L toggle edit-lock
+ * - 1/V select, 2/T text, 3/E eraser, 4/C connect, H hand, L toggle edit-lock
  * - ?: Open keyboard shortcuts overlay
  * - Delete/Backspace: Delete selected individuals
  * - Escape: Clear selection, close modal, hide radial menu
@@ -107,6 +107,13 @@ export function useKeyboardShortcuts() {
           useUIStore.getState().setActiveTool('eraser');
           return;
         }
+        case '4':
+        case 'c': {
+          e.preventDefault();
+          if (useUIStore.getState().editingLocked) return;
+          useUIStore.getState().setActiveTool('connect');
+          return;
+        }
         case 'l': {
           e.preventDefault();
           useUIStore.getState().toggleEditingLocked();
@@ -121,6 +128,8 @@ export function useKeyboardShortcuts() {
           const ui = useUIStore.getState();
           if (ui.activeModal) {
             ui.closeModal();
+          } else if (ui.dragLink.active) {
+            ui.endDragLink();
           } else if (ui.radialMenu.visible) {
             ui.hideRadialMenu();
           } else {

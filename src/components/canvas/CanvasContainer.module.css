@@ -30,3 +30,7 @@
 .container[data-tool='partnership'] {
   cursor: crosshair;
 }
+
+.container[data-tool='connect'] {
+  cursor: crosshair;
+}

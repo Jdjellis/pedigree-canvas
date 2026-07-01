@@ -151,6 +151,14 @@ export function buildCommands(actions: EditorActions): Command[] {
       keywords: ['hand', 'pan', 'drag', 'tool'],
       run: () => actions.handTool(),
     },
+    {
+      id: 'tools.connect',
+      title: 'Connect tool',
+      category: 'tools',
+      shortcut: 'C',
+      keywords: ['connect', 'link', 'relationship', 'partner', 'join', 'tool'],
+      run: () => actions.connectTool(),
+    },
   ];
 }
 

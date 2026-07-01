@@ -53,6 +53,10 @@ export interface PedigreeSymbolProps {
    * mutation interactions (erase, radial menu) are blocked.
    */
   editingLocked?: boolean;
+  /** True while this symbol is the source of an in-progress connect gesture. */
+  isLinkSource?: boolean;
+  /** True while this symbol is the hovered drop-target of a connect gesture. */
+  isLinkTarget?: boolean;
 }
 
 const SELECTION_STROKE_WIDTH = 2;
@@ -226,6 +230,44 @@ function HoverHighlight({ isHovered }: { isHovered: boolean }) {
   );
 }
 
+const LINK_SOURCE_COLOR = '#2563eb'; // matches the dashed connect preview line
+const LINK_TARGET_COLOR = '#16a34a'; // green = valid drop target
+
+/**
+ * Ring drawn around a symbol that is the source or hovered target of an
+ * in-progress connect gesture, so the person you started from and the person
+ * you are about to link to are both obvious. Target takes visual priority when
+ * a symbol is somehow both.
+ */
+function LinkHighlight({
+  isSource,
+  isTarget,
+}: {
+  isSource: boolean;
+  isTarget: boolean;
+}) {
+  if (!isSource && !isTarget) return null;
+
+  const pad = 6;
+  const size = SYMBOL_SIZE + pad * 2;
+  const half = size / 2;
+  const color = isTarget ? LINK_TARGET_COLOR : LINK_SOURCE_COLOR;
+
+  return (
+    <Rect
+      x={-half}
+      y={-half}
+      width={size}
+      height={size}
+      stroke={color}
+      strokeWidth={2.5}
+      cornerRadius={4}
+      listening={false}
+      name="export-exclude"
+    />
+  );
+}
+
 /**
  * Main pedigree symbol component.
  *
@@ -245,6 +287,8 @@ export const PedigreeSymbol: React.FC<PedigreeSymbolProps> = React.memo(
     panMode = false,
     eraseOnHover = false,
     editingLocked = false,
+    isLinkSource = false,
+    isLinkTarget = false,
   }) => {
     // Position of the symbol when a drag began. Captured so the whole drag can
     // be committed as a single undo step on drag end (see handleDragEnd).
@@ -260,6 +304,25 @@ export const PedigreeSymbol: React.FC<PedigreeSymbolProps> = React.memo(
 
     const strokeColor = isSelected ? SELECTION_COLOR : SYMBOL_COLOR;
 
+    // Open the relationship-type popup for a link whose target is THIS symbol,
+    // anchored at this symbol's screen position. Shared by the connect tool
+    // (second click) and alt-drag (drop). Reads the live source from the store.
+    const openLinkPopupTo = useCallback(() => {
+      const { dragLink, showLinkPopup } = useUIStore.getState();
+      if (!dragLink.active || !dragLink.sourceId || dragLink.sourceId === individual.id) {
+        return;
+      }
+      const { canvasToScreen } = useViewportStore.getState();
+      const canvasEl = document.querySelector('.konvajs-content');
+      const screenPos = canvasToScreen(individual.position);
+      if (canvasEl) {
+        const rect = canvasEl.getBoundingClientRect();
+        screenPos.x += rect.left;
+        screenPos.y += rect.top;
+      }
+      showLinkPopup(dragLink.sourceId, individual.id, screenPos);
+    }, [individual.id, individual.position]);
+
     const handleClick = useCallback(
       (e: KonvaEventObject<MouseEvent | TouchEvent>) => {
         e.cancelBubble = true;
@@ -269,6 +332,25 @@ export const PedigreeSymbol: React.FC<PedigreeSymbolProps> = React.memo(
         if (tool === 'eraser') {
           ui.hideRadialMenu();
           eraseElementById(individual.id);
+          return;
+        }
+
+        // Connect tool: click a source, then click a target. The first click
+        // arms a `click`-mode link (torn down only by another click, never by
+        // pointer-up); the second click on a different person opens the
+        // relationship popup. Clicking the source again cancels.
+        if (tool === 'connect' && !ui.editingLocked) {
+          const { dragLink } = ui;
+          if (dragLink.active && dragLink.sourceId) {
+            if (dragLink.sourceId === individual.id) {
+              ui.endDragLink();
+            } else {
+              openLinkPopupTo();
+            }
+          } else {
+            ui.startDragLink(individual.id, 'click');
+            ui.updateDragLinkCursor(individual.position);
+          }
           return;
         }
 
@@ -285,7 +367,7 @@ export const PedigreeSymbol: React.FC<PedigreeSymbolProps> = React.memo(
           }
         }
       },
-      [individual.id, individual.position],
+      [individual.id, individual.position, openLinkPopupTo],
     );
 
     const handleMouseEnter = useCallback(() => {
@@ -321,11 +403,14 @@ export const PedigreeSymbol: React.FC<PedigreeSymbolProps> = React.memo(
 
     const handleDragStart = useCallback(
       (e: KonvaEventObject<DragEvent>) => {
-        if (e.evt.altKey) {
-          // Cancel the Konva drag (don't move the symbol)
+        // Alt-drag (any tool) or a drag with the connect tool draws a link
+        // instead of moving the symbol. Cancel the Konva drag so the symbol
+        // stays put; only arm a fresh link if one isn't already in progress
+        // (e.g. a connect-tool click already picked a source).
+        const ui = useUIStore.getState();
+        if (e.evt.altKey || ui.activeTool === 'connect') {
           e.target.stopDrag();
-          // Start link mode
-          useUIStore.getState().startDragLink(individual.id);
+          if (!ui.dragLink.active) ui.startDragLink(individual.id, 'drag');
           return;
         }
         const node = e.target;
@@ -375,19 +460,13 @@ export const PedigreeSymbol: React.FC<PedigreeSymbolProps> = React.memo(
     );
 
     const handleMouseUp = useCallback(() => {
-      const { dragLink, showLinkPopup } = useUIStore.getState();
-      if (dragLink.active && dragLink.sourceId && dragLink.sourceId !== individual.id) {
-        const { canvasToScreen } = useViewportStore.getState();
-        const canvasEl = document.querySelector('.konvajs-content');
-        const screenPos = canvasToScreen(individual.position);
-        if (canvasEl) {
-          const rect = canvasEl.getBoundingClientRect();
-          screenPos.x += rect.left;
-          screenPos.y += rect.top;
-        }
-        showLinkPopup(dragLink.sourceId, individual.id, screenPos);
+      // Only a drag-mode link commits on release. A click-mode link (connect
+      // tool) is completed by the next click in handleClick, so releasing the
+      // button here must not consume it.
+      if (useUIStore.getState().dragLink.mode === 'drag') {
+        openLinkPopupTo();
       }
-    }, [individual.id, individual.position]);
+    }, [openLinkPopupTo]);
 
     return (
       <Group
@@ -406,6 +485,9 @@ export const PedigreeSymbol: React.FC<PedigreeSymbolProps> = React.memo(
       >
         {/* Hover highlight (behind everything) */}
         <HoverHighlight isHovered={isHovered} />
+
+        {/* Connect-gesture source / drop-target ring */}
+        <LinkHighlight isSource={isLinkSource} isTarget={isLinkTarget} />
 
         {/* Selection highlight */}
         <SelectionHighlight individual={individual} isSelected={isSelected} />

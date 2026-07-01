@@ -257,8 +257,12 @@ export const CanvasContainer = forwardRef<CanvasContainerHandle>(
     // *still* active (i.e. was never resolved), and tears it down.
     useEffect(() => {
       const onUp = () => {
-        if (!useUIStore.getState().dragLink.active) return;
-        useUIStore.getState().endDragLink();
+        const { dragLink, endDragLink } = useUIStore.getState();
+        // Only tear down a *drag*-mode link on release. A click-mode link
+        // (connect tool) is waiting for its second click and must survive the
+        // pointer-up of its first click.
+        if (!dragLink.active || dragLink.mode !== 'drag') return;
+        endDragLink();
         resetLayerCursors();
       };
       window.addEventListener('mouseup', onUp);
@@ -354,6 +358,13 @@ export const CanvasContainer = forwardRef<CanvasContainerHandle>(
         // subscriptions inside react-konva handlers).
         const currentTool = useUIStore.getState().activeTool;
 
+        // Clicking empty canvas mid-connect abandons the pending link rather
+        // than doing the tool's usual empty-click behaviour.
+        if (useUIStore.getState().dragLink.active) {
+          useUIStore.getState().endDragLink();
+          return;
+        }
+
         if (currentTool === 'text') {
           if (useUIStore.getState().editingLocked) return;
           const stage = stageRef.current;
@@ -385,11 +396,14 @@ export const CanvasContainer = forwardRef<CanvasContainerHandle>(
     );
 
     const handleStageMouseUp = useCallback(() => {
-      if (dragLink.active) {
+      // A drag-mode link released over empty canvas is cancelled. A click-mode
+      // link is left armed — its second click (or an empty-canvas click,
+      // handled in handleStageClick) resolves it.
+      if (dragLink.active && dragLink.mode === 'drag') {
         endDragLink();
         resetLayerCursors();
       }
-    }, [dragLink.active, endDragLink, resetLayerCursors]);
+    }, [dragLink.active, dragLink.mode, endDragLink, resetLayerCursors]);
 
     const handleMarqueeDown = useCallback(
       (e: KonvaEventObject<MouseEvent>) => {
@@ -556,6 +570,12 @@ export const CanvasContainer = forwardRef<CanvasContainerHandle>(
                   panMode={isSpaceHeld || activeTool === 'hand'}
                   eraseOnHover={isErasing}
                   editingLocked={editingLocked}
+                  isLinkSource={dragLink.active && dragLink.sourceId === individual.id}
+                  isLinkTarget={
+                    dragLink.active &&
+                    dragLink.targetId === individual.id &&
+                    dragLink.sourceId !== individual.id
+                  }
                 />
               ))}
             </Layer>
