@@ -319,6 +319,11 @@ function buildLabelLines(individual: Individual): string[] {
   if (individual.vitalStatus === VitalStatus.Stillborn) {
     lines.push('SB');
   }
+  // Pregnancy not carried to term: annotate the triangle with the outcome
+  // abbreviation (SAB / TOP / ECT), mirroring SymbolLabel.tsx.
+  if (individual.isPregnancy && individual.pregnancyOutcome) {
+    lines.push(individual.pregnancyOutcome);
+  }
   if (
     (individual.vitalStatus === VitalStatus.Stillborn || individual.isPregnancy) &&
     individual.gestationalAge?.trim()

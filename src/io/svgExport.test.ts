@@ -6,6 +6,7 @@ import {
   VitalStatus,
   RelationshipType,
   TwinType,
+  PregnancyOutcome,
 } from '../types/enums';
 import { PARENTLESS_SIBSHIP_RISE } from '../utils/constants';
 
@@ -650,5 +651,28 @@ describe('childless-union rendering', () => {
     expect(svg).not.toContain('<line x1="152" y1="113" x2="168" y2="113"');
     expect(svg).not.toContain('<line x1="152" y1="118" x2="168" y2="118"');
     expect(svg).not.toContain('>azoospermia</text>');
+  });
+});
+
+describe('pregnancy-loss triangle rendering', () => {
+  it('draws a triangle and annotates the outcome abbreviation + gestational age', () => {
+    const p = person('p', 100, 100);
+    p.isPregnancy = true;
+    p.pregnancyOutcome = PregnancyOutcome.SAB;
+    p.gestationalAge = '12 wk';
+    const svg = buildPedigreeSvg(minimalDoc({ p }, {}, {}));
+
+    expect(svg).toContain('<polygon'); // triangle symbol
+    expect(svg).toContain('>SAB</text>');
+    expect(svg).toContain('>GA: 12 wk</text>');
+  });
+
+  it('labels an ectopic pregnancy with ECT', () => {
+    const p = person('p', 100, 100);
+    p.isPregnancy = true;
+    p.pregnancyOutcome = PregnancyOutcome.ECT;
+    const svg = buildPedigreeSvg(minimalDoc({ p }, {}, {}));
+
+    expect(svg).toContain('>ECT</text>');
   });
 });

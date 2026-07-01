@@ -53,6 +53,11 @@ export const SymbolLabel: React.FC<SymbolLabelProps> = React.memo(
       if (individual.vitalStatus === VitalStatus.Stillborn) {
         result.push('SB');
       }
+      // Pregnancy not carried to term: annotate the triangle with the outcome
+      // abbreviation (SAB / TOP / ECT) so the three losses are distinguishable.
+      if (individual.isPregnancy && individual.pregnancyOutcome) {
+        result.push(individual.pregnancyOutcome);
+      }
       if (
         (individual.vitalStatus === VitalStatus.Stillborn || individual.isPregnancy) &&
         individual.gestationalAge?.trim()

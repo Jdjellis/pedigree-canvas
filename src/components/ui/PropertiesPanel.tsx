@@ -3,6 +3,7 @@ import { usePedigreeStore } from '../../stores/pedigreeStore';
 import { useUIStore } from '../../stores/uiStore';
 import {
   GenderIdentity,
+  PregnancyOutcome,
   SexAssignedAtBirth,
   VitalStatus,
 } from '../../types/enums';
@@ -59,6 +60,21 @@ const VITAL_STATUS_OPTIONS: { value: VitalStatus; label: string }[] = [
   { value: VitalStatus.Deceased, label: 'Deceased' },
   { value: VitalStatus.Stillborn, label: 'Stillborn' },
 ];
+
+const PREGNANCY_OUTCOME_OPTIONS: { value: PregnancyOutcome; label: string }[] = [
+  { value: PregnancyOutcome.SAB, label: 'SAB' },
+  { value: PregnancyOutcome.TOP, label: 'TOP' },
+  { value: PregnancyOutcome.ECT, label: 'ECT' },
+];
+
+// One-line clinical reminder per outcome, shown under the outcome control.
+const PREGNANCY_OUTCOME_HINT: Record<PregnancyOutcome, string> = {
+  [PregnancyOutcome.SAB]:
+    'Spontaneous abortion / miscarriage — open triangle; note gestational age if known.',
+  [PregnancyOutcome.TOP]:
+    'Termination of pregnancy — open triangle; shaded if the fetus is affected (add a condition).',
+  [PregnancyOutcome.ECT]: 'Ectopic pregnancy — triangle with an “ECT” annotation.',
+};
 
 type RoleValue = 'none' | 'proband' | 'consultand';
 
@@ -705,6 +721,76 @@ export function PropertiesPanel() {
               (that’s for earlier pregnancy loss).
             </p>
           </div>
+        )}
+      </div>
+
+      <div className={styles.divider} />
+
+      {/* Pregnancy Section */}
+      <div className={styles.section}>
+        <div className={styles.sectionTitle}>Pregnancy</div>
+
+        <div className={styles.field}>
+          <label className={styles.checkbox}>
+            <input
+              type="checkbox"
+              checked={individual.isPregnancy}
+              onChange={(e) =>
+                update(
+                  e.target.checked
+                    ? {
+                        isPregnancy: true,
+                        // A triangle only renders once an outcome is set, so
+                        // default to SAB when first marking the pregnancy.
+                        pregnancyOutcome:
+                          individual.pregnancyOutcome ?? PregnancyOutcome.SAB,
+                      }
+                    : {
+                        isPregnancy: false,
+                        pregnancyOutcome: undefined,
+                        gestationalAge: undefined,
+                      },
+                )
+              }
+            />
+            Pregnancy not carried to term
+          </label>
+          <p className={styles.hint}>
+            Draws a triangle (SAB / TOP / ECT) in place of the sex symbol, per
+            NSGC/Bennett. For a later-gestation stillbirth use Vital Status →
+            Stillborn instead — that stays a sex symbol with a slash.
+          </p>
+        </div>
+
+        {individual.isPregnancy && (
+          <>
+            <div className={styles.field}>
+              <label className={styles.label}>Outcome</label>
+              <SegmentedControl
+                options={PREGNANCY_OUTCOME_OPTIONS}
+                value={individual.pregnancyOutcome ?? PregnancyOutcome.SAB}
+                onChange={(v) => update({ pregnancyOutcome: v })}
+                ariaLabel="Pregnancy outcome"
+              />
+              <p className={styles.hint}>
+                {PREGNANCY_OUTCOME_HINT[
+                  individual.pregnancyOutcome ?? PregnancyOutcome.SAB
+                ]}
+              </p>
+            </div>
+
+            <div className={styles.field}>
+              <label className={styles.label}>Gestational age</label>
+              <input
+                className={styles.input}
+                value={individual.gestationalAge ?? ''}
+                onChange={(e) =>
+                  update({ gestationalAge: e.target.value || undefined })
+                }
+                placeholder="e.g. 12 wk"
+              />
+            </div>
+          </>
         )}
       </div>
 

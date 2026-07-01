@@ -96,9 +96,11 @@ App enums: `PregnancyOutcome.SAB`, `.TOP`, `.ECT`.
 
 Ongoing / live pregnancy: diamond symbol (sex unknown) or sex-specific symbol when known, with gestational age annotated (e.g. "GA: 22 wk").
 
-> **Not yet in the app:** there is no UI to mark a pregnancy or set SAB/TOP/ECT,
-> so triangle rendering is currently reachable only via imported data. Tracked
-> as a follow-on to the stillbirth work (issue #106).
+> **In the app:** the person properties panel has a **Pregnancy** section — tick
+> "Pregnancy not carried to term", choose the outcome (SAB / TOP / ECT), and
+> optionally record a gestational age. The outcome abbreviation and "GA: … wk"
+> are rendered beneath the triangle; a TOP with an affected fetus is shaded via
+> the usual condition mechanism.
 
 ---
 
@@ -227,7 +229,7 @@ App: `LegendConfig` with `LegendEntry[]` (id, quarter, fillColor, fillPattern, n
 - Consanguinity double line with optional degree-of-relationship annotation (`PartnershipRelationship.consanguinityDegree`)
 - Parent-child and adoption links; adopted individuals are drawn in square brackets (`Individual.adopted`, `AdoptionBrackets`), and each line of descent is **dashed for adoptive** parents / **solid for biological** parents via `ParentChildRelationship.isAdoptive` (adopted-in vs adopted-out). Showing both families for one child at once is deferred to multi-parentage (#64).
 - MZ / DZ / unknown twin groups (with the `?` rendered for unknown zygosity); created via the "Mark selected as twins" command, zygosity editable in the properties panel
-- Pregnancy outcomes: SAB, TOP, ECT (triangle; data model only — no UI yet)
+- Pregnancy outcomes: SAB, TOP, ECT (triangle), set via the properties panel's Pregnancy section with an outcome abbreviation + optional gestational age annotation
 - Vital status: alive, deceased, stillborn (stillborn drawn with the sex symbol + deceased slash + "SB" + gestational age)
 - Childless unions: infertility (double cross-bar + optional cause) and no children by choice (single cross-bar) via `PartnershipRelationship.childlessStatus`
 - Individual numbering within generations (`generationOrder`)
@@ -236,5 +238,4 @@ App: `LegendConfig` with `LegendEntry[]` (id, quarter, fillColor, fillPattern, n
 
 ### Gaps / Not yet modelled
 - **Carrier notation**: No dedicated `isCarrier` or `carrierStatus` field; must be approximated with a condition quarter fill + legend entry.
-- **Pregnancy-loss UI**: SAB/TOP/ECT triangles exist in the data model but have no editing UI yet (follow-on to #106).
 - **Individual diagnosis uncertainty**: No structured `diagnosisUncertain` flag; convention is to use a notes field.

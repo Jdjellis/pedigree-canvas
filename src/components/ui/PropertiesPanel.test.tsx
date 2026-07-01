@@ -11,7 +11,7 @@ import { render, screen, act, fireEvent } from '@testing-library/react';
 import { beforeEach, describe, it, expect } from 'vitest';
 import { usePedigreeStore, createDefaultDocument, createDefaultIndividual } from '../../stores/pedigreeStore';
 import { useUIStore } from '../../stores/uiStore';
-import { RelationshipType, VitalStatus } from '../../types/enums';
+import { PregnancyOutcome, RelationshipType, VitalStatus } from '../../types/enums';
 import type { ParentChildRelationship, PartnershipRelationship } from '../../types/pedigree';
 import { PropertiesPanel } from './PropertiesPanel';
 
@@ -166,5 +166,74 @@ describe('PropertiesPanel stillbirth gestational age', () => {
     expect(usePedigreeStore.getState().document.individuals['p-1'].age).toBeUndefined();
     expect(screen.queryByPlaceholderText('Age')).not.toBeInTheDocument();
     expect(screen.getByPlaceholderText('e.g. 20 wk')).toBeInTheDocument();
+  });
+});
+
+describe('PropertiesPanel pregnancy section', () => {
+  function seed(overrides = {}) {
+    const ind = createDefaultIndividual({ id: 'preg-1', displayName: 'Fetus', ...overrides });
+    const doc = createDefaultDocument();
+    doc.individuals['preg-1'] = ind;
+
+    act(() => {
+      usePedigreeStore.getState().setDocument(doc);
+      useUIStore.setState({
+        selectedIds: new Set(['preg-1']),
+        propertiesPanelOpen: true,
+      });
+    });
+  }
+
+  it('hides the outcome control until the individual is marked a pregnancy', () => {
+    seed();
+    render(<PropertiesPanel />);
+    expect(
+      screen.queryByRole('group', { name: 'Pregnancy outcome' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('marks the individual a pregnancy and defaults the outcome to SAB', () => {
+    seed();
+    render(<PropertiesPanel />);
+
+    fireEvent.click(
+      screen.getByRole('checkbox', { name: 'Pregnancy not carried to term' }),
+    );
+
+    const ind = usePedigreeStore.getState().document.individuals['preg-1'];
+    expect(ind.isPregnancy).toBe(true);
+    expect(ind.pregnancyOutcome).toBe(PregnancyOutcome.SAB);
+    expect(
+      screen.getByRole('group', { name: 'Pregnancy outcome' }),
+    ).toBeInTheDocument();
+  });
+
+  it('changes the outcome to TOP / ECT via the segmented control', () => {
+    seed({ isPregnancy: true, pregnancyOutcome: PregnancyOutcome.SAB });
+    render(<PropertiesPanel />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'ECT' }));
+
+    expect(
+      usePedigreeStore.getState().document.individuals['preg-1'].pregnancyOutcome,
+    ).toBe(PregnancyOutcome.ECT);
+  });
+
+  it('clears the outcome and gestational age when unmarked', () => {
+    seed({
+      isPregnancy: true,
+      pregnancyOutcome: PregnancyOutcome.TOP,
+      gestationalAge: '12 wk',
+    });
+    render(<PropertiesPanel />);
+
+    fireEvent.click(
+      screen.getByRole('checkbox', { name: 'Pregnancy not carried to term' }),
+    );
+
+    const ind = usePedigreeStore.getState().document.individuals['preg-1'];
+    expect(ind.isPregnancy).toBe(false);
+    expect(ind.pregnancyOutcome).toBeUndefined();
+    expect(ind.gestationalAge).toBeUndefined();
   });
 });
