@@ -4,26 +4,52 @@
 }
 
 .badge {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md, 10px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.06);
-  color: var(--color-text-secondary);
+  background: none;
+  border: none;
+  padding: 2px;
+  border-radius: 4px;
+  color: var(--color-primary);
   cursor: pointer;
-  transition: background-color 0.1s;
+  transition: opacity 0.15s;
 }
 
 .badge:hover {
-  background: rgba(0, 0, 0, 0.04);
+  opacity: 0.75;
 }
 
 .badge:active {
-  background: rgba(0, 0, 0, 0.08);
+  opacity: 0.55;
+}
+
+/* Instant CSS tooltip — avoids the browser's ~500 ms native title delay. */
+.badge::after {
+  content: 'None of your data leaves your device';
+  position: absolute;
+  bottom: calc(100% + 6px);
+  right: 0;
+  white-space: nowrap;
+  background: rgba(30, 30, 30, 0.9);
+  color: #fff;
+  font-size: 11px;
+  line-height: 1.4;
+  padding: 4px 8px;
+  border-radius: 5px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0s;
+}
+
+.badge:hover::after {
+  opacity: 1;
+}
+
+/* Hide tooltip when the detail popover is already open. */
+.badge[aria-expanded='true']::after {
+  opacity: 0;
 }
 
 .popover {

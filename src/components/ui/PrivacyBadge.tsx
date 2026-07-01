@@ -1,39 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
+import { ShieldCheck } from 'lucide-react';
 import styles from './PrivacyBadge.module.css';
 
-function LockIcon(): React.JSX.Element {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 14 14"
-      fill="none"
-      aria-hidden="true"
-    >
-      <rect
-        x="2"
-        y="6"
-        width="10"
-        height="7"
-        rx="1.5"
-        stroke="currentColor"
-        strokeWidth="1.5"
-      />
-      <path
-        d="M4.5 6V4.5a2.5 2.5 0 0 1 5 0V6"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
 /**
- * Floating badge indicating local-first data privacy.
+ * Clickable privacy badge indicating local-first data storage.
  *
- * Renders a small lock button in the bottom-right chrome. Clicking it opens
- * an inline popover explaining that pedigree data never leaves the browser.
+ * Renders a shield-check icon in the bottom-right chrome. Hovering shows a
+ * native tooltip; clicking opens an inline popover with more detail.
  * Dismissed by clicking outside, pressing Escape, or clicking the badge again.
  */
 export function PrivacyBadge(): React.JSX.Element {
@@ -85,9 +58,8 @@ export function PrivacyBadge(): React.JSX.Element {
         onClick={() => setOpen((prev) => !prev)}
         aria-label="Privacy information"
         aria-expanded={open}
-        title="Privacy information"
       >
-        <LockIcon />
+        <ShieldCheck size={20} aria-hidden="true" />
       </button>
     </div>
   );
