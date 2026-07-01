@@ -7,6 +7,7 @@ import {
   isThemeId,
   type ThemeId,
 } from '../theme/themes';
+import type { TwinType } from '../types/enums';
 
 /**
  * The currently active canvas tool. `select`/`hand` are modal helpers
@@ -62,9 +63,11 @@ interface UIState {
   /**
    * The individual for whom Add Child must disambiguate between multiple unions,
    * or `null`. Set when the target belongs to 2+ partnerships so the union picker
-   * can prompt for which union the new child belongs to.
+   * can prompt for which union the new child belongs to. `twinType` carries the
+   * "hold ⌥ over Child" intent: when non-null the chosen union gets a pair of
+   * twin children of that zygosity instead of a single child.
    */
-  unionPicker: { targetId: string | null };
+  unionPicker: { targetId: string | null; twinType: TwinType | null };
 
   dragLink: {
     active: boolean;
@@ -127,8 +130,12 @@ interface UIState {
   showGenderPicker: (id: string) => void;
   /** Close the inline gender picker (keeps the individual's current shape). */
   hideGenderPicker: () => void;
-  /** Open the union picker to choose which of the target's unions gets the new child. */
-  showUnionPicker: (id: string) => void;
+  /**
+   * Open the union picker to choose which of the target's unions gets the new
+   * child. Pass `twinType` to add a pair of twin children of that zygosity to
+   * the chosen union instead of a single child.
+   */
+  showUnionPicker: (id: string, twinType?: TwinType | null) => void;
   /** Close the union picker (no child is added). */
   hideUnionPicker: () => void;
   /** Pin the radial menu open so it survives the pointer leaving the hot-zone. */
@@ -186,7 +193,7 @@ export const useUIStore = create<UIState>()((set) => ({
   },
 
   genderPicker: { targetId: null },
-  unionPicker: { targetId: null },
+  unionPicker: { targetId: null, twinType: null },
 
   dragLink: {
     active: false,
@@ -273,9 +280,10 @@ export const useUIStore = create<UIState>()((set) => ({
 
   hideGenderPicker: () => set({ genderPicker: { targetId: null } }),
 
-  showUnionPicker: (id) => set({ unionPicker: { targetId: id } }),
+  showUnionPicker: (id, twinType = null) =>
+    set({ unionPicker: { targetId: id, twinType } }),
 
-  hideUnionPicker: () => set({ unionPicker: { targetId: null } }),
+  hideUnionPicker: () => set({ unionPicker: { targetId: null, twinType: null } }),
 
   pinRadialMenu: () =>
     set((state) => ({ radialMenu: { ...state.radialMenu, pinned: true } })),

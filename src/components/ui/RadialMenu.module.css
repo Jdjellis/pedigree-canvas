@@ -75,14 +75,62 @@
   transform: translate(-50%, -50%) translate(66px, 0px) scale(1.1);
 }
 
-/* Cardinal south: child goes straight down in the generational direction. */
+/*
+ * Cardinal south: child goes straight down in the generational direction.
+ * Holding ⌥ fades it out and reveals "MZ"/"DZ" twin-children buttons that split
+ * from the same origin LEFT and RIGHT along the child axis (the mirror of the
+ * Sibling split, which splits vertically because Sibling sits on the horizontal
+ * axis).
+ */
 .bottom {
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%) translate(0px, 72px);
+  opacity: 1;
 }
 .bottom:hover {
   transform: translate(-50%, -50%) translate(0px, 72px) scale(1.1);
+}
+.bottom.altActive {
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -50%) translate(0px, 72px) scale(0.7);
+}
+
+/*
+ * Twin-children buttons: both start collapsed at the Child position and slide
+ * apart to ±26px on the horizontal axis while fading in when ⌥ is held.
+ */
+.bottomLeft {
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) translate(0px, 72px) scale(0.7);
+  opacity: 0;
+  pointer-events: none;
+}
+.bottomLeft.altActive {
+  transform: translate(-50%, -50%) translate(-26px, 72px);
+  opacity: 1;
+  pointer-events: auto;
+}
+.bottomLeft.altActive:hover {
+  transform: translate(-50%, -50%) translate(-26px, 72px) scale(1.1);
+}
+
+.bottomRight {
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) translate(0px, 72px) scale(0.7);
+  opacity: 0;
+  pointer-events: none;
+}
+.bottomRight.altActive {
+  transform: translate(-50%, -50%) translate(26px, 72px);
+  opacity: 1;
+  pointer-events: auto;
+}
+.bottomRight.altActive:hover {
+  transform: translate(-50%, -50%) translate(26px, 72px) scale(1.1);
 }
 
 /* Cardinal west: Sibling. Fades out when ⌥ is held. */

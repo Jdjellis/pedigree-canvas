@@ -249,6 +249,23 @@ interface PedigreeState {
     partnership: PartnershipRelationship,
     link: ParentChildRelationship,
   ) => void;
+  /**
+   * Add a set of children who are twins of EACH OTHER, plus their twin group, in
+   * one undo step. Mirrors {@link addChildToFamily}/{@link addChildViaNewUnion}
+   * but for the "hold ⌥ over Child" flow, where the target is the parent so the
+   * twins are two brand-new children rather than the target itself.
+   *
+   * When `newPartnership` is provided its `childrenIds` must already list the new
+   * children and it is inserted as a fresh union under the target. When it is
+   * `null` the children are appended to the existing union named by
+   * `twinGroup.parentPartnershipId`.
+   */
+  addTwinChildren: (
+    children: Individual[],
+    links: ParentChildRelationship[],
+    twinGroup: TwinGroup,
+    newPartnership: PartnershipRelationship | null,
+  ) => void;
   fillUnionPartner: (partner: Individual, partnershipId: string) => void;
   addParentsToParentlessUnion: (
     parent1: Individual,
@@ -1014,6 +1031,55 @@ export const usePedigreeStore = create<PedigreeState>()(
               individuals,
               partnerships,
               parentChildLinks,
+            },
+          };
+        }),
+
+      addTwinChildren: (children, links, twinGroup, newPartnership) =>
+        set((state) => {
+          const partnershipId = twinGroup.parentPartnershipId;
+
+          const partnerships = { ...state.document.partnerships };
+          if (newPartnership) {
+            // Fresh 1-partner union under the target; its childrenIds already
+            // list the twins.
+            partnerships[partnershipId] = newPartnership;
+          } else {
+            const existing = partnerships[partnershipId];
+            if (!existing) return state;
+            partnerships[partnershipId] = {
+              ...existing,
+              childrenIds: [...existing.childrenIds, ...children.map((c) => c.id)],
+            };
+          }
+
+          let individuals: Record<string, Individual> = { ...state.document.individuals };
+          for (const child of children) individuals[child.id] = child;
+
+          const parentChildLinks = { ...state.document.parentChildLinks };
+          for (const link of links) parentChildLinks[link.id] = link;
+
+          const twinGroups = {
+            ...state.document.twinGroups,
+            [twinGroup.id]: twinGroup,
+          };
+
+          // Re-tidy the whole blood family so parents re-centre over the full
+          // sibling row, exactly as the single-child path does. Insert + layout +
+          // twin-grouping share this one `set` so a single undo reverts them all.
+          individuals = relayoutFamily(
+            { individuals, partnerships, parentChildLinks },
+            children[0].id,
+          );
+
+          return {
+            document: {
+              ...state.document,
+              metadata: { ...state.document.metadata, updatedAt: new Date().toISOString() },
+              individuals,
+              partnerships,
+              parentChildLinks,
+              twinGroups,
             },
           };
         }),

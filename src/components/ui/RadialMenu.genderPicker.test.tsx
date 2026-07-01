@@ -99,7 +99,7 @@ describe('RadialMenu gender-picker wiring', () => {
   it('Add MZ twin (parentless sibship branch) creates an Unknown twin and opens the gender picker on it', () => {
     // ROOT has no parents, so handleAddTwin takes the parentless-sibship branch.
     render(<RadialMenu />);
-    fireEvent.click(screen.getByRole('button', { name: 'MZ' }));
+    fireEvent.click(screen.getByTitle('Add Monozygotic twin (MZ)'));
 
     const doc = usePedigreeStore.getState().document;
     const newPeople = Object.values(doc.individuals).filter((i) => i.id !== ROOT);
@@ -145,7 +145,7 @@ describe('RadialMenu gender-picker wiring', () => {
     });
 
     render(<RadialMenu />);
-    fireEvent.click(screen.getByRole('button', { name: 'DZ' }));
+    fireEvent.click(screen.getByTitle('Add Dizygotic twin (DZ)'));
 
     const doc = usePedigreeStore.getState().document;
     const newPeople = Object.values(doc.individuals).filter(
@@ -161,7 +161,7 @@ describe('RadialMenu gender-picker wiring', () => {
     usePedigreeStore.temporal.getState().clear();
 
     render(<RadialMenu />);
-    fireEvent.click(screen.getByRole('button', { name: 'MZ' }));
+    fireEvent.click(screen.getByTitle('Add Monozygotic twin (MZ)'));
 
     const twinId = useUIStore.getState().genderPicker.targetId;
     expect(twinId).not.toBeNull();

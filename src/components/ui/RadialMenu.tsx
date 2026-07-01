@@ -4,6 +4,7 @@ import { useViewportStore } from '../../stores/viewportStore';
 import { usePedigreeStore, createDefaultIndividual } from '../../stores/pedigreeStore';
 import { getPresentPartners, findPartnerships } from '../../utils/graphTraversal';
 import { addChildToUnion } from './addChild';
+import { addTwinChildrenToUnion, buildTwinChildrenViaNewUnion } from './addTwinChildren';
 import { generateId } from '../../utils/idGenerator';
 import { RelationshipType, GenderIdentity, TwinType } from '../../types/enums';
 import { PARTNER_SPACING, GENERATION_SPACING, SIBLING_SPACING } from '../../utils/constants';
@@ -34,6 +35,7 @@ export function RadialMenu() {
   const fillUnionPartner = usePedigreeStore((s) => s.fillUnionPartner);
   const addParentsToParentlessUnion = usePedigreeStore((s) => s.addParentsToParentlessUnion);
   const addTwinGroup = usePedigreeStore((s) => s.addTwinGroup);
+  const addTwinChildren = usePedigreeStore((s) => s.addTwinChildren);
 
   const [altMod, setAltMod] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -230,6 +232,44 @@ export function RadialMenu() {
     addChildToUnion(doc, target, partnership);
   }, [target, targetId, doc, showGenderPicker, showUnionPicker, addChildViaNewUnion, hideRadialMenu, select]);
 
+  // Hold ⌥ over Child: add a pair of twin CHILDREN. Because the target is the
+  // parent (not a co-twin), a twin child can only exist as two new siblings born
+  // together — so this mirrors handleAddChild's union resolution but creates a
+  // pair grouped by zygosity rather than a single child.
+  const handleAddChildTwin = useCallback((twinType: TwinType) => {
+    if (!target || !targetId) return;
+
+    const partnershipIds = findPartnerships(doc, targetId);
+
+    // No union yet: create a 1-partner union with the target as sole parent
+    // holding both twins.
+    if (partnershipIds.length === 0) {
+      const { children, links, partnership, twinGroup } = buildTwinChildrenViaNewUnion(
+        target,
+        twinType,
+      );
+      addTwinChildren(children, links, twinGroup, partnership);
+      hideRadialMenu();
+      select(children[0].id);
+      showGenderPicker(children[0].id);
+      return;
+    }
+
+    // Multiple unions: which one the twins belong to is ambiguous, so defer to
+    // the union picker (carrying the twin intent) — same as single Add Child.
+    if (partnershipIds.length > 1) {
+      hideRadialMenu();
+      showUnionPicker(targetId, twinType);
+      return;
+    }
+
+    const partnership = doc.partnerships[partnershipIds[0]];
+    if (!partnership) return;
+
+    hideRadialMenu();
+    addTwinChildrenToUnion(doc, target, partnership, twinType);
+  }, [target, targetId, doc, showGenderPicker, showUnionPicker, addTwinChildren, hideRadialMenu, select]);
+
   const handleAddSibling = useCallback(() => {
     if (!target || !targetId) return;
 
@@ -370,11 +410,25 @@ export function RadialMenu() {
           Partner
         </button>
         <button
-          className={clsx(styles.option, styles.bottom)}
+          className={clsx(styles.option, styles.bottom, altMod && styles.altActive)}
           onClick={handleAddChild}
-          title="Add Child"
+          title="Add Child (hold ⌥ for MZ / DZ twin children)"
         >
           Child
+        </button>
+        <button
+          className={clsx(styles.option, styles.bottomLeft, altMod && styles.altActive)}
+          onClick={() => handleAddChildTwin(TwinType.Monozygotic)}
+          title="Add Monozygotic (MZ) twin children"
+        >
+          MZ
+        </button>
+        <button
+          className={clsx(styles.option, styles.bottomRight, altMod && styles.altActive)}
+          onClick={() => handleAddChildTwin(TwinType.Dizygotic)}
+          title="Add Dizygotic (DZ) twin children"
+        >
+          DZ
         </button>
         <button
           className={clsx(styles.option, styles.left, altMod && styles.altActive)}

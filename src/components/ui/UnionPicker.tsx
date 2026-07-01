@@ -7,6 +7,7 @@ import { findPartnerships } from '../../utils/graphTraversal';
 import { individualDisplayLabel } from '../../utils/individualLabel';
 import { RelationshipType } from '../../types/enums';
 import { addChildToUnion } from './addChild';
+import { addTwinChildrenToUnion } from './addTwinChildren';
 import type { PartnershipRelationship } from '../../types/pedigree';
 import styles from './UnionPicker.module.css';
 
@@ -44,6 +45,7 @@ function describeUnion(
  */
 export function UnionPicker(): React.JSX.Element | null {
   const targetId = useUIStore((s) => s.unionPicker.targetId);
+  const twinType = useUIStore((s) => s.unionPicker.twinType);
   const editingLocked = useUIStore((s) => s.editingLocked);
   const scale = useViewportStore((s) => s.scale);
   const viewportX = useViewportStore((s) => s.position.x);
@@ -61,11 +63,16 @@ export function UnionPicker(): React.JSX.Element | null {
     (union: PartnershipRelationship) => {
       if (!target) return;
       useUIStore.getState().hideUnionPicker();
-      // `doc`/`target` are the current store snapshot; addChildToUnion reads the
-      // union's present partners + children from it to place the child.
-      addChildToUnion(doc, target, union);
+      // `doc`/`target` are the current store snapshot; the add helpers read the
+      // union's present partners + children from it to place the child(ren).
+      // A twin intent (held ⌥ over Child) adds a pair; otherwise a single child.
+      if (twinType) {
+        addTwinChildrenToUnion(doc, target, union, twinType);
+      } else {
+        addChildToUnion(doc, target, union);
+      }
     },
-    [doc, target],
+    [doc, target, twinType],
   );
 
   // Self-clear: if the target disappears (undo, delete, import) or no longer has
@@ -105,7 +112,7 @@ export function UnionPicker(): React.JSX.Element | null {
         role="dialog"
         aria-label="Choose which union the child belongs to"
       >
-        <p className={styles.title}>Add child to…</p>
+        <p className={styles.title}>{twinType ? 'Add twins to…' : 'Add child to…'}</p>
         {unionIds.map((id) => {
           const union = doc.partnerships[id];
           if (!union) return null;
