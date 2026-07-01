@@ -9,10 +9,19 @@ import {
   LABEL_COLOR,
   LABEL_OFFSET_Y,
 } from '../../../utils/constants';
+import { CHILDLESS_LABEL_OFFSET } from '../../../utils/childlessness';
 
 export interface SymbolLabelProps {
   individual: Individual;
   individualNumber?: number;
+  /**
+   * True when this individual's childless marks are drawn below the symbol. The
+   * label block is then pushed down to clear the stub + cross-bar(s), and the
+   * childless cause (if any) is folded in as the first line so it reads as part
+   * of the marks. Owned by the parent, which knows whether the marks are
+   * suppressed by children — see {@link childlessMarksActive}.
+   */
+  childlessActive?: boolean;
 }
 
 const LINE_HEIGHT = LABEL_FONT_SIZE + 4;
@@ -24,9 +33,17 @@ const LINE_HEIGHT = LABEL_FONT_SIZE + 4;
 const NUMBER_CORNER_GAP = 3;
 
 export const SymbolLabel: React.FC<SymbolLabelProps> = React.memo(
-  ({ individual, individualNumber }) => {
+  ({ individual, individualNumber, childlessActive = false }) => {
     const lines = useMemo(() => {
       const result: string[] = [];
+
+      // Childless cause (e.g. "vasectomy") sits first, directly under the
+      // cross-bar(s), when the childless marks are drawn — mirrors the partnership
+      // marker, which prints the cause below its bars.
+      const childlessReason = individual.childlessReason?.trim();
+      if (childlessActive && childlessReason) {
+        result.push(childlessReason);
+      }
 
       // Display name
       if (individual.displayName) {
@@ -87,14 +104,16 @@ export const SymbolLabel: React.FC<SymbolLabelProps> = React.memo(
       }
 
       return result;
-    }, [individual]);
+    }, [individual, childlessActive]);
 
     if (lines.length === 0 && individualNumber == null) {
       return null;
     }
 
     const half = SYMBOL_SIZE / 2;
-    const startY = half + LABEL_OFFSET_Y;
+    // Push the whole stack below the childless marks when they are drawn.
+    const startY =
+      half + LABEL_OFFSET_Y + (childlessActive ? CHILDLESS_LABEL_OFFSET : 0);
 
     return (
       <Group>

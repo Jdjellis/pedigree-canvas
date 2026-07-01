@@ -5,7 +5,7 @@
  * properties panel so the geometry and the "has children" suppression rule
  * cannot drift.
  */
-import { SYMBOL_SIZE } from './constants';
+import { SYMBOL_SIZE, CHILDLESS_STUB } from './constants';
 import type { Individual, PartnershipRelationship } from '../types/pedigree';
 import type { Point } from './partnershipGeometry';
 
@@ -37,3 +37,28 @@ export function individualHasChildren(
       p.childrenIds.length > 0,
   );
 }
+
+/**
+ * Whether an individual's childless marks are actually drawn: the status is set
+ * *and* not suppressed by existing children. Used to gate both the marks and the
+ * label-block offset that keeps the name/investigations/cause stack clear of
+ * them, so the two never disagree.
+ */
+export function childlessMarksActive(
+  individual: Individual,
+  partnerships: Record<string, PartnershipRelationship>,
+): boolean {
+  return (
+    !!individual.childlessStatus &&
+    !individualHasChildren(partnerships, individual.id)
+  );
+}
+
+/**
+ * Extra vertical offset added to the label block when childless marks are drawn,
+ * so the name / investigations / cause stack starts below the stub and
+ * cross-bar(s) instead of colliding with them. Equal to the stub length, which
+ * leaves the normal label gap ({@link LABEL_OFFSET_Y}) between the bars and the
+ * first line.
+ */
+export const CHILDLESS_LABEL_OFFSET = CHILDLESS_STUB;

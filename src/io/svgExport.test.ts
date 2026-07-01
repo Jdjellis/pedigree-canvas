@@ -713,6 +713,42 @@ describe('individual childless rendering', () => {
     expect(svg).not.toContain('<line x1="100" y1="120" x2="100" y2="138"');
     expect(svg).not.toContain('>azoospermia</text>');
   });
+
+  it('pushes the label stack below the marks and folds the cause in as the first line', () => {
+    const p = person('p', 100, 100);
+    p.displayName = 'Solo';
+    p.childlessStatus = 'infertility';
+    p.childlessReason = 'azoospermia';
+    const svg = buildPedigreeSvg(minimalDoc({ p }, {}, {}));
+    // Bars still hang directly from the symbol (unchanged geometry).
+    expect(svg).toContain('<line x1="92" y1="133" x2="108" y2="133"');
+    expect(svg).toContain('<line x1="92" y1="138" x2="108" y2="138"');
+    // Label block starts at 20 + LABEL_OFFSET_Y(8) + CHILDLESS_LABEL_OFFSET(18) = 46;
+    // first baseline at 46 + FONT(12) = 58, which clears the bars at y=138.
+    // The cause is the first line, the name follows one line height (16) below.
+    expect(svg).toContain('<text x="0" y="58"');
+    expect(svg).toMatch(/<text x="0" y="58"[^>]*>azoospermia<\/text>/);
+    expect(svg).toMatch(/<text x="0" y="74"[^>]*>Solo<\/text>/);
+  });
+
+  it('applies the label offset even when there is no cause', () => {
+    const p = person('p', 100, 100);
+    p.displayName = 'Solo';
+    p.childlessStatus = 'noChildren';
+    const svg = buildPedigreeSvg(minimalDoc({ p }, {}, {}));
+    // With no cause, the name is the only line — pushed to y=58 (offset applied),
+    // not the un-offset y=40.
+    expect(svg).toMatch(/<text x="0" y="58"[^>]*>Solo<\/text>/);
+    expect(svg).not.toContain('<text x="0" y="40"');
+  });
+
+  it('does not offset the label stack for an ordinary individual', () => {
+    const p = person('p', 100, 100);
+    p.displayName = 'Solo';
+    const svg = buildPedigreeSvg(minimalDoc({ p }, {}, {}));
+    // Normal start: 20 + LABEL_OFFSET_Y(8) = 28; baseline at 28 + FONT(12) = 40.
+    expect(svg).toMatch(/<text x="0" y="40"[^>]*>Solo<\/text>/);
+  });
 });
 
 describe('pregnancy-loss triangle rendering', () => {

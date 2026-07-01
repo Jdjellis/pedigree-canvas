@@ -10,7 +10,9 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Individual-level childlessness: a person can be marked infertile or childless
   (no partner drawn) from their properties panel, drawn as a stub below the
   symbol ended by a double or single cross-bar — identical to the partnership
-  marker, per NSGC/Bennett. Suppressed once the person has children.
+  marker, per NSGC/Bennett. Suppressed once the person has children. The
+  symbol's label stack (name, investigations, and the childless cause) is pushed
+  below the cross-bars so nothing overlaps the marks.
 - Help/shortcuts hint that a relationship line can be clicked to edit it
   (relationship type, consanguinity, infertility), so those line-level editors
   are discoverable.

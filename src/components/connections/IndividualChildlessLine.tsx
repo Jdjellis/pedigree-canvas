@@ -1,5 +1,5 @@
 import type { JSX } from 'react';
-import { Line, Text } from 'react-konva';
+import { Line } from 'react-konva';
 import type { Individual, PartnershipRelationship } from '../../types/pedigree';
 import {
   LINE_COLOR,
@@ -7,10 +7,6 @@ import {
   CHILDLESS_STUB,
   CHILDLESS_BAR_HALF,
   CHILDLESS_BAR_GAP,
-  LABEL_FONT_SIZE,
-  LABEL_FONT_FAMILY,
-  LABEL_COLOR,
-  RELATIONSHIP_LABEL_OFFSET,
 } from '../../utils/constants';
 import { childlessMarks } from '../../utils/partnershipGeometry';
 import { individualChildlessAnchor, individualHasChildren } from '../../utils/childlessness';
@@ -27,6 +23,10 @@ interface IndividualChildlessLineProps {
  * stub + cross-bar(s) geometry, anchored at the symbol's bottom edge instead of
  * a relationship-line midpoint. Non-interactive — the individual symbol carries
  * selection and drives the properties panel.
+ *
+ * The cause text is *not* drawn here: it is folded into the symbol's label stack
+ * (see {@link SymbolLabel}), which is pushed below these marks so the two never
+ * collide.
  *
  * Suppressed once the individual has children on the canvas: the marker would
  * contradict the descent line, and the panel control is disabled there, so a
@@ -46,42 +46,24 @@ export function IndividualChildlessLine({
     barGap: CHILDLESS_BAR_GAP,
   });
 
-  const els: JSX.Element[] = [
-    <Line
-      key={`icl-stub-${individual.id}`}
-      points={stub}
-      stroke={LINE_COLOR}
-      strokeWidth={LINE_WIDTH}
-      listening={false}
-    />,
-    ...bars.map((b, i) => (
+  return (
+    <>
       <Line
-        key={`icl-bar-${individual.id}-${i}`}
-        points={b}
+        key={`icl-stub-${individual.id}`}
+        points={stub}
         stroke={LINE_COLOR}
         strokeWidth={LINE_WIDTH}
         listening={false}
       />
-    )),
-  ];
-
-  const reason = individual.childlessReason?.trim();
-  if (reason) {
-    els.push(
-      <Text
-        key={`icl-reason-${individual.id}`}
-        text={reason}
-        x={anchor.x - 100}
-        y={anchor.y + CHILDLESS_STUB + RELATIONSHIP_LABEL_OFFSET}
-        width={200}
-        align="center"
-        fontSize={LABEL_FONT_SIZE}
-        fontFamily={LABEL_FONT_FAMILY}
-        fill={LABEL_COLOR}
-        listening={false}
-      />,
-    );
-  }
-
-  return <>{els}</>;
+      {bars.map((b, i) => (
+        <Line
+          key={`icl-bar-${individual.id}-${i}`}
+          points={b}
+          stroke={LINE_COLOR}
+          strokeWidth={LINE_WIDTH}
+          listening={false}
+        />
+      ))}
+    </>
+  );
 }

@@ -23,6 +23,7 @@ import { TextAnnotationLayer } from './TextAnnotationLayer';
 import { BoundsLayer } from './BoundsLayer';
 import { computeBounds } from '../../utils/boundsCalculation';
 import { collectInvestigations } from '../../utils/investigations';
+import { childlessMarksActive } from '../../utils/childlessness';
 import type { ActiveQuarter } from './symbols/ConditionOverlay';
 import type { Individual } from '../../types/pedigree';
 import { THEME_CANVAS_PALETTES } from '../../theme/themes';
@@ -567,6 +568,7 @@ export const CanvasContainer = forwardRef<CanvasContainerHandle>(
                   eraseOnHover={isErasing}
                   editingLocked={editingLocked}
                   symbolFill={canvasPalette.symbolFill}
+                  childlessActive={childlessMarksActive(individual, partnerships)}
                 />
               ))}
             </Layer>

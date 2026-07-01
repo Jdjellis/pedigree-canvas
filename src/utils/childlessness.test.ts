@@ -1,6 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { individualChildlessAnchor, individualHasChildren } from './childlessness';
-import { SYMBOL_SIZE } from './constants';
+import {
+  individualChildlessAnchor,
+  individualHasChildren,
+  childlessMarksActive,
+  CHILDLESS_LABEL_OFFSET,
+} from './childlessness';
+import { SYMBOL_SIZE, CHILDLESS_STUB } from './constants';
 import { RelationshipType } from '../types/enums';
 import type { Individual, PartnershipRelationship } from '../types/pedigree';
 
@@ -50,5 +55,30 @@ describe('individualHasChildren', () => {
   it('is false when the individual is not a partner in any union', () => {
     const partnerships = { u1: union('u1', 'a', 'b', ['c']) };
     expect(individualHasChildren(partnerships, 'z')).toBe(false);
+  });
+});
+
+describe('childlessMarksActive', () => {
+  it('is true when the status is set and the individual has no children', () => {
+    const p = person('a', 0, 0);
+    p.childlessStatus = 'infertility';
+    expect(childlessMarksActive(p, {})).toBe(true);
+  });
+
+  it('is false when no status is set', () => {
+    expect(childlessMarksActive(person('a', 0, 0), {})).toBe(false);
+  });
+
+  it('is false when the status is set but the individual has children (suppressed)', () => {
+    const p = person('a', 0, 0);
+    p.childlessStatus = 'noChildren';
+    const partnerships = { u1: union('u1', 'a', 'b', ['c']) };
+    expect(childlessMarksActive(p, partnerships)).toBe(false);
+  });
+});
+
+describe('CHILDLESS_LABEL_OFFSET', () => {
+  it('equals the stub length, so labels clear the cross-bars', () => {
+    expect(CHILDLESS_LABEL_OFFSET).toBe(CHILDLESS_STUB);
   });
 });
