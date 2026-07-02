@@ -19,6 +19,10 @@ full explanation and the fix):
 - **Feature flags** live in `src/config/featureFlags.ts` (build-time defaults,
   mutable for per-test overrides) — reset any flag you flip in a test's
   `afterEach`.
+- **Auto-spacing** (`computeTreeLayout`) is documented in the "Auto-spacing"
+  section of `docs/architecture-reference.md`; `src/utils/__fixtures__/pedigrees.ts`
+  + `invariants.ts` are the canonical layout test surface — add a fixture and
+  check invariants when changing layout.
 
 ## Clinical Standards Reference
 

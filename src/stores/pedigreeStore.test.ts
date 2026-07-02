@@ -1842,6 +1842,41 @@ describe('groupTwins', () => {
     usePedigreeStore.temporal.getState().undo();
     expect(Object.keys(usePedigreeStore.getState().document.twinGroups)).toHaveLength(0);
   });
+
+  it('reorders non-adjacent twins to be contiguous after grouping (#131)', () => {
+    // Seed a sibship of 3 children: A and B are the twins-to-be, but C sits
+    // between them by x-position (A-left, C-middle, B-right).
+    const store = usePedigreeStore.getState();
+    store.addPartnership({
+      id: 'union1',
+      type: RelationshipType.Partnership,
+      partner1Id: 'p1',
+      partner2Id: 'p2',
+      childrenIds: ['a', 'b', 'c'],
+    });
+    // Place them A(left), C(middle), B(right) so A and B are NOT adjacent.
+    store.addIndividual(createDefaultIndividual({ id: 'a', position: { x: 0, y: 200 } }));
+    store.addIndividual(createDefaultIndividual({ id: 'c', position: { x: 80, y: 200 } }));
+    store.addIndividual(createDefaultIndividual({ id: 'b', position: { x: 160, y: 200 } }));
+    for (const id of ['a', 'b', 'c']) {
+      store.addParentChildLink({
+        id: `link-${id}`,
+        type: RelationshipType.ParentChild,
+        parentPartnershipId: 'union1',
+        childId: id,
+        isAdoptive: false,
+      });
+    }
+
+    store.groupTwins(['a', 'b'], TwinType.Dizygotic);
+
+    const { individuals } = usePedigreeStore.getState().document;
+    // Sort siblings by their final x-position and check A and B are adjacent.
+    const sorted = ['a', 'b', 'c'].sort((p, q) => individuals[p].position.x - individuals[q].position.x);
+    const idxA = sorted.indexOf('a');
+    const idxB = sorted.indexOf('b');
+    expect(Math.abs(idxA - idxB)).toBe(1);
+  });
 });
 
 // ---------------------------------------------------------------------------

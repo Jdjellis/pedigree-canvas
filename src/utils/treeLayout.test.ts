@@ -5,12 +5,15 @@ import {
   findRootUnion,
   coupleAround,
   packBlocks,
+  resolveRowSeparation,
   computeTreeLayout,
   type LayoutDoc,
 } from './treeLayout';
 import type { Individual, PartnershipRelationship, ParentChildRelationship } from '../types/pedigree';
 import { RelationshipType } from '../types/enums';
 import { createDefaultIndividual } from '../stores/pedigreeStore';
+import { finalPositions, checkAllInvariants } from './__fixtures__/invariants';
+import { SYMBOL_SIZE } from './constants';
 
 function ind(id: string, x: number, generation = 0): Individual {
   return createDefaultIndividual({ id, generation, position: { x, y: generation * 150 } });
@@ -97,6 +100,25 @@ describe('packBlocks', () => {
   it('never pulls an already-clear block left', () => {
     const offsets = packBlocks([{ anchorX: 0, minX: 0, maxX: 0 }, { anchorX: 0, minX: 500, maxX: 500 }], 80);
     expect(offsets).toEqual([0, 0]);
+  });
+});
+
+describe('resolveRowSeparation', () => {
+  const B = (minX: number, maxX: number) => ({ ids: [], minX, maxX });
+  it('leaves an already-separated row untouched (idempotent)', () => {
+    expect(resolveRowSeparation([B(0,0), B(80,80), B(160,160)], 80)).toEqual([0, 0, 0]);
+  });
+  it('pushes a coincident block right to clear minGap (the #115 collision)', () => {
+    expect(resolveRowSeparation([B(100,100), B(100,100)], 80)).toEqual([0, 80]);
+  });
+  it('separates by extents plus gap for a wide block', () => {
+    expect(resolveRowSeparation([B(0,0), B(-60,60)], 80)).toEqual([0, 140]);
+  });
+  it('never pulls a clear block left', () => {
+    expect(resolveRowSeparation([B(0,0), B(500,500)], 80)).toEqual([0, 0]);
+  });
+  it('cascades three coincident points', () => {
+    expect(resolveRowSeparation([B(0,0), B(0,0), B(0,0)], 80)).toEqual([0, 80, 160]);
   });
 });
 
@@ -389,17 +411,20 @@ describe('computeTreeLayout — clearance & cross-sibship', () => {
   });
 });
 
-describe('computeTreeLayout — remarriage (best-effort limitation)', () => {
-  it('does not crash when a person has two child-bearing unions; second sibship is left untouched', () => {
-    // layoutChildBlock only lays out the first child-bearing union (by insertion
-    // order).  Children from a second union (remarriage) are left in place.
-    // This test documents the known limitation and guards against a crash.
+describe('computeTreeLayout — remarriage (multi-union)', () => {
+  it('lays out a second child-bearing union clear of the first (both sibships tidy)', () => {
+    // The earlier best-effort limitation (only the first child-bearing union was
+    // laid out; a remarriage's second sibship was left in place) was LIFTED in
+    // #131: composeHubUnions now lays out every child-bearing union of the shared
+    // parent and packs the sibships side-by-side. Both half-sibs are seeded at the
+    // SAME x here, so leaving u2 in place would violate no-overlap; the multi-union
+    // layout must resolve it and satisfy every positional invariant.
     const individuals = {
       p: ind('p', 0, 0),
       spouse1: ind('spouse1', 120, 0),
       spouse2: ind('spouse2', -120, 0),
-      kidA: ind('kidA', 60, 1),
-      kidB: ind('kidB', -60, 1),
+      kidA: ind('kidA', 0, 1),
+      kidB: ind('kidB', 0, 1), // overlaps kidA at seed time
     };
     const partnerships = {
       u1: union('u1', 'p', 'spouse1', ['kidA']),
@@ -409,14 +434,22 @@ describe('computeTreeLayout — remarriage (best-effort limitation)', () => {
       la: link('la', 'u1', 'kidA'),
       lb: link('lb', 'u2', 'kidB'),
     };
-    // Must not throw.
+    const d = { individuals, partnerships, parentChildLinks };
+
     let moved: Record<string, { x: number; y: number }> | undefined;
     expect(() => {
-      moved = computeTreeLayout({ individuals, partnerships, parentChildLinks }, 'u1');
+      moved = computeTreeLayout(d, 'u1');
     }).not.toThrow();
-    // kidB belongs to the second union (u2) which is not laid out; it must be
-    // absent from the moves map (left at its current position).
-    expect(moved!['kidB']).toBeUndefined();
+
+    // Both unions are now laid out: every positional invariant holds (no symbol
+    // overlap, cousin sibships separated, partner spacing exact, rows aligned).
+    const pos = finalPositions(d, moved!);
+    const res = checkAllInvariants(pos, d);
+    expect(res.violations, JSON.stringify(res.violations, null, 2)).toEqual([]);
+
+    // The second sibship's child (kidB) is now placed clear of the first (kidA),
+    // no longer left at its overlapping seed position.
+    expect(Math.abs(pos.kidA.x - pos.kidB.x)).toBeGreaterThanOrEqual(SYMBOL_SIZE - 0.5);
   });
 });
 
