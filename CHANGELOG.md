@@ -40,6 +40,10 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   (issue #106).
 
 ### Fixed
+- Changing a childless status (on an individual or a partnership) now clears the
+  previously entered cause, which is specific to the status it was typed under.
+  Switching between "no children" and "infertility" — or back to "None" — no
+  longer leaves a stale cause behind.
 - The eraser tool no longer deletes the last remaining individual, which left an
   empty canvas with no way to add a new person. Erasing stops at the final
   individual, matching the existing guard on keyboard delete (issue #103).

@@ -114,9 +114,10 @@ export function ConnectionProperties() {
               onChange={(v) =>
                 updatePartnership(p.id, {
                   childlessStatus: v === 'none' ? undefined : v,
-                  // Keep the cause across no-children/infertility; drop it only
-                  // when clearing the childless status entirely.
-                  childlessReason: v === 'none' ? undefined : p.childlessReason,
+                  // The cause is specific to the status it was entered under, so
+                  // any status change (including switching between no-children and
+                  // infertility) drops the now-stale cause.
+                  childlessReason: undefined,
                 })
               }
               ariaLabel="Childless status"

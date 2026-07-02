@@ -273,7 +273,7 @@ describe('PropertiesPanel individual childlessness control', () => {
     );
   });
 
-  it('keeps the cause when switching between no-children and infertility, drops it on none', () => {
+  it('clears the stale cause when switching childless status, and on none', () => {
     seed({ childlessStatus: 'noChildren', childlessReason: 'vasectomy' });
     render(<PropertiesPanel />);
 
@@ -281,7 +281,7 @@ describe('PropertiesPanel individual childlessness control', () => {
     fireEvent.click(within(group).getByRole('button', { name: 'Infertility' }));
     let ind = usePedigreeStore.getState().document.individuals['ind-1'];
     expect(ind.childlessStatus).toBe('infertility');
-    expect(ind.childlessReason).toBe('vasectomy');
+    expect(ind.childlessReason).toBeUndefined();
 
     fireEvent.click(within(group).getByRole('button', { name: 'None' }));
     ind = usePedigreeStore.getState().document.individuals['ind-1'];
