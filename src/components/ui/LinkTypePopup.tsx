@@ -1,9 +1,8 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback } from 'react';
 import { useUIStore } from '../../stores/uiStore';
 import { usePedigreeStore } from '../../stores/pedigreeStore';
 import { RelationshipType } from '../../types/enums';
 import { generateId } from '../../utils/idGenerator';
-import { clearCanvasCursor } from '../../utils/canvasCursor';
 import type { PartnershipRelationship, ParentChildRelationship } from '../../types/pedigree';
 import styles from './LinkTypePopup.module.css';
 
@@ -15,18 +14,6 @@ export function LinkTypePopup() {
   const addPartnership = usePedigreeStore((s) => s.addPartnership);
   const addParentChildLink = usePedigreeStore((s) => s.addParentChildLink);
   const updateIndividual = usePedigreeStore((s) => s.updateIndividual);
-
-  // When the popup closes — however it closes (create, Cancel, backdrop) — the
-  // hover cursor the canvas is holding is stale: the popup overlay swallowed the
-  // pointer-leave that would have reset it, so it stays stuck as a hand. Reset
-  // the canvas cursor and the hovered id when the popup goes from open to shut.
-  useEffect(() => {
-    if (!visible) return;
-    return () => {
-      clearCanvasCursor();
-      useUIStore.getState().setHovered(null);
-    };
-  }, [visible]);
 
   // Close after a relationship is created. If the connect tool drove this, drop
   // back to select — one connection per tool activation (Excalidraw-style), so
