@@ -570,6 +570,7 @@ export const usePedigreeStore = create<PedigreeState>()(
               individuals,
               partnerships: state.document.partnerships,
               parentChildLinks: state.document.parentChildLinks,
+              twinGroups: state.document.twinGroups,
             },
             id,
           );
@@ -912,7 +913,7 @@ export const usePedigreeStore = create<PedigreeState>()(
           // Re-tidy the whole blood family so parents are centred over their
           // children. The add and the layout share this one `set` so a single
           // undo reverts the whole operation.
-          individuals = relayoutFamily({ individuals, partnerships, parentChildLinks }, childId);
+          individuals = relayoutFamily({ individuals, partnerships, parentChildLinks, twinGroups: state.document.twinGroups }, childId);
           return {
             document: {
               ...state.document,
@@ -981,7 +982,7 @@ export const usePedigreeStore = create<PedigreeState>()(
             [partnership.id]: partnership,
           };
           individuals = relayoutFamily(
-            { individuals, partnerships, parentChildLinks: state.document.parentChildLinks },
+            { individuals, partnerships, parentChildLinks: state.document.parentChildLinks, twinGroups: state.document.twinGroups },
             targetId ?? partner.id,
           );
           return {
@@ -1021,7 +1022,7 @@ export const usePedigreeStore = create<PedigreeState>()(
             ...state.document.individuals,
             [child.id]: child,
           };
-          individuals = relayoutFamily({ individuals, partnerships, parentChildLinks }, child.id);
+          individuals = relayoutFamily({ individuals, partnerships, parentChildLinks, twinGroups: state.document.twinGroups }, child.id);
           return {
             document: {
               ...state.document,
@@ -1051,7 +1052,7 @@ export const usePedigreeStore = create<PedigreeState>()(
             [targetLink.id]: targetLink,
             [siblingLink.id]: siblingLink,
           };
-          individuals = relayoutFamily({ individuals, partnerships, parentChildLinks }, sibling.id);
+          individuals = relayoutFamily({ individuals, partnerships, parentChildLinks, twinGroups: state.document.twinGroups }, sibling.id);
           return {
             document: {
               ...state.document,
@@ -1077,7 +1078,7 @@ export const usePedigreeStore = create<PedigreeState>()(
             ...state.document.parentChildLinks,
             [link.id]: link,
           };
-          individuals = relayoutFamily({ individuals, partnerships, parentChildLinks }, child.id);
+          individuals = relayoutFamily({ individuals, partnerships, parentChildLinks, twinGroups: state.document.twinGroups }, child.id);
           return {
             document: {
               ...state.document,
@@ -1122,7 +1123,7 @@ export const usePedigreeStore = create<PedigreeState>()(
           // sibling row, exactly as the single-child path does. Insert + layout +
           // twin-grouping share this one `set` so a single undo reverts them all.
           individuals = relayoutFamily(
-            { individuals, partnerships, parentChildLinks },
+            { individuals, partnerships, parentChildLinks, twinGroups },
             children[0].id,
           );
 
@@ -1168,7 +1169,7 @@ export const usePedigreeStore = create<PedigreeState>()(
           // centred over their children. Anchor on the EXISTING partner so
           // findRootUnion can climb the full blood-family tree to the real root.
           individuals = relayoutFamily(
-            { individuals, partnerships, parentChildLinks: state.document.parentChildLinks },
+            { individuals, partnerships, parentChildLinks: state.document.parentChildLinks, twinGroups: state.document.twinGroups },
             existingId ?? partner.id,
           );
           return {
@@ -1202,7 +1203,7 @@ export const usePedigreeStore = create<PedigreeState>()(
           };
           // Re-tidy the family so the new parents are centred over their children.
           individuals = relayoutFamily(
-            { individuals, partnerships, parentChildLinks: state.document.parentChildLinks },
+            { individuals, partnerships, parentChildLinks: state.document.parentChildLinks, twinGroups: state.document.twinGroups },
             parent1.id,
           );
           return {

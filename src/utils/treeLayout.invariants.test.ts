@@ -3,13 +3,14 @@ import { computeTreeLayout } from './treeLayout';
 import {
   finalPositions, checkAllInvariants, manualOrderPreserved,
   noSymbolOverlap, minSiblingSpacing, noCrossedDescentLines, subtreeNonCollision,
-  generationRowAlignment,
+  generationRowAlignment, twinContiguity,
 } from './__fixtures__/invariants';
 import {
   loneFounder, coupleWithSibship, threeGenerations, marriedInWithParents,
   consanguinity, chainedWideCouples, wideCousinFan,
   crossBranchMarriage, wideCoupleAdjacentCousin, wideCoupleInverted,
   wideCoupleOppositeCousin, undefinedGenerationChild,
+  twins, twinsWithSingletonSibling,
 } from './__fixtures__/pedigrees';
 
 // Fixtures that already satisfy their invariants on the current code.
@@ -85,4 +86,15 @@ describe('computeTreeLayout — cross-branch centering', () => {
     expect(noCrossedDescentLines(pos, f.doc).violations).toEqual([]);
     expect(subtreeNonCollision(pos, f.doc).violations).toEqual([]);
   });
+});
+
+describe('computeTreeLayout — twin contiguity', () => {
+  for (const build of [twins, twinsWithSingletonSibling]) {
+    const f = build();
+    it(`${f.name}: twin-group members stay contiguous`, () => {
+      const moved = computeTreeLayout(f.doc, f.rootUnionId);
+      const pos = finalPositions(f.doc, moved);
+      expect(twinContiguity(pos, f.doc, f.twinGroups!).violations).toEqual([]);
+    });
+  }
 });

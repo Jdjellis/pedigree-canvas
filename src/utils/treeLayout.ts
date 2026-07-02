@@ -2,6 +2,7 @@ import type {
   Individual,
   PartnershipRelationship,
   PedigreeDocument,
+  TwinGroup,
 } from '../types/pedigree';
 import {
   SIBLING_SPACING,
@@ -24,11 +25,17 @@ export const DEFAULT_LAYOUT_SPACING: LayoutSpacing = {
   generationSpacing: GENERATION_SPACING,
 };
 
-/** The slice of a document the layout reads. */
+/**
+ * The slice of a document the layout reads. `twinGroups` is optional so
+ * existing callers that omit it continue to typecheck unchanged; the layout
+ * reads `doc.twinGroups ?? {}` internally.
+ */
 export type LayoutDoc = Pick<
   PedigreeDocument,
   'individuals' | 'partnerships' | 'parentChildLinks'
->;
+> & {
+  twinGroups?: Record<string, TwinGroup>;
+};
 
 /** A laid-out subtree's horizontal footprint: its blood anchor and its extent. */
 export interface Block {
@@ -54,6 +61,104 @@ export function orderChildrenByX(
       if (ax !== bx) return ax - bx;
       return a < b ? -1 : a > b ? 1 : 0;
     });
+}
+
+/**
+ * Order siblings so twin-group members are contiguous, otherwise stable.
+ *
+ * Algorithm:
+ * 1. Sort all child ids by their current x (ascending), with id as a
+ *    deterministic tie-break — exactly like {@link orderChildrenByX}.
+ * 2. For each twin group whose members appear in the sibship, anchor the run
+ *    at the position of the group's leftmost member in the x-sorted list, then
+ *    pull all other members of that group into a contiguous block at that
+ *    position, preserving their relative x-order. Non-member siblings are
+ *    left in their stable x-sorted positions outside the run.
+ * 3. Groups are processed left-to-right (by anchor position) so runs never
+ *    interleave with one another.
+ *
+ * Falls back to plain x-order for a sibship that contains no twin-group members.
+ *
+ * @param childIds   - The union's childrenIds (may include unknown ids, which
+ *                     are filtered out).
+ * @param individuals - Current individual map (provides x positions).
+ * @param twinGroups  - All twin groups in the document.
+ * @returns A new array of present child ids in the contiguity-corrected order.
+ */
+export function orderSiblingsWithTwins(
+  childIds: readonly string[],
+  individuals: Record<string, Individual>,
+  twinGroups: Record<string, TwinGroup>,
+): string[] {
+  // Step 1: sort by x, id tie-break.
+  const byX = orderChildrenByX(childIds, individuals);
+
+  // Collect twin groups that have ≥2 members present in this sibship.
+  const sibSet = new Set(byX);
+  const relevantGroups = Object.values(twinGroups).filter(
+    (g) => g.individualIds.filter((id) => sibSet.has(id)).length >= 2,
+  );
+  if (relevantGroups.length === 0) return byX;
+
+  // For each relevant group, record which positions in `byX` are member slots.
+  // Build a Set of all twin-member ids so we can distinguish them from singletons.
+  const twinMemberIds = new Set(
+    relevantGroups.flatMap((g) => g.individualIds.filter((id) => sibSet.has(id))),
+  );
+
+  // Determine anchor index for each group = leftmost member's index in byX.
+  // Sort groups left-to-right by that anchor index so we process them in order.
+  interface GroupEntry {
+    memberIds: string[];
+    anchorIdx: number;
+  }
+  const groupEntries: GroupEntry[] = relevantGroups.map((g) => {
+    const memberIds = g.individualIds.filter((id) => sibSet.has(id));
+    // Sort the group's members by x (id tie-break) so their relative order is stable.
+    const sortedMembers = [...memberIds].sort((a, b) => {
+      const ax = individuals[a].position.x;
+      const bx = individuals[b].position.x;
+      if (ax !== bx) return ax - bx;
+      return a < b ? -1 : a > b ? 1 : 0;
+    });
+    const anchorIdx = byX.indexOf(sortedMembers[0]);
+    return { memberIds: sortedMembers, anchorIdx };
+  });
+  groupEntries.sort((a, b) => a.anchorIdx - b.anchorIdx);
+
+  // Reconstruct the order: walk byX left-to-right; when a non-twin singleton
+  // is seen, emit it immediately. When a twin member is seen and it is the
+  // leftmost of its group (anchor), emit the entire group's run in sorted order.
+  // Other group members (non-anchor) are skipped at their original position
+  // because they have already been emitted in the group's run.
+  const emitted = new Set<string>();
+  const result: string[] = [];
+
+  // Build a map: member id → its GroupEntry, for O(1) lookup.
+  const memberToGroup = new Map<string, GroupEntry>();
+  for (const entry of groupEntries) {
+    for (const id of entry.memberIds) memberToGroup.set(id, entry);
+  }
+
+  for (const id of byX) {
+    if (emitted.has(id)) continue;
+    if (twinMemberIds.has(id)) {
+      const entry = memberToGroup.get(id)!;
+      // Emit the full group run (in sorted member order) only on the anchor.
+      if (id === entry.memberIds[0]) {
+        for (const mid of entry.memberIds) {
+          result.push(mid);
+          emitted.add(mid);
+        }
+      }
+      // Non-anchor twin members are skipped here; they were already emitted above.
+    } else {
+      result.push(id);
+      emitted.add(id);
+    }
+  }
+
+  return result;
 }
 
 /**
@@ -270,7 +375,10 @@ function layoutUnionFrame(
   visited.add(unionId);
 
   const union = doc.partnerships[unionId];
-  const orderedChildren = orderChildrenByX(union.childrenIds, doc.individuals);
+  const twinGroups = doc.twinGroups ?? {};
+  const orderedChildren = Object.keys(twinGroups).length > 0
+    ? orderSiblingsWithTwins(union.childrenIds, doc.individuals, twinGroups)
+    : orderChildrenByX(union.childrenIds, doc.individuals);
   const childFrames = orderedChildren.map((cid) =>
     layoutChildBlock(cid, doc, spacing, visited),
   );

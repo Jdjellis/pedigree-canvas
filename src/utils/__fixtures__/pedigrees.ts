@@ -62,11 +62,13 @@ function doc(parts: {
   individuals?: Record<string, Individual>;
   partnerships?: Record<string, PartnershipRelationship>;
   parentChildLinks?: Record<string, ParentChildRelationship>;
+  twinGroups?: Record<string, TwinGroup>;
 }): LayoutDoc {
   return {
     individuals: parts.individuals ?? {},
     partnerships: parts.partnerships ?? {},
     parentChildLinks: parts.parentChildLinks ?? {},
+    ...(parts.twinGroups !== undefined ? { twinGroups: parts.twinGroups } : {}),
   };
 }
 
@@ -174,6 +176,14 @@ export function threeGenerations(): Fixture {
  * Tests twin contiguity and twin group metadata.
  */
 export function twins(): Fixture {
+  const twinGroups: Record<string, TwinGroup> = {
+    g: {
+      id: 'g',
+      twinType: TwinType.Monozygotic,
+      individualIds: ['t1', 't2'],
+      parentPartnershipId: 'u',
+    },
+  };
   return {
     name: 'twins',
     doc: doc({
@@ -187,16 +197,10 @@ export function twins(): Fixture {
         l1: link('l1', 'u', 't1'),
         l2: link('l2', 'u', 't2'),
       },
+      twinGroups,
     }),
     rootUnionId: 'u',
-    twinGroups: {
-      g: {
-        id: 'g',
-        twinType: TwinType.Monozygotic,
-        individualIds: ['t1', 't2'],
-        parentPartnershipId: 'u',
-      },
-    },
+    twinGroups,
   };
 }
 
@@ -510,6 +514,14 @@ export function remarriageHalfSibs(): Fixture {
  * outside the twin run (twin contiguity) and respects the seeded order.
  */
 export function twinsWithSingletonSibling(): Fixture {
+  const twinGroups: Record<string, TwinGroup> = {
+    tg: {
+      id: 'tg',
+      twinType: TwinType.Monozygotic,
+      individualIds: ['t1', 't2'],
+      parentPartnershipId: 'u',
+    },
+  };
   return {
     name: 'twinsWithSingletonSibling',
     doc: doc({
@@ -525,16 +537,10 @@ export function twinsWithSingletonSibling(): Fixture {
         l2: link('l2', 'u', 's'),
         l3: link('l3', 'u', 't2'),
       },
+      twinGroups,
     }),
     rootUnionId: 'u',
-    twinGroups: {
-      tg: {
-        id: 'tg',
-        twinType: TwinType.Monozygotic,
-        individualIds: ['t1', 't2'],
-        parentPartnershipId: 'u',
-      },
-    },
+    twinGroups,
   };
 }
 
