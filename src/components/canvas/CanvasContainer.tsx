@@ -61,6 +61,9 @@ export const CanvasContainer = forwardRef<CanvasContainerHandle>(
     // True while the spacebar is held — turns the canvas into a "pan anywhere"
     // mode (symbol dragging is suspended so a left-drag pans over symbols too).
     const [isSpaceHeld, setIsSpaceHeld] = useState(false);
+    // True while the Alt/Option key is held — arms the "connect two people"
+    // gesture, so hovering a person shows the connect crosshair.
+    const [isAltHeld, setIsAltHeld] = useState(false);
     // True while a middle-mouse pan gesture is in progress.
     const [isMiddlePanning, setIsMiddlePanning] = useState(false);
     // Marquee drag in canvas space (select tool only); null when not dragging.
@@ -195,6 +198,27 @@ export const CanvasContainer = forwardRef<CanvasContainerHandle>(
       };
     }, []);
 
+    // --------------- Alt/Option: arm the connect gesture (crosshair over people) ---------------
+    useEffect(() => {
+      const onKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Alt' && !e.repeat) setIsAltHeld(true);
+      };
+      const onKeyUp = (e: KeyboardEvent) => {
+        if (e.key === 'Alt') setIsAltHeld(false);
+      };
+      // Alt+Tab (or any focus loss) can swallow the keyup and leave the gesture
+      // armed, so clear it whenever the window loses focus.
+      const onBlur = () => setIsAltHeld(false);
+      window.addEventListener('keydown', onKeyDown);
+      window.addEventListener('keyup', onKeyUp);
+      window.addEventListener('blur', onBlur);
+      return () => {
+        window.removeEventListener('keydown', onKeyDown);
+        window.removeEventListener('keyup', onKeyUp);
+        window.removeEventListener('blur', onBlur);
+      };
+    }, []);
+
     // --------------- Middle-mouse drag: pan from anywhere ---------------
     useEffect(() => {
       const container = containerRef.current;
@@ -288,12 +312,17 @@ export const CanvasContainer = forwardRef<CanvasContainerHandle>(
       const el = stageRef.current?.container();
       if (!el) return;
       const panning = isDragging || isMiddlePanning;
+      // Connect gesture armed: Alt held over a person, or an alt-drag link already
+      // in progress. The latter keeps the crosshair across empty canvas until the
+      // drop finishes the gesture.
+      const connectArmed = (isAltHeld && hoveredId !== null) || dragLink.active;
       el.style.cursor = resolveCanvasCursor({
         panning,
         spaceHeld: isSpaceHeld,
         // A hovered symbol OR a hovered connection line both warrant a pointer.
         hovering: hoveredId !== null || hoveredConnection !== null,
         tool: activeTool,
+        connectArmed,
       });
       // While panning, clear any stale inline cursor on the layer canvases so the
       // container's grab/grabbing cursor is what shows.
@@ -302,7 +331,16 @@ export const CanvasContainer = forwardRef<CanvasContainerHandle>(
           (c as HTMLElement).style.cursor = '';
         });
       }
-    }, [isDragging, isMiddlePanning, isSpaceHeld, hoveredId, hoveredConnection, activeTool]);
+    }, [
+      isDragging,
+      isMiddlePanning,
+      isSpaceHeld,
+      isAltHeld,
+      hoveredId,
+      hoveredConnection,
+      activeTool,
+      dragLink.active,
+    ]);
 
     // --------------- Wheel: pan, or zoom with Ctrl/Cmd (and trackpad pinch) ---------------
     const handleWheel = useCallback((e: KonvaEventObject<WheelEvent>) => {

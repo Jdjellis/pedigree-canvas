@@ -107,4 +107,68 @@ describe('resolveCanvasCursor', () => {
       }),
     ).toBe('');
   });
+
+  it('shows a crosshair when the connect gesture is armed (alt over a person)', () => {
+    // Holding Alt over a person arms the "connect two people" gesture; it should
+    // match the connect tool's crosshair. See CanvasContainer connectArmed.
+    expect(
+      resolveCanvasCursor({
+        panning: false,
+        spaceHeld: false,
+        hovering: true,
+        tool: 'select',
+        connectArmed: true,
+      }),
+    ).toBe('crosshair');
+  });
+
+  it('keeps the crosshair mid-drag even when not hovering a person', () => {
+    // Once the alt-drag link is in progress the crosshair must persist across
+    // empty canvas until the drop finishes the gesture.
+    expect(
+      resolveCanvasCursor({
+        panning: false,
+        spaceHeld: false,
+        hovering: false,
+        tool: 'select',
+        connectArmed: true,
+      }),
+    ).toBe('crosshair');
+  });
+
+  it('prioritises the connect crosshair over the plain hover pointer', () => {
+    expect(
+      resolveCanvasCursor({
+        panning: false,
+        spaceHeld: false,
+        hovering: true,
+        tool: 'select',
+        connectArmed: true,
+      }),
+    ).toBe('crosshair');
+  });
+
+  it('an active pan gesture still beats the connect crosshair', () => {
+    expect(
+      resolveCanvasCursor({
+        panning: true,
+        spaceHeld: false,
+        hovering: true,
+        tool: 'select',
+        connectArmed: true,
+      }),
+    ).toBe('grabbing');
+  });
+
+  it('space-held pan-ready still beats the connect crosshair', () => {
+    expect(
+      resolveCanvasCursor({
+        panning: false,
+        spaceHeld: true,
+        hovering: true,
+        tool: 'select',
+        connectArmed: true,
+      }),
+    ).toBe('grab');
+  });
 });
