@@ -821,7 +821,64 @@ export function computeTreeLayout(
   const rootGen = ref?.generation ?? 0;
   const rootY = ref?.position.y ?? 0;
 
-  const genOf = (id: string): number => doc.individuals[id]?.generation ?? rootGen;
+  /**
+   * Resolve the generation row for every node that has a non-finite `generation`
+   * by walking the parent-child links upward to the nearest ancestor whose row is
+   * known, then setting this node's row = ancestorRow + depth. Nodes with a finite
+   * `generation` are left unchanged. A visited set guards against consanguinity cycles.
+   *
+   * The resolved rows are stored in `resolvedRow` and consulted by both `genOf`
+   * (used for horizontal separation) and the final y computation, so a node with a
+   * missing generation lands on the correct row in both axes.
+   */
+  const resolvedRow = new Map<string, number>();
+
+  // Seed the map with every node that already has a finite generation.
+  for (const [id, node] of Object.entries(doc.individuals)) {
+    if (Number.isFinite(node.generation)) {
+      resolvedRow.set(id, node.generation as number);
+    }
+  }
+
+  /**
+   * Walk parent links upward from `nodeId` until a node with a known row is found.
+   * Returns `{ row, depth }` where `depth` is the number of hops taken, or null
+   * when no ancestor with a known row is reachable. Guards against cycles.
+   */
+  function resolveAncestorRow(
+    nodeId: string,
+    visited: Set<string>,
+  ): { row: number; depth: number } | null {
+    if (visited.has(nodeId)) return null;
+    visited.add(nodeId);
+    if (resolvedRow.has(nodeId)) return { row: resolvedRow.get(nodeId)!, depth: 0 };
+    // Find which union this node is a child of.
+    const parentLink = Object.values(doc.parentChildLinks).find(
+      (l) => l.childId === nodeId,
+    );
+    if (!parentLink) return null;
+    const parentUnion = doc.partnerships[parentLink.parentPartnershipId];
+    if (!parentUnion) return null;
+    // Try both partners as the upward path, prefer the one with a known row.
+    const candidates = [parentUnion.partner1Id, parentUnion.partner2Id].filter(
+      (id): id is string => !!id && !!doc.individuals[id],
+    );
+    for (const parentId of candidates) {
+      const found = resolveAncestorRow(parentId, visited);
+      if (found !== null) return { row: found.row, depth: found.depth + 1 };
+    }
+    return null;
+  }
+
+  // Resolve all non-finite nodes by walking the graph.
+  for (const id of Object.keys(doc.individuals)) {
+    if (!resolvedRow.has(id)) {
+      const found = resolveAncestorRow(id, new Set());
+      resolvedRow.set(id, found !== null ? found.row + found.depth : rootGen);
+    }
+  }
+
+  const genOf = (id: string): number => resolvedRow.get(id) ?? rootGen;
 
   // Absolute x for every laid-out node (frame + anchor).
   const finalX: Record<string, number> = {};
@@ -844,7 +901,8 @@ export function computeTreeLayout(
   const result: Record<string, { x: number; y: number }> = {};
   for (const [id, x] of Object.entries(finalX)) {
     const node = doc.individuals[id];
-    const gen = node.generation ?? rootGen;
+    // Use the pre-resolved row (handles undefined/NaN generation via graph depth).
+    const gen = resolvedRow.get(id) ?? rootGen;
     const y = rootY + (gen - rootGen) * spacing.generationSpacing;
     if (node.position.x !== x || node.position.y !== y) result[id] = { x, y };
   }

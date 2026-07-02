@@ -3,12 +3,13 @@ import { computeTreeLayout } from './treeLayout';
 import {
   finalPositions, checkAllInvariants, manualOrderPreserved,
   noSymbolOverlap, minSiblingSpacing, noCrossedDescentLines, subtreeNonCollision,
+  generationRowAlignment,
 } from './__fixtures__/invariants';
 import {
   loneFounder, coupleWithSibship, threeGenerations, marriedInWithParents,
   consanguinity, chainedWideCouples, wideCousinFan,
   crossBranchMarriage, wideCoupleAdjacentCousin, wideCoupleInverted,
-  wideCoupleOppositeCousin,
+  wideCoupleOppositeCousin, undefinedGenerationChild,
 } from './__fixtures__/pedigrees';
 
 // Fixtures that already satisfy their invariants on the current code.
@@ -53,6 +54,15 @@ describe('computeTreeLayout — overlap resolution (#115)', () => {
       expect(subtreeNonCollision(pos, f.doc).violations).toEqual([]);
     });
   }
+});
+
+describe('computeTreeLayout — generation robustness', () => {
+  it('undefinedGenerationChild: siblings share a row despite a missing generation', () => {
+    const f = undefinedGenerationChild();
+    const moved = computeTreeLayout(f.doc, f.rootUnionId);
+    const pos = finalPositions(f.doc, moved);
+    expect(generationRowAlignment(pos, f.doc).violations).toEqual([]);
+  });
 });
 
 describe('computeTreeLayout — cross-branch centering', () => {

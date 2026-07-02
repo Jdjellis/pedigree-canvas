@@ -446,17 +446,23 @@ export function chainedWideCouples(): Fixture {
 
 /**
  * Parent with two children where one child has an undefined generation.
- * Documents the bug where a child with no generation coordinate causes the
- * layout to crash or produce NaN positions.
+ * Documents the bug where a child with no generation coordinate collapses
+ * onto the root row (y=0) instead of landing on the correct child row
+ * (y = GENERATION_SPACING). `c2` is constructed without a `generation`
+ * field so it is genuinely `undefined` on the individual — bypassing the
+ * `ind()` helper's `= 0` default which would silently coerce it to 0.
  */
 export function undefinedGenerationChild(): Fixture {
+  // Build c2 directly so its generation stays undefined (the ind() helper's
+  // default parameter `= 0` would replace an explicit `undefined` argument).
+  const c2 = createDefaultIndividual({ id: 'c2', position: { x: 40, y: 0 } });
   return {
     name: 'undefinedGenerationChild',
     doc: doc({
       individuals: {
         p: ind('p', 0, 0),
         c1: ind('c1', -40, 1),
-        c2: ind('c2', 40, undefined),
+        c2,
       },
       partnerships: { u: union('u', 'p', undefined, ['c1', 'c2']) },
       parentChildLinks: {
