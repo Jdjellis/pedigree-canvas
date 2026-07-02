@@ -75,11 +75,6 @@ export function TwinConnector({
   const emphasis = connectionEmphasis(isSelected, isHovered);
   const stroke = isSelected ? SELECTION_COLOR : LINE_COLOR;
 
-  const setCursor = (cursor: string) => {
-    const stage = document.querySelector('canvas');
-    if (stage) stage.style.cursor = cursor;
-  };
-
   const selectGroup = (e: KonvaEventObject<MouseEvent | TouchEvent>) => {
     e.cancelBubble = true;
     useUIStore.getState().selectConnection({ kind: 'twin', id: twinGroup.id });
@@ -89,12 +84,12 @@ export function TwinConnector({
     hitStrokeWidth: 12,
     onClick: selectGroup,
     onTap: selectGroup,
+    // Only hover state is updated; the pointer cursor is derived from
+    // `hoveredConnection` by CanvasContainer's cursor effect.
     onMouseEnter: () => {
-      setCursor('pointer');
       useUIStore.getState().setHoveredConnection({ kind: 'twin', id: twinGroup.id });
     },
     onMouseLeave: () => {
-      setCursor('default');
       useUIStore.getState().setHoveredConnection(null);
     },
   };

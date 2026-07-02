@@ -1,4 +1,4 @@
-import { Lock, Hand, MousePointer2, Type, Eraser } from 'lucide-react';
+import { Lock, Hand, MousePointer2, Type, Eraser, Waypoints } from 'lucide-react';
 import { useUIStore } from '../../../stores/uiStore';
 import { useEditorActions } from '../../../commands/useEditorActions';
 import { Island } from './Island';
@@ -59,6 +59,15 @@ export function ToolIsland(): React.JSX.Element | null {
         icon={<Eraser size={19} />}
         active={activeTool === 'eraser'}
         onClick={actions.eraserTool}
+      />
+      <span className={styles.toolDivider} aria-hidden="true" />
+      <ToolButton
+        label="Connect (click a person, then another)"
+        shortcut="4"
+        icon={<Waypoints size={19} />}
+        active={activeTool === 'connect'}
+        onClick={actions.connectTool}
+        disabled={editingLocked}
       />
     </Island>
   );

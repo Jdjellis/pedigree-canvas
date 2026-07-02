@@ -61,6 +61,8 @@ export interface EditorActions {
   textTool: () => void;
   /** Activate the eraser tool. */
   eraserTool: () => void;
+  /** Activate the connect tool (click a source person, then a target). */
+  connectTool: () => void;
   /** Toggle whether the pedigree is locked against editing. */
   toggleEditingLock: () => void;
 }
@@ -188,6 +190,10 @@ export function useEditorActions(): EditorActions {
     useUIStore.getState().setActiveTool('eraser');
   };
 
+  const connectTool = (): void => {
+    useUIStore.getState().setActiveTool('connect');
+  };
+
   const toggleEditingLock = (): void => {
     useUIStore.getState().toggleEditingLocked();
   };
@@ -214,6 +220,7 @@ export function useEditorActions(): EditorActions {
       handTool,
       textTool,
       eraserTool,
+      connectTool,
       toggleEditingLock,
     }),
     []

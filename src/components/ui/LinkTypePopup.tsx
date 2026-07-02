@@ -15,6 +15,16 @@ export function LinkTypePopup() {
   const addParentChildLink = usePedigreeStore((s) => s.addParentChildLink);
   const updateIndividual = usePedigreeStore((s) => s.updateIndividual);
 
+  // Close after a relationship is created. If the connect tool drove this, drop
+  // back to select — one connection per tool activation (Excalidraw-style), so
+  // the user isn't left armed for accidental extra links. Cancelling keeps the
+  // connect tool active so a fumbled attempt can be retried immediately.
+  const finishAfterCreate = useCallback(() => {
+    const ui = useUIStore.getState();
+    ui.hideLinkPopup();
+    if (ui.activeTool === 'connect') ui.setActiveTool('select');
+  }, []);
+
   const createPartnership = useCallback(
     (type: RelationshipType.Partnership | RelationshipType.Consanguinity) => {
       if (!sourceId || !targetId) return;
@@ -26,9 +36,9 @@ export function LinkTypePopup() {
         childrenIds: [],
       };
       addPartnership(partnership);
-      hideLinkPopup();
+      finishAfterCreate();
     },
-    [sourceId, targetId, addPartnership, hideLinkPopup],
+    [sourceId, targetId, addPartnership, finishAfterCreate],
   );
 
   const createParentChild = useCallback(
@@ -50,9 +60,9 @@ export function LinkTypePopup() {
       };
       addPartnership(partnership);
       addParentChildLink(link);
-      hideLinkPopup();
+      finishAfterCreate();
     },
-    [addPartnership, addParentChildLink, hideLinkPopup],
+    [addPartnership, addParentChildLink, finishAfterCreate],
   );
 
   const createAdoption = useCallback(() => {
@@ -76,8 +86,8 @@ export function LinkTypePopup() {
     addParentChildLink(link);
     // Flag the adoptee so its symbol is drawn in adoption brackets.
     updateIndividual(targetId, { adopted: true });
-    hideLinkPopup();
-  }, [sourceId, targetId, addPartnership, addParentChildLink, updateIndividual, hideLinkPopup]);
+    finishAfterCreate();
+  }, [sourceId, targetId, addPartnership, addParentChildLink, updateIndividual, finishAfterCreate]);
 
   if (!visible || !sourceId || !targetId) return null;
 

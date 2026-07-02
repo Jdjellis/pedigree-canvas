@@ -21,6 +21,7 @@ function makeNoopActions(): EditorActions {
     handTool: vi.fn(),
     textTool: vi.fn(),
     eraserTool: vi.fn(),
+    connectTool: vi.fn(),
     toggleEditingLock: vi.fn(),
   };
 }

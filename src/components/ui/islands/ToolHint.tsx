@@ -12,6 +12,7 @@ import styles from './ToolHint.module.css';
 export function ToolHint(): React.JSX.Element | null {
   const activeTool = useUIStore((s) => s.activeTool);
   const hoveredId = useUIStore((s) => s.hoveredId);
+  const linkPending = useUIStore((s) => s.dragLink.active);
   const zenMode = useUIStore((s) => s.zenMode);
   const editingLocked = useUIStore((s) => s.editingLocked);
 
@@ -33,6 +34,12 @@ export function ToolHint(): React.JSX.Element | null {
         </>
       );
     }
+  } else if (activeTool === 'connect') {
+    hint = linkPending ? (
+      <>Now click the second person to link them, or <kbd>Esc</kbd> to cancel</>
+    ) : (
+      <>Click a person, then click another to connect them</>
+    );
   }
 
   if (!hint) return null;

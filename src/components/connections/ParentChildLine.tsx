@@ -37,11 +37,6 @@ export function ParentChildLine({
   selectedConnection,
   hoveredConnection,
 }: ParentChildLineProps) {
-  const setCursor = useCallback((cursor: string) => {
-    const stage = document.querySelector('canvas');
-    if (stage) stage.style.cursor = cursor;
-  }, []);
-
   const selectLink = useCallback(
     (e: KonvaEventObject<MouseEvent | TouchEvent>, linkId: string) => {
       e.cancelBubble = true;
@@ -137,12 +132,12 @@ export function ParentChildLine({
               hitStrokeWidth: 12,
               onClick: (e: KonvaEventObject<MouseEvent>) => selectLink(e, link.id),
               onTap: (e: KonvaEventObject<TouchEvent>) => selectLink(e, link.id),
+              // Only hover state is updated; the pointer cursor is derived from
+              // `hoveredConnection` by CanvasContainer's cursor effect.
               onMouseEnter: () => {
-                setCursor('pointer');
                 useUIStore.getState().setHoveredConnection({ kind: 'parentChild', id: link.id });
               },
               onMouseLeave: () => {
-                setCursor('default');
                 useUIStore.getState().setHoveredConnection(null);
               },
             }

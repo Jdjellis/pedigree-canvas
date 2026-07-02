@@ -14,6 +14,7 @@ import { useViewportStore } from '../../stores/viewportStore';
 import { useUIStore } from '../../stores/uiStore';
 import { usePedigreeStore } from '../../stores/pedigreeStore';
 import { placeTextAt } from './toolPlacement';
+import { resolveCanvasCursor } from './canvasCursor';
 import { GridLayer } from './GridLayer';
 import { ConnectionsLayer } from '../connections/ConnectionsLayer';
 import { PedigreeSymbol } from './symbols/PedigreeSymbol';
@@ -39,6 +40,7 @@ import {
   idsIntersectingMarquee,
   type NodeBox,
 } from './marqueeSelection';
+import { nextPanningState } from './stageDrag';
 import { useRadialHover } from '../../hooks/useRadialHover';
 import styles from './CanvasContainer.module.css';
 
@@ -58,6 +60,9 @@ export const CanvasContainer = forwardRef<CanvasContainerHandle>(
     // True while the spacebar is held — turns the canvas into a "pan anywhere"
     // mode (symbol dragging is suspended so a left-drag pans over symbols too).
     const [isSpaceHeld, setIsSpaceHeld] = useState(false);
+    // True while the Alt/Option key is held — arms the "connect two people"
+    // gesture, so hovering a person shows the connect crosshair.
+    const [isAltHeld, setIsAltHeld] = useState(false);
     // True while a middle-mouse pan gesture is in progress.
     const [isMiddlePanning, setIsMiddlePanning] = useState(false);
     // Marquee drag in canvas space (select tool only); null when not dragging.
@@ -193,6 +198,27 @@ export const CanvasContainer = forwardRef<CanvasContainerHandle>(
       };
     }, []);
 
+    // --------------- Alt/Option: arm the connect gesture (crosshair over people) ---------------
+    useEffect(() => {
+      const onKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Alt' && !e.repeat) setIsAltHeld(true);
+      };
+      const onKeyUp = (e: KeyboardEvent) => {
+        if (e.key === 'Alt') setIsAltHeld(false);
+      };
+      // Alt+Tab (or any focus loss) can swallow the keyup and leave the gesture
+      // armed, so clear it whenever the window loses focus.
+      const onBlur = () => setIsAltHeld(false);
+      window.addEventListener('keydown', onKeyDown);
+      window.addEventListener('keyup', onKeyUp);
+      window.addEventListener('blur', onBlur);
+      return () => {
+        window.removeEventListener('keydown', onKeyDown);
+        window.removeEventListener('keyup', onKeyUp);
+        window.removeEventListener('blur', onBlur);
+      };
+    }, []);
+
     // --------------- Middle-mouse drag: pan from anywhere ---------------
     useEffect(() => {
       const container = containerRef.current;
@@ -236,20 +262,6 @@ export const CanvasContainer = forwardRef<CanvasContainerHandle>(
       };
     }, []);
 
-    // Clear any inline cursor the symbols set on the layer canvases (via
-    // mouseenter) so the container's tool cursor — the default arrow in select
-    // mode — takes over. Konva captures the pointer during an alt-drag, so the
-    // source symbol's `pointer` cursor never gets reset by a mouseleave; we do it
-    // explicitly when the drag-link gesture ends.
-    const resetLayerCursors = useCallback(() => {
-      stageRef.current
-        ?.container()
-        .querySelectorAll('canvas')
-        .forEach((c) => {
-          (c as HTMLElement).style.cursor = '';
-        });
-    }, []);
-
     // --------------- Eraser drag: safety-net stop when mouse releases off-canvas ---------------
     useEffect(() => {
       const stop = () => setIsErasing(false);
@@ -266,31 +278,63 @@ export const CanvasContainer = forwardRef<CanvasContainerHandle>(
     // *still* active (i.e. was never resolved), and tears it down.
     useEffect(() => {
       const onUp = () => {
-        if (!useUIStore.getState().dragLink.active) return;
-        useUIStore.getState().endDragLink();
-        resetLayerCursors();
+        const { dragLink, endDragLink } = useUIStore.getState();
+        // Only tear down a *drag*-mode link on release. A click-mode link
+        // (connect tool) is waiting for its second click and must survive the
+        // pointer-up of its first click.
+        if (!dragLink.active || dragLink.mode !== 'drag') return;
+        endDragLink();
       };
       window.addEventListener('mouseup', onUp);
       return () => window.removeEventListener('mouseup', onUp);
-    }, [resetLayerCursors]);
+    }, []);
 
-    // --------------- Cursor feedback for pan modes ---------------
+    // --------------- Cursor feedback: pan modes and hover ---------------
+    // The stage-container div is the single owner of the canvas cursor. `cursor`
+    // is an inherited CSS property and this element sits above every one of
+    // Konva's stacked layer canvases, so whatever we set here is what the browser
+    // actually shows over the canvas. (Symbol and connection-line hover handlers
+    // used to write to an individual <canvas> via `document.querySelector('canvas')`
+    // — the invisible bottom layer — so the pointer affordance never appeared. They
+    // now only update hover state; the cursor is derived from that state here.)
     useEffect(() => {
       const el = stageRef.current?.container();
       if (!el) return;
       const panning = isDragging || isMiddlePanning;
-      // View mode makes plain drag pan everywhere, so advertise it with a grab
-      // cursor just like the space-to-pan mode.
+      // View mode (editingLocked) makes plain drag pan everywhere, so it is a
+      // "pan anywhere" ready state just like holding space.
       const grabReady = isSpaceHeld || editingLocked;
-      el.style.cursor = panning ? 'grabbing' : grabReady ? 'grab' : '';
-      // While panning, clear any inline cursor the symbols set on the canvases
-      // so the container's grab/grabbing cursor is what shows.
+      // Connect gesture armed: Alt held over a person, or an alt-drag link already
+      // in progress. The latter keeps the crosshair across empty canvas until the
+      // drop finishes the gesture.
+      const connectArmed = (isAltHeld && hoveredId !== null) || dragLink.active;
+      el.style.cursor = resolveCanvasCursor({
+        panning,
+        spaceHeld: isSpaceHeld,
+        editingLocked,
+        // A hovered symbol OR a hovered connection line both warrant a pointer.
+        hovering: hoveredId !== null || hoveredConnection !== null,
+        tool: activeTool,
+        connectArmed,
+      });
+      // While panning (or in a grab-ready pan mode), clear any stale inline cursor
+      // on the layer canvases so the container's grab/grabbing cursor is what shows.
       if (panning || grabReady) {
         el.querySelectorAll('canvas').forEach((c) => {
           (c as HTMLElement).style.cursor = '';
         });
       }
-    }, [isDragging, isMiddlePanning, isSpaceHeld, editingLocked]);
+    }, [
+      isDragging,
+      isMiddlePanning,
+      isSpaceHeld,
+      editingLocked,
+      isAltHeld,
+      hoveredId,
+      hoveredConnection,
+      activeTool,
+      dragLink.active,
+    ]);
 
     // --------------- Wheel: pan, or zoom with Ctrl/Cmd (and trackpad pinch) ---------------
     const handleWheel = useCallback((e: KonvaEventObject<WheelEvent>) => {
@@ -328,15 +372,28 @@ export const CanvasContainer = forwardRef<CanvasContainerHandle>(
     }, []);
 
     // --------------- Stage Drag (Pan) ---------------
-    const handleDragStart = useCallback(() => {
-      setIsDragging(true);
+    // Konva bubbles a child symbol's drag events up to these stage handlers, so
+    // both guard on the drag target being the stage itself. Without the guard on
+    // dragstart, an alt-drag "connect" gesture (which cancels the symbol drag via
+    // stopDrag() and never emits a stage dragend) latches isDragging on and leaves
+    // the grab cursor stuck as a hand — issue #91. See ./stageDrag.
+    const handleDragStart = useCallback((e: KonvaEventObject<DragEvent>) => {
+      setIsDragging((panning) =>
+        nextPanningState(panning, {
+          phase: 'start',
+          targetIsStage: e.target === stageRef.current,
+        }),
+      );
     }, []);
 
     const handleDragEnd = useCallback(
       (e: KonvaEventObject<DragEvent>) => {
-        setIsDragging(false);
         const stage = e.target;
-        if (stage !== stageRef.current) return;
+        const targetIsStage = stage === stageRef.current;
+        setIsDragging((panning) =>
+          nextPanningState(panning, { phase: 'end', targetIsStage }),
+        );
+        if (!targetIsStage) return;
         setPosition({ x: stage.x(), y: stage.y() });
       },
       [setPosition]
@@ -365,6 +422,13 @@ export const CanvasContainer = forwardRef<CanvasContainerHandle>(
         // consistent with the existing pattern in this file (no Zustand hook
         // subscriptions inside react-konva handlers).
         const currentTool = useUIStore.getState().activeTool;
+
+        // Clicking empty canvas mid-connect abandons the pending link rather
+        // than doing the tool's usual empty-click behaviour.
+        if (useUIStore.getState().dragLink.active) {
+          useUIStore.getState().endDragLink();
+          return;
+        }
 
         if (currentTool === 'text') {
           if (useUIStore.getState().editingLocked) return;
@@ -397,11 +461,13 @@ export const CanvasContainer = forwardRef<CanvasContainerHandle>(
     );
 
     const handleStageMouseUp = useCallback(() => {
-      if (dragLink.active) {
+      // A drag-mode link released over empty canvas is cancelled. A click-mode
+      // link is left armed — its second click (or an empty-canvas click,
+      // handled in handleStageClick) resolves it.
+      if (dragLink.active && dragLink.mode === 'drag') {
         endDragLink();
-        resetLayerCursors();
       }
-    }, [dragLink.active, endDragLink, resetLayerCursors]);
+    }, [dragLink.active, dragLink.mode, endDragLink]);
 
     const handleMarqueeDown = useCallback(
       (e: KonvaEventObject<MouseEvent>) => {
@@ -577,6 +643,12 @@ export const CanvasContainer = forwardRef<CanvasContainerHandle>(
                   panMode={isSpaceHeld || activeTool === 'hand'}
                   eraseOnHover={isErasing}
                   editingLocked={editingLocked}
+                  isLinkSource={dragLink.active && dragLink.sourceId === individual.id}
+                  isLinkTarget={
+                    dragLink.active &&
+                    dragLink.targetId === individual.id &&
+                    dragLink.sourceId !== individual.id
+                  }
                   symbolFill={canvasPalette.symbolFill}
                   childlessActive={childlessMarksActive(individual, partnerships)}
                 />

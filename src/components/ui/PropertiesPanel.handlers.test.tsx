@@ -299,6 +299,7 @@ describe('PropertiesPanel role and notes handlers', () => {
     expect(current().isProband).toBe(false);
     expect(current().isConsultand).toBe(true);
 
+    // Scope to the role control: the Childlessness control also has a "None".
     const roleGroup = screen.getByRole('group', { name: 'Pedigree role' });
     fireEvent.click(within(roleGroup).getByRole('button', { name: 'None' }));
     expect(current().isProband).toBe(false);

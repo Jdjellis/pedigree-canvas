@@ -18,7 +18,14 @@ describe('ToolIsland', () => {
 
   it('renders a button for each tool plus lock and hand', () => {
     render(<ToolIsland />);
-    for (const label of ['Lock editing', 'Hand', 'Select', 'Text', 'Eraser']) {
+    for (const label of [
+      'Lock editing',
+      'Hand',
+      'Select',
+      'Text',
+      'Eraser',
+      'Connect (click a person, then another)',
+    ]) {
       expect(screen.getByRole('button', { name: label })).toBeInTheDocument();
     }
   });

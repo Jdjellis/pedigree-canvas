@@ -110,20 +110,16 @@ export function PartnershipLine({
     [partnership.id],
   );
 
-  const setCursor = useCallback((cursor: string) => {
-    const stage = document.querySelector('canvas');
-    if (stage) stage.style.cursor = cursor;
-  }, []);
-
+  // Only hover STATE is updated here. The pointer cursor is derived from
+  // `hoveredConnection` by CanvasContainer's cursor effect (the single owner of
+  // the container cursor); writing it here hit the invisible bottom canvas.
   const handleEnter = useCallback(() => {
-    setCursor('pointer');
     useUIStore.getState().setHoveredConnection({ kind: 'partnership', id: partnership.id });
-  }, [setCursor, partnership.id]);
+  }, [partnership.id]);
 
   const handleLeave = useCallback(() => {
-    setCursor('default');
     useUIStore.getState().setHoveredConnection(null);
-  }, [setCursor]);
+  }, []);
 
   if (!p1 || !p2) return null;
 
