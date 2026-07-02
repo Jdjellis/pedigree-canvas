@@ -5,7 +5,7 @@
  * via the segmented controls, ungrouping twins, and the two remove buttons that
  * also clear the connection selection.
  */
-import { render, screen, act, fireEvent } from '@testing-library/react';
+import { render, screen, act, fireEvent, within } from '@testing-library/react';
 import { beforeEach, describe, it, expect } from 'vitest';
 import {
   usePedigreeStore,
@@ -111,15 +111,24 @@ describe('ConnectionProperties partnership edit handlers', () => {
     );
   });
 
-  it('clears the stale cause when leaving the infertility state', () => {
+  it('keeps the cause across no-children/infertility, drops it on none', () => {
+    // Mirrors the individual-level behaviour (PropertiesPanel.test.tsx): the
+    // free-text cause survives a switch between the two childless statuses and
+    // is cleared only when the status itself is cleared to "None".
     selectPartnership(
       makePartnership({ childlessStatus: 'infertility', childlessReason: 'azoospermia' }),
     );
     render(<PropertiesPanel />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'No children' }));
-    const p = usePedigreeStore.getState().document.partnerships['union1'];
+    const group = screen.getByRole('group', { name: 'Childless status' });
+    fireEvent.click(within(group).getByRole('button', { name: 'No children' }));
+    let p = usePedigreeStore.getState().document.partnerships['union1'];
     expect(p.childlessStatus).toBe('noChildren');
+    expect(p.childlessReason).toBe('azoospermia');
+
+    fireEvent.click(within(group).getByRole('button', { name: 'None' }));
+    p = usePedigreeStore.getState().document.partnerships['union1'];
+    expect(p.childlessStatus).toBeUndefined();
     expect(p.childlessReason).toBeUndefined();
   });
 
