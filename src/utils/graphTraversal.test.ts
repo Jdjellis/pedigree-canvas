@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   findParents,
+  findParentSets,
   findChildren,
   findSiblings,
   findPartnerships,
@@ -68,6 +69,74 @@ function makeFamily(): {
   };
 }
 
+/**
+ * Attach a SECOND parent set to `child1` (multi-parentage, #64): a new couple in
+ * partnership `p2` who also have a biological child `bioSibling`. Returns the new
+ * ids so tests can assert both sets and their combined siblings.
+ */
+function addSecondParentSet(doc: PedigreeDocument, childId: string): {
+  dad2Id: string;
+  mom2Id: string;
+  bioSiblingId: string;
+  partnership2Id: string;
+} {
+  const dad2 = createDefaultIndividual();
+  const mom2 = createDefaultIndividual();
+  const bioSibling = createDefaultIndividual();
+  for (const ind of [dad2, mom2, bioSibling]) doc.individuals[ind.id] = ind;
+
+  const partnership2Id = 'p2';
+  doc.partnerships[partnership2Id] = {
+    id: partnership2Id,
+    type: RelationshipType.Partnership,
+    partner1Id: dad2.id,
+    partner2Id: mom2.id,
+    childrenIds: [childId, bioSibling.id],
+  };
+  for (const cid of [childId, bioSibling.id]) {
+    const linkId = `link2-${cid}`;
+    doc.parentChildLinks[linkId] = {
+      id: linkId,
+      type: RelationshipType.ParentChild,
+      parentPartnershipId: partnership2Id,
+      childId: cid,
+    };
+  }
+  return { dad2Id: dad2.id, mom2Id: mom2.id, bioSiblingId: bioSibling.id, partnership2Id };
+}
+
+describe('findParentSets', () => {
+  it('returns a single set for an ordinary child', () => {
+    const { doc, child1Id, fatherId, motherId, partnershipId } = makeFamily();
+    const sets = findParentSets(doc, child1Id);
+    expect(sets).toHaveLength(1);
+    expect(sets[0].father?.id).toBe(fatherId);
+    expect(sets[0].mother?.id).toBe(motherId);
+    expect(sets[0].partnershipId).toBe(partnershipId);
+    expect(sets[0].link.childId).toBe(child1Id);
+  });
+
+  it('returns BOTH parent sets for a child with two parent couples', () => {
+    const { doc, child1Id, partnershipId } = makeFamily();
+    const { partnership2Id } = addSecondParentSet(doc, child1Id);
+    const sets = findParentSets(doc, child1Id);
+    expect(sets.map((s) => s.partnershipId).sort()).toEqual(
+      [partnershipId, partnership2Id].sort(),
+    );
+  });
+
+  it('returns an empty array when the child has no parent link', () => {
+    const { doc, lonerId } = makeFamily();
+    expect(findParentSets(doc, lonerId)).toEqual([]);
+  });
+
+  it('skips a set whose partnership has been deleted', () => {
+    const { doc, child1Id, partnershipId } = makeFamily();
+    delete doc.partnerships[partnershipId];
+    expect(findParentSets(doc, child1Id)).toEqual([]);
+  });
+});
+
 describe('findParents', () => {
   it('returns both partners and the partnership for a child', () => {
     const { doc, fatherId, motherId, child1Id, partnershipId } = makeFamily();
@@ -130,6 +199,15 @@ describe('findSiblings', () => {
   it('returns an empty array when the individual has no parents', () => {
     const { doc, fatherId } = makeFamily();
     expect(findSiblings(doc, fatherId)).toEqual([]);
+  });
+
+  it('aggregates siblings across BOTH parent sets, deduped and self-excluded', () => {
+    const { doc, child1Id, child2Id } = makeFamily();
+    const { bioSiblingId } = addSecondParentSet(doc, child1Id);
+    // child2 is a sibling via the first set; bioSibling via the second set.
+    const ids = findSiblings(doc, child1Id).map((s) => s.id).sort();
+    expect(ids).toEqual([child2Id, bioSiblingId].sort());
+    expect(ids).not.toContain(child1Id);
   });
 });
 

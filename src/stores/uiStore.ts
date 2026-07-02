@@ -107,6 +107,20 @@ interface UIState {
   /** When true, the pedigree is read-only: no structural or property edits. */
   editingLocked: boolean;
 
+  /**
+   * Zen mode: hides the editing chrome (Menu / Tools / Actions islands and the
+   * properties panel) for a clean, distraction-free canvas — useful for
+   * presenting a pedigree or taking screenshots. The interactive analog of the
+   * `export-exclude` layers we already omit from vector export.
+   */
+  zenMode: boolean;
+
+  /**
+   * Whether the dot-grid + generation guide lines are drawn on the canvas.
+   * On by default; turning it off gives a cleaner look / lighter screenshot.
+   */
+  showGrid: boolean;
+
   /** Whether the ⌘K command palette is open. */
   commandPaletteOpen: boolean;
 
@@ -170,6 +184,14 @@ interface UIState {
   setActiveTool: (tool: ActiveTool) => void;
   /** Toggle whether the pedigree is locked against editing. */
   toggleEditingLocked: () => void;
+  /** Toggle zen mode (distraction-free canvas). */
+  toggleZenMode: () => void;
+  /** Set zen mode explicitly (e.g. an "Exit zen mode" affordance). */
+  setZenMode: (on: boolean) => void;
+  /** Toggle whether the dot-grid + generation guide lines are drawn. */
+  toggleShowGrid: () => void;
+  /** Set grid visibility explicitly. */
+  setShowGrid: (on: boolean) => void;
   openModal: (modal: ActiveModal) => void;
   closeModal: () => void;
   setPropertiesPanelOpen: (open: boolean) => void;
@@ -234,6 +256,8 @@ export const useUIStore = create<UIState>()((set) => ({
   activeModal: null,
   activeTool: 'select',
   editingLocked: false,
+  zenMode: false,
+  showGrid: true,
   commandPaletteOpen: false,
   editingAnnotationId: null,
   lastSavedAt: null,
@@ -359,6 +383,14 @@ export const useUIStore = create<UIState>()((set) => ({
 
   toggleEditingLocked: () =>
     set((state) => ({ editingLocked: !state.editingLocked })),
+
+  toggleZenMode: () => set((state) => ({ zenMode: !state.zenMode })),
+
+  setZenMode: (on) => set({ zenMode: on }),
+
+  toggleShowGrid: () => set((state) => ({ showGrid: !state.showGrid })),
+
+  setShowGrid: (on) => set({ showGrid: on }),
 
   openModal: (activeModal) => set({ activeModal }),
 

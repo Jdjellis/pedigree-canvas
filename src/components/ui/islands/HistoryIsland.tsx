@@ -1,4 +1,5 @@
 import { useEditorActions } from '../../../commands/useEditorActions';
+import { useUIStore } from '../../../stores/uiStore';
 import { Island } from './Island';
 import styles from './islands.module.css';
 
@@ -10,13 +11,19 @@ import styles from './islands.module.css';
  * buttons are always available (enabling/disabling based on history depth is
  * a future enhancement).
  *
+ * Hidden in view (read-only) mode: with editing locked there is nothing to
+ * undo or redo, and it's part of the edit chrome a read-only canvas sheds.
+ *
  * @example
  * ```tsx
  * <HistoryIsland />
  * ```
  */
-export function HistoryIsland(): React.JSX.Element {
+export function HistoryIsland(): React.JSX.Element | null {
   const { undo, redo } = useEditorActions();
+  const editingLocked = useUIStore((s) => s.editingLocked);
+
+  if (editingLocked) return null;
 
   return (
     <Island aria-label="History">

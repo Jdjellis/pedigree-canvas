@@ -1,5 +1,10 @@
 import { render, screen, fireEvent } from '@testing-library/react';
+import { useUIStore } from '../../stores/uiStore';
 import { PrivacyBadge } from './PrivacyBadge';
+
+beforeEach(() => {
+  useUIStore.setState({ zenMode: false });
+});
 
 test('renders a button with accessible name "Privacy information"', () => {
   render(<PrivacyBadge />);
@@ -56,4 +61,14 @@ test('aria-expanded reflects popover open/closed state', () => {
   expect(btn).toHaveAttribute('aria-expanded', 'false');
   fireEvent.click(btn);
   expect(btn).toHaveAttribute('aria-expanded', 'true');
+});
+
+test('renders nothing in zen mode', () => {
+  useUIStore.setState({ zenMode: true });
+  const { container } = render(<PrivacyBadge />);
+
+  expect(container).toBeEmptyDOMElement();
+  expect(
+    screen.queryByRole('button', { name: 'Privacy information' }),
+  ).not.toBeInTheDocument();
 });

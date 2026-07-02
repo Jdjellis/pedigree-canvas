@@ -31,6 +31,8 @@ beforeEach(() => {
       commandPaletteOpen: false,
       selectedIds: new Set<string>(),
       editingLocked: false,
+      zenMode: false,
+      showGrid: true,
     });
   });
 });
@@ -160,6 +162,30 @@ describe('number + letter tool shortcuts', () => {
     fireEvent.keyDown(document.body, { key: 'l' });
 
     expect(useUIStore.getState().editingLocked).toBe(true);
+  });
+
+  test('pressing z toggles zen mode on', () => {
+    render(<TestHarness />);
+
+    act(() => {
+      useUIStore.setState({ zenMode: false });
+    });
+
+    fireEvent.keyDown(document.body, { key: 'z' });
+
+    expect(useUIStore.getState().zenMode).toBe(true);
+  });
+
+  test('pressing g toggles the grid off', () => {
+    render(<TestHarness />);
+
+    act(() => {
+      useUIStore.setState({ showGrid: true });
+    });
+
+    fireEvent.keyDown(document.body, { key: 'g' });
+
+    expect(useUIStore.getState().showGrid).toBe(false);
   });
 });
 

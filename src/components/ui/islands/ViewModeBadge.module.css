@@ -1,0 +1,34 @@
+/**
+ * "View only" badge — the read-only indicator for View mode.
+ *
+ * Sits centred at the top of the canvas (in the top-centre slot stack, above
+ * the toolbar) so it's the first thing the eye lands on. Uses the accent colour
+ * so it reads as an active mode, not a passive label, and doubles as the
+ * click-to-edit exit affordance.
+ */
+.badge {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--color-primary, #6c63ff);
+  background: var(--color-primary, #6c63ff);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.08);
+  transition: opacity 0.12s;
+}
+
+.badge:hover {
+  opacity: 0.9;
+}
+
+/* The "· click to edit" affordance — lighter, so the mode label leads. */
+.hint {
+  font-weight: 500;
+  opacity: 0.85;
+}

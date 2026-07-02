@@ -6,8 +6,67 @@
  * cannot drift.
  */
 import { SYMBOL_SIZE, CHILDLESS_STUB } from './constants';
-import type { Individual, PartnershipRelationship } from '../types/pedigree';
+import type {
+  ChildlessStatus,
+  Individual,
+  PartnershipRelationship,
+} from '../types/pedigree';
 import type { Point } from './partnershipGeometry';
+
+/** The segmented-control selection: a childless status, or `'none'` (cleared). */
+export type ChildlessSelection = 'none' | ChildlessStatus;
+
+/**
+ * The subset of an individual/partnership that tracks its childless status and
+ * the free-text cause(s). Shared so {@link childlessStatusChange} can operate on
+ * either entity.
+ */
+export interface ChildlessCauseState {
+  childlessStatus?: ChildlessStatus;
+  childlessReason?: string;
+  childlessReasonByStatus?: Partial<Record<ChildlessStatus, string>>;
+}
+
+/**
+ * Compute the patch to apply when the user picks `next` in the childless-status
+ * segmented control.
+ *
+ * The cause is per-status: the cause the user was editing is parked under the
+ * *outgoing* status, and the *incoming* status's parked cause (if any) is
+ * restored as the active {@link ChildlessCauseState.childlessReason}. So an
+ * accidental status change — or a round-trip like no-children → infertility →
+ * no-children — never discards typed text, while the rendered cause always
+ * matches the selected status. Selecting `'none'` clears the active status and
+ * cause but keeps every parked cause for when a status is re-selected.
+ */
+export function childlessStatusChange(
+  current: ChildlessCauseState,
+  next: ChildlessSelection,
+): Pick<
+  ChildlessCauseState,
+  'childlessStatus' | 'childlessReason' | 'childlessReasonByStatus'
+> {
+  const parked: Partial<Record<ChildlessStatus, string>> = {
+    ...current.childlessReasonByStatus,
+  };
+
+  // Park the cause the user was editing under the status it belonged to.
+  if (current.childlessStatus) {
+    if (current.childlessReason) parked[current.childlessStatus] = current.childlessReason;
+    else delete parked[current.childlessStatus];
+  }
+
+  const nextStatus = next === 'none' ? undefined : next;
+  // Restore the incoming status's cause; it is now active, not parked.
+  const restored = nextStatus ? parked[nextStatus] : undefined;
+  if (nextStatus) delete parked[nextStatus];
+
+  return {
+    childlessStatus: nextStatus,
+    childlessReason: restored,
+    childlessReasonByStatus: Object.keys(parked).length > 0 ? parked : undefined,
+  };
+}
 
 /**
  * Anchor point for an individual's childless marks: the bottom-centre of the

@@ -12,7 +12,12 @@ function setTool(tool: ActiveTool): void {
 
 beforeEach(() => {
   act(() => {
-    useUIStore.setState({ activeTool: 'select', hoveredId: null });
+    useUIStore.setState({
+      activeTool: 'select',
+      hoveredId: null,
+      zenMode: false,
+      editingLocked: false,
+    });
   });
 });
 
@@ -38,6 +43,28 @@ describe('ToolHint', () => {
 
   test('renders nothing for tools without a hint', () => {
     setTool('text');
+    const { container } = render(<ToolHint />);
+
+    expect(screen.queryByRole('note')).not.toBeInTheDocument();
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  test('renders nothing in zen mode even when the select tool would show a hint', () => {
+    setTool('select');
+    act(() => {
+      useUIStore.setState({ zenMode: true });
+    });
+    const { container } = render(<ToolHint />);
+
+    expect(screen.queryByRole('note')).not.toBeInTheDocument();
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  test('renders nothing in view mode (edit lock) — its hints are edit guidance', () => {
+    setTool('select');
+    act(() => {
+      useUIStore.setState({ editingLocked: true });
+    });
     const { container } = render(<ToolHint />);
 
     expect(screen.queryByRole('note')).not.toBeInTheDocument();

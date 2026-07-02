@@ -45,6 +45,7 @@ export function RadialMenu() {
 
   const doc = usePedigreeStore((s) => s.document);
   const addParentsForChild = usePedigreeStore((s) => s.addParentsForChild);
+  const addParentSet = usePedigreeStore((s) => s.addParentSet);
   const addPartnerToIndividual = usePedigreeStore((s) => s.addPartnerToIndividual);
   const addChildToFamily = usePedigreeStore((s) => s.addChildToFamily);
   const addSiblingViaNewUnion = usePedigreeStore((s) => s.addSiblingViaNewUnion);
@@ -103,14 +104,19 @@ export function RadialMenu() {
     ? { x: target.position.x * viewportScale + viewportX, y: target.position.y * viewportScale + viewportY }
     : { x: 0, y: 0 };
 
-  // Add Parents is disabled only when the target already has two present parents.
-  const canAddParents = (() => {
+  // Add Parents is always available for a real target: with no parents (or an
+  // incomplete couple) it fills the first set; with a complete couple it attaches
+  // an ADDITIONAL parent set (multi-parentage, #64 — e.g. biological + adoptive).
+  const canAddParents = !!targetId;
+  // Whether clicking "Parent" will create a second parent set rather than fill
+  // the first — drives the button's tooltip so the affordance is discoverable.
+  const addsSecondParentSet = (() => {
     if (!targetId) return false;
     const link = Object.values(doc.parentChildLinks).find((l) => l.childId === targetId);
-    if (!link) return true;
+    if (!link) return false;
     const union = doc.partnerships[link.parentPartnershipId];
-    if (!union) return true;
-    return getPresentPartners(doc.individuals, union).length < 2;
+    if (!union) return false;
+    return getPresentPartners(doc.individuals, union).length >= 2;
   })();
 
   // Tracks Escape (dismiss) and ⌥/Alt (reveal twin split).
@@ -185,8 +191,37 @@ export function RadialMenu() {
       return;
     }
 
-    // Two parents already present — nothing to add (also gated in the UI).
-    if (union && partners.length >= 2) return;
+    // Case D — the child already has a complete parent couple: attach a SECOND
+    // parent set (multi-parentage, #64 — e.g. a biological couple alongside an
+    // adoptive one). Place the new couple one row up, clear to the right of the
+    // existing couple so the two descent lines converge on the child without
+    // colliding; the new edge defaults to biological (solid) and is switched to
+    // adoptive in the properties panel. No relayout — the solver roots on a
+    // single parent union, so the placement is explicit.
+    if (union && partners.length >= 2) {
+      const rightEdge = Math.max(...partners.map((p) => p.position.x));
+      const secondMidX = rightEdge + SIBLING_SPACING + PARTNER_SPACING;
+      const secondParent1 = createDefaultIndividual({
+        genderIdentity: GenderIdentity.Man, generation: parentGeneration,
+        position: { x: secondMidX - PARTNER_SPACING / 2, y: parentY },
+      });
+      const secondParent2 = createDefaultIndividual({
+        genderIdentity: GenderIdentity.Woman, generation: parentGeneration,
+        position: { x: secondMidX + PARTNER_SPACING / 2, y: parentY },
+      });
+      const secondPartnership: PartnershipRelationship = {
+        id: generateId(), type: RelationshipType.Partnership,
+        partner1Id: secondParent1.id, partner2Id: secondParent2.id, childrenIds: [target.id],
+      };
+      const secondLink: ParentChildRelationship = {
+        id: generateId(), type: RelationshipType.ParentChild,
+        parentPartnershipId: secondPartnership.id, childId: target.id,
+      };
+      addParentSet(secondParent1, secondParent2, secondPartnership, secondLink);
+      hideRadialMenu();
+      select(secondParent1.id);
+      return;
+    }
 
     // Case C — no parent union: create a fresh couple above the target.
     const parent1 = createDefaultIndividual({
@@ -208,7 +243,7 @@ export function RadialMenu() {
     addParentsForChild(parent1, parent2, partnership, link, target.id, childGeneration);
     hideRadialMenu();
     select(parent1.id);
-  }, [target, targetId, doc, addParentsForChild, addParentsToParentlessUnion, fillUnionPartner, hideRadialMenu, select]);
+  }, [target, targetId, doc, addParentsForChild, addParentSet, addParentsToParentlessUnion, fillUnionPartner, hideRadialMenu, select]);
 
   const handleAddPartner = useCallback(() => {
     if (!target || !targetId) return;
@@ -416,7 +451,7 @@ export function RadialMenu() {
         <button
           className={clsx(styles.option, styles.top, !canAddParents && styles.disabled)}
           onClick={canAddParents ? handleAddParent : undefined}
-          title={canAddParents ? 'Add Parents' : 'Both parents already added'}
+          title={addsSecondParentSet ? 'Add another parent set (e.g. adoptive)' : 'Add Parents'}
         >
           Parent
         </button>

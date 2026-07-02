@@ -9,6 +9,9 @@ import {
   Info,
   Command,
   HelpCircle,
+  Sparkles,
+  Eye,
+  Grid3x3,
 } from 'lucide-react';
 import { usePedigreeStore } from '../../../stores/pedigreeStore';
 import { useUIStore } from '../../../stores/uiStore';
@@ -97,25 +100,79 @@ function MenuItemButton({
   );
 }
 
+interface MenuToggleItemProps {
+  /** Leading lucide icon (rendered decorative — excluded from the a11y name). */
+  icon: React.ReactNode;
+  label: string;
+  /** Whether the toggle is currently on (drives `aria-checked` + the ✓ badge). */
+  checked: boolean;
+  /** Display string for the keyboard shortcut hint (e.g. `Z`). */
+  shortcut?: string;
+  onToggle: () => void;
+}
+
+/**
+ * A checkable row in the Preferences section: `[icon] label … [shortcut] [✓]`.
+ *
+ * Uses `role="menuitemcheckbox"` + `aria-checked` for correct toggle semantics.
+ * Unlike {@link MenuItemButton}, activating it does NOT close the dropdown, so
+ * users can flip several preferences and watch the checkmarks update in place
+ * (mirrors how the theme picker stays open).
+ */
+function MenuToggleItem({
+  icon,
+  label,
+  checked,
+  shortcut,
+  onToggle,
+}: MenuToggleItemProps): React.JSX.Element {
+  return (
+    <button
+      type="button"
+      role="menuitemcheckbox"
+      aria-checked={checked}
+      className={styles.menuItem}
+      onClick={onToggle}
+      tabIndex={-1}
+      aria-keyshortcuts={shortcut}
+    >
+      <span className={styles.menuItemIcon} aria-hidden="true">
+        {icon}
+      </span>
+      <span className={styles.menuItemLabel}>{label}</span>
+      {shortcut && (
+        <kbd className={styles.menuItemKbd} aria-hidden="true">
+          {shortcut}
+        </kbd>
+      )}
+      <span className={styles.menuItemCheck} aria-hidden="true">
+        {checked ? '✓' : ''}
+      </span>
+    </button>
+  );
+}
+
 /**
  * The top-left "menu island" for the floating-island canvas UI.
  *
  * Renders:
  * - A ☰ hamburger button that opens a dropdown of document actions (New, Open,
- *   Import, Export, Legend, Document details, Command palette, Keyboard
- *   shortcuts), each with a leading icon and — where one exists — a
- *   right-aligned keyboard-shortcut hint.
+ *   Import, Export, Legend, Document details, a Preferences section, Command
+ *   palette, Keyboard shortcuts), each with a leading icon and — where one
+ *   exists — a right-aligned keyboard-shortcut hint.
  * - An editable document title (click-to-edit inline input).
  * - A "Saved locally" save-status indicator, updated on a 15-second tick.
  *
  * Lives in the react-dom tree, so Zustand subscriptions are safe here.
+ * In zen mode it collapses to just the ☰ button (title/save-status hidden) so
+ * the menu — and the Preferences → Zen mode exit — stays discoverable.
  *
  * @example
  * ```tsx
  * <MenuIsland />
  * ```
  */
-export function MenuIsland(): React.JSX.Element {
+export function MenuIsland(): React.JSX.Element | null {
   const updateMetadata = usePedigreeStore((s) => s.updateMetadata);
   const metadata = usePedigreeStore((s) => s.document.metadata);
   const title = metadata.title;
@@ -124,6 +181,10 @@ export function MenuIsland(): React.JSX.Element {
   const storagePersistent = useUIStore((s) => s.storagePersistent);
   const theme = useUIStore((s) => s.theme);
   const setTheme = useUIStore((s) => s.setTheme);
+  // Preferences toggles read reactively so the ✓ badges track store state.
+  const zenMode = useUIStore((s) => s.zenMode);
+  const editingLocked = useUIStore((s) => s.editingLocked);
+  const showGrid = useUIStore((s) => s.showGrid);
 
   const actions = useEditorActions();
 
@@ -241,7 +302,9 @@ export function MenuIsland(): React.JSX.Element {
       if (!menuRef.current) return;
 
       const items = Array.from(
-        menuRef.current.querySelectorAll<HTMLElement>('[role="menuitem"]')
+        menuRef.current.querySelectorAll<HTMLElement>(
+          '[role="menuitem"], [role="menuitemcheckbox"]'
+        )
       );
       if (items.length === 0) return;
 
@@ -318,6 +381,21 @@ export function MenuIsland(): React.JSX.Element {
   const handleMenuLegend = (): void => {
     closeMenu(false);
     actions.openLegend();
+  };
+
+  // Preferences toggles. These deliberately leave the dropdown open so the ✓
+  // badges update in place — except Zen mode, which unmounts this whole island
+  // (it hides in zen mode), so the menu disappears with it.
+  const handleToggleZenMode = (): void => {
+    useUIStore.getState().toggleZenMode();
+  };
+
+  const handleToggleViewMode = (): void => {
+    actions.toggleEditingLock();
+  };
+
+  const handleToggleGrid = (): void => {
+    useUIStore.getState().toggleShowGrid();
   };
 
   /** Opens the ⌘K command palette and closes the dropdown. */
@@ -402,6 +480,34 @@ export function MenuIsland(): React.JSX.Element {
               />
             </div>
             <div className={styles.menuSeparator} role="separator" />
+            {/* Preferences: grouped view/canvas toggles. Kept as in-place
+                checkboxes rather than a nested flyout to match the flat,
+                section-based layout of this dropdown. */}
+            <div className={styles.themeSection}>
+              <span className={styles.themeLabel}>Preferences</span>
+            </div>
+            <MenuToggleItem
+              icon={<Sparkles size={16} />}
+              label="Zen mode"
+              shortcut="Z"
+              checked={zenMode}
+              onToggle={handleToggleZenMode}
+            />
+            <MenuToggleItem
+              icon={<Eye size={16} />}
+              label="View mode"
+              shortcut="L"
+              checked={editingLocked}
+              onToggle={handleToggleViewMode}
+            />
+            <MenuToggleItem
+              icon={<Grid3x3 size={16} />}
+              label="Toggle grid"
+              shortcut="G"
+              checked={showGrid}
+              onToggle={handleToggleGrid}
+            />
+            <div className={styles.menuSeparator} role="separator" />
             <MenuItemButton
               icon={<Command size={16} />}
               label="Command palette…"
@@ -426,7 +532,10 @@ export function MenuIsland(): React.JSX.Element {
         )}
       </div>
 
-      {/* Title + save-status column */}
+      {/* Title + save-status column. Collapsed in zen mode so only the ☰ button
+          remains — the menu stays discoverable (and offers Preferences → Zen
+          mode to exit) without reintroducing the full editing chrome. */}
+      {!zenMode && (
       <div className={styles.docColumn}>
         {isEditingTitle ? (
           <input
@@ -464,6 +573,7 @@ export function MenuIsland(): React.JSX.Element {
           {saveStatusText}
         </span>
       </div>
+      )}
 
     </Island>
   );

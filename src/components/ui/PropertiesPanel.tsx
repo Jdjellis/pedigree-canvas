@@ -30,7 +30,7 @@ import {
   parentCoupleLabel,
   type AdoptionMode,
 } from '../../utils/adoption';
-import { individualHasChildren } from '../../utils/childlessness';
+import { individualHasChildren, childlessStatusChange } from '../../utils/childlessness';
 import type {
   FillPatternType,
   Individual,
@@ -928,14 +928,7 @@ export function PropertiesPanel() {
             options={CHILDLESS_OPTIONS}
             value={individual.childlessStatus ?? 'none'}
             disabled={hasChildren}
-            onChange={(v) =>
-              update({
-                childlessStatus: v === 'none' ? undefined : v,
-                // Keep the cause across no-children/infertility; drop it only
-                // when clearing the childless status entirely.
-                childlessReason: v === 'none' ? undefined : individual.childlessReason,
-              })
-            }
+            onChange={(v) => update(childlessStatusChange(individual, v))}
             ariaLabel="Individual childless status"
           />
           {hasChildren ? (

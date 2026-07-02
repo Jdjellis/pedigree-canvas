@@ -6,7 +6,12 @@ import { OnboardingHints } from './OnboardingHints';
 
 beforeEach(() => {
   usePedigreeStore.getState().resetDocument();
-  useUIStore.setState({ activeModal: null, onboarded: false });
+  useUIStore.setState({
+    activeModal: null,
+    onboarded: false,
+    zenMode: false,
+    editingLocked: false,
+  });
   localStorage.removeItem(ONBOARDED_STORAGE_KEY);
 });
 
@@ -86,6 +91,20 @@ describe('OnboardingHints with onboarded flag set', () => {
   test('renders nothing when onboarded flag is set', () => {
     useUIStore.getState().setOnboarded();
 
+    const { container } = render(<OnboardingHints />);
+    expect(container.firstChild).toBeNull();
+  });
+});
+
+describe('OnboardingHints in zen / view mode', () => {
+  test('renders nothing in zen mode even on a fresh document', () => {
+    useUIStore.setState({ zenMode: true });
+    const { container } = render(<OnboardingHints />);
+    expect(container.firstChild).toBeNull();
+  });
+
+  test('renders nothing in view mode (its cues are edit guidance)', () => {
+    useUIStore.setState({ editingLocked: true });
     const { container } = render(<OnboardingHints />);
     expect(container.firstChild).toBeNull();
   });

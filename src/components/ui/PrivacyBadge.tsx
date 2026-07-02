@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { ShieldCheck } from 'lucide-react';
+import { useUIStore } from '../../stores/uiStore';
 import styles from './PrivacyBadge.module.css';
 
 /**
@@ -8,10 +9,14 @@ import styles from './PrivacyBadge.module.css';
  * Renders a shield-check icon in the bottom-right chrome. Hovering shows a
  * native tooltip; clicking opens an inline popover with more detail.
  * Dismissed by clicking outside, pressing Escape, or clicking the badge again.
+ *
+ * Hidden in zen mode — it's peripheral chrome that the focus mode strips. It
+ * stays in view mode.
  */
-export function PrivacyBadge(): React.JSX.Element {
+export function PrivacyBadge(): React.JSX.Element | null {
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const zenMode = useUIStore((s) => s.zenMode);
 
   useEffect(() => {
     if (!open) return;
@@ -35,6 +40,8 @@ export function PrivacyBadge(): React.JSX.Element {
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [open]);
+
+  if (zenMode) return null;
 
   return (
     <div ref={wrapperRef} className={styles.wrapper}>

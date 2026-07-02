@@ -1,0 +1,26 @@
+/**
+ * "Exit zen mode" pill — the only chrome in the bottom-right while zen mode is
+ * active (help + privacy badges are hidden there). Subtle by default so it
+ * doesn't intrude on a focused canvas, but always one click away.
+ */
+.exitButton {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.06);
+  opacity: 0.75;
+  transition: opacity 0.12s, background-color 0.12s;
+}
+
+.exitButton:hover {
+  opacity: 1;
+  background: var(--color-surface-hover, rgba(0, 0, 0, 0.04));
+}

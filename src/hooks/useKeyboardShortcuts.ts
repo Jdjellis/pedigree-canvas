@@ -14,7 +14,9 @@ import { openDocumentAction, deleteSelectedAction } from '../commands/editorActi
  * - Cmd/Ctrl+S: Save to JSON
  * - Cmd/Ctrl+O: Open JSON file
  * - Cmd/Ctrl+E: Open export modal
- * - 1/V select, 2/T text, 3/E eraser, 4/C connect, H hand, L toggle edit-lock
+ * - 1/V select, 2/T text, 3/E eraser, 4/C connect, H hand, L toggle edit-lock (view mode)
+ * - Z: Toggle zen mode (distraction-free canvas)
+ * - G: Toggle the dot-grid + generation guide lines
  * - ?: Open keyboard shortcuts overlay
  * - Delete/Backspace: Delete selected individuals
  * - Escape: Clear selection, close modal, hide radial menu
@@ -117,6 +119,16 @@ export function useKeyboardShortcuts() {
         case 'l': {
           e.preventDefault();
           useUIStore.getState().toggleEditingLocked();
+          return;
+        }
+        case 'z': {
+          e.preventDefault();
+          useUIStore.getState().toggleZenMode();
+          return;
+        }
+        case 'g': {
+          e.preventDefault();
+          useUIStore.getState().toggleShowGrid();
           return;
         }
         case '?': {

@@ -97,6 +97,7 @@ export const CanvasContainer = forwardRef<CanvasContainerHandle>(
     const updateDragLinkCursor = useUIStore((s) => s.updateDragLinkCursor);
     const endDragLink = useUIStore((s) => s.endDragLink);
     const editingLocked = useUIStore((s) => s.editingLocked);
+    const showGrid = useUIStore((s) => s.showGrid);
     // Resolve the active theme's canvas palette here (react-dom), then pass the
     // colours down to the Konva layers as props — react-konva's reconciler does
     // not reliably propagate store subscriptions into canvas children.
@@ -300,6 +301,9 @@ export const CanvasContainer = forwardRef<CanvasContainerHandle>(
       const el = stageRef.current?.container();
       if (!el) return;
       const panning = isDragging || isMiddlePanning;
+      // View mode (editingLocked) makes plain drag pan everywhere, so it is a
+      // "pan anywhere" ready state just like holding space.
+      const grabReady = isSpaceHeld || editingLocked;
       // Connect gesture armed: Alt held over a person, or an alt-drag link already
       // in progress. The latter keeps the crosshair across empty canvas until the
       // drop finishes the gesture.
@@ -307,14 +311,15 @@ export const CanvasContainer = forwardRef<CanvasContainerHandle>(
       el.style.cursor = resolveCanvasCursor({
         panning,
         spaceHeld: isSpaceHeld,
+        editingLocked,
         // A hovered symbol OR a hovered connection line both warrant a pointer.
         hovering: hoveredId !== null || hoveredConnection !== null,
         tool: activeTool,
         connectArmed,
       });
-      // While panning, clear any stale inline cursor on the layer canvases so the
-      // container's grab/grabbing cursor is what shows.
-      if (panning || isSpaceHeld) {
+      // While panning (or in a grab-ready pan mode), clear any stale inline cursor
+      // on the layer canvases so the container's grab/grabbing cursor is what shows.
+      if (panning || grabReady) {
         el.querySelectorAll('canvas').forEach((c) => {
           (c as HTMLElement).style.cursor = '';
         });
@@ -323,6 +328,7 @@ export const CanvasContainer = forwardRef<CanvasContainerHandle>(
       isDragging,
       isMiddlePanning,
       isSpaceHeld,
+      editingLocked,
       isAltHeld,
       hoveredId,
       hoveredConnection,
@@ -466,6 +472,8 @@ export const CanvasContainer = forwardRef<CanvasContainerHandle>(
     const handleMarqueeDown = useCallback(
       (e: KonvaEventObject<MouseEvent>) => {
         didMarqueeRef.current = false;
+        // In view mode the stage is draggable and plain drag pans, so no marquee.
+        if (useUIStore.getState().editingLocked) return;
         if (useUIStore.getState().activeTool !== 'select') return;
         if (e.target !== e.target.getStage()) return; // only on empty canvas
         const stage = stageRef.current;
@@ -516,9 +524,11 @@ export const CanvasContainer = forwardRef<CanvasContainerHandle>(
       else ui.clearSelection();
     }, []);
 
-    // Pan by dragging only when the hand tool is active or space is held. In
-    // every other tool, dragging empty canvas is free for marquee / placement.
-    const isDraggable = activeTool === 'hand' || isSpaceHeld;
+    // Pan by dragging when the hand tool is active, space is held, or the canvas
+    // is read-only (view mode) — there, plain drag anywhere pans, mirroring
+    // Excalidraw's view mode. In editable tools, dragging empty canvas is free
+    // for marquee / placement instead.
+    const isDraggable = activeTool === 'hand' || isSpaceHeld || editingLocked;
 
     const individualsList = Object.values(individuals);
 
@@ -601,14 +611,16 @@ export const CanvasContainer = forwardRef<CanvasContainerHandle>(
               <BoundsLayer bounds={bounds} individuals={individualsList} />
             </Layer>
 
-            <GridLayer
-              width={dimensions.width}
-              height={dimensions.height}
-              scale={scale}
-              position={position}
-              gridColor={canvasPalette.gridColor}
-              generationLineColor={canvasPalette.generationLineColor}
-            />
+            {showGrid && (
+              <GridLayer
+                width={dimensions.width}
+                height={dimensions.height}
+                scale={scale}
+                position={position}
+                gridColor={canvasPalette.gridColor}
+                generationLineColor={canvasPalette.generationLineColor}
+              />
+            )}
 
             <ConnectionsLayer
               partnerships={partnerships}

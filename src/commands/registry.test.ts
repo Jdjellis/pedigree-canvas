@@ -56,6 +56,20 @@ describe('buildCommands / getCommand', () => {
     expect(uniqueIds.size).toBe(ids.length);
   });
 
+  test('exposes the view preference commands (zen mode, view mode, grid)', () => {
+    const cmds = buildCommands(makeNoopActions());
+    expect(getCommand(cmds, 'view.toggleZenMode')).toBeDefined();
+    expect(getCommand(cmds, 'view.toggleViewMode')).toBeDefined();
+    expect(getCommand(cmds, 'view.toggleGrid')).toBeDefined();
+  });
+
+  test('running the view-mode command delegates to toggleEditingLock', () => {
+    const actions = makeNoopActions();
+    const cmds = buildCommands(actions);
+    getCommand(cmds, 'view.toggleViewMode')!.run();
+    expect(actions.toggleEditingLock).toHaveBeenCalled();
+  });
+
   test('getCommand returns undefined for an unknown id', () => {
     const actions = makeNoopActions();
     const cmds = buildCommands(actions);

@@ -7,7 +7,27 @@ beforeEach(() => {
   useUIStore.setState({
     activeModal: null,
     propertiesPanelOpen: false,
+    zenMode: false,
+    editingLocked: false,
   });
+});
+
+test('renders nothing while zen mode is active', () => {
+  useUIStore.setState({ zenMode: true });
+  const { container } = render(<ActionsIsland />);
+
+  expect(container).toBeEmptyDOMElement();
+  expect(screen.queryByRole('button', { name: 'Export' })).not.toBeInTheDocument();
+});
+
+test('keeps Export in view mode but hides the properties-panel toggle', () => {
+  useUIStore.setState({ editingLocked: true });
+  render(<ActionsIsland />);
+
+  expect(screen.getByRole('button', { name: 'Export' })).toBeInTheDocument();
+  expect(
+    screen.queryByRole('button', { name: 'Toggle properties panel' })
+  ).not.toBeInTheDocument();
 });
 
 test('renders Export and Toggle properties panel buttons', () => {

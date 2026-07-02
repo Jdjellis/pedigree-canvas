@@ -109,11 +109,64 @@ describe('PropertiesPanel adoption control', () => {
     expect(screen.queryByRole('checkbox', { name: 'Adopted' })).not.toBeInTheDocument();
   });
 
-  // NOTE: The 2+-link (multi-family) branch of the adoption control is not
-  // tested here because it is currently unreachable in the data model — an
-  // individual cannot belong to more than one parent partnership until
-  // multi-parentage (#64) is implemented. RTL coverage is intentionally
-  // deferred to that issue.
+  // The 2+-link (multi-family) branch — reachable now that multi-parentage (#64)
+  // lets a child gain a second parent set.
+  function seedTwoParentSets(): void {
+    const doc = createDefaultDocument();
+    doc.individuals['child-c'] = createDefaultIndividual({ id: 'child-c', adopted: true });
+    doc.individuals['bioDad'] = createDefaultIndividual({ id: 'bioDad', displayName: 'Bio Dad' });
+    doc.individuals['bioMum'] = createDefaultIndividual({ id: 'bioMum', displayName: 'Bio Mum' });
+    doc.individuals['adoptDad'] = createDefaultIndividual({ id: 'adoptDad', displayName: 'Adoptive Dad' });
+    doc.individuals['adoptMum'] = createDefaultIndividual({ id: 'adoptMum', displayName: 'Adoptive Mum' });
+    doc.partnerships['bioUnion'] = makePartnership('bioUnion', 'bioDad', 'bioMum');
+    doc.partnerships['adoptUnion'] = makePartnership('adoptUnion', 'adoptDad', 'adoptMum');
+    // Biological edge (solid) + adoptive edge (dashed) for the same child.
+    doc.parentChildLinks['bioLink'] = makeLink('bioLink', 'child-c', 'bioUnion');
+    doc.parentChildLinks['adoptLink'] = {
+      ...makeLink('adoptLink', 'child-c', 'adoptUnion'),
+      isAdoptive: true,
+    };
+
+    act(() => {
+      usePedigreeStore.getState().setDocument(doc);
+      useUIStore.setState({
+        selectedIds: new Set(['child-c']),
+        propertiesPanelOpen: true,
+      });
+    });
+  }
+
+  it('shows a per-couple Biological/Adoptive toggle for each parent set when 2+ links exist', () => {
+    seedTwoParentSets();
+    render(<PropertiesPanel />);
+
+    // One labelled toggle group per couple, keyed by the partners' display names.
+    expect(
+      screen.getByRole('group', { name: 'Line of descent for Bio Dad & Bio Mum' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('group', { name: 'Line of descent for Adoptive Dad & Adoptive Mum' }),
+    ).toBeInTheDocument();
+
+    // The 1-link in/out control is NOT used in this branch.
+    expect(screen.queryByRole('group', { name: 'Adoption status' })).not.toBeInTheDocument();
+    // A separate brackets checkbox remains.
+    expect(screen.getByRole('checkbox', { name: 'Adopted (brackets)' })).toBeInTheDocument();
+  });
+
+  it('toggles a single edge\'s line style independently via setLinkAdoptive', () => {
+    seedTwoParentSets();
+    render(<PropertiesPanel />);
+
+    // The biological couple starts solid (Biological selected). Switch it to Adoptive.
+    const bioGroup = screen.getByRole('group', { name: 'Line of descent for Bio Dad & Bio Mum' });
+    fireEvent.click(within(bioGroup).getByRole('button', { name: 'Adoptive' }));
+
+    const links = usePedigreeStore.getState().document.parentChildLinks;
+    expect(links['bioLink'].isAdoptive).toBe(true);
+    // The other couple's edge is unaffected.
+    expect(links['adoptLink'].isAdoptive).toBe(true);
+  });
 });
 
 describe('PropertiesPanel stillbirth gestational age', () => {
@@ -273,20 +326,47 @@ describe('PropertiesPanel individual childlessness control', () => {
     );
   });
 
-  it('keeps the cause when switching between no-children and infertility, drops it on none', () => {
+  it('parks each status cause so an accidental switch never loses typed text', () => {
     seed({ childlessStatus: 'noChildren', childlessReason: 'vasectomy' });
     render(<PropertiesPanel />);
 
     const group = screen.getByRole('group', { name: 'Individual childless status' });
+
+    // Switching to infertility hides the no-children cause; the field is blank
+    // for the new status until the user types.
     fireEvent.click(within(group).getByRole('button', { name: 'Infertility' }));
     let ind = usePedigreeStore.getState().document.individuals['ind-1'];
     expect(ind.childlessStatus).toBe('infertility');
-    expect(ind.childlessReason).toBe('vasectomy');
+    expect(ind.childlessReason).toBeUndefined();
+    expect(screen.getByPlaceholderText('e.g. azoospermia')).toHaveValue('');
 
-    fireEvent.click(within(group).getByRole('button', { name: 'None' }));
+    // Type an infertility cause, then switch back to no children.
+    fireEvent.change(screen.getByPlaceholderText('e.g. azoospermia'), {
+      target: { value: 'azoospermia' },
+    });
+    fireEvent.click(within(group).getByRole('button', { name: 'No children' }));
     ind = usePedigreeStore.getState().document.individuals['ind-1'];
+    expect(ind.childlessStatus).toBe('noChildren');
+    // The original no-children cause is restored, not lost.
+    expect(ind.childlessReason).toBe('vasectomy');
+    expect(screen.getByPlaceholderText('e.g. vasectomy')).toHaveValue('vasectomy');
+  });
+
+  it('clears the active cause on none while keeping parked causes for re-selection', () => {
+    seed({ childlessStatus: 'noChildren', childlessReason: 'vasectomy' });
+    render(<PropertiesPanel />);
+
+    const group = screen.getByRole('group', { name: 'Individual childless status' });
+    fireEvent.click(within(group).getByRole('button', { name: 'None' }));
+    let ind = usePedigreeStore.getState().document.individuals['ind-1'];
     expect(ind.childlessStatus).toBeUndefined();
     expect(ind.childlessReason).toBeUndefined();
+
+    // Re-selecting no children restores the cause the user had entered.
+    fireEvent.click(within(group).getByRole('button', { name: 'No children' }));
+    ind = usePedigreeStore.getState().document.individuals['ind-1'];
+    expect(ind.childlessStatus).toBe('noChildren');
+    expect(ind.childlessReason).toBe('vasectomy');
   });
 
   it('disables the control and hides the cause when the individual has children', () => {

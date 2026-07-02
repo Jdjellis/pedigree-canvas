@@ -36,3 +36,42 @@ describe('uiStore tool state', () => {
     expect(useUIStore.getState().editingLocked).toBe(false);
   });
 });
+
+describe('uiStore view preferences', () => {
+  beforeEach(() => {
+    useUIStore.setState({ zenMode: false, showGrid: true });
+  });
+
+  it('defaults zen mode off and grid on', () => {
+    expect(useUIStore.getState().zenMode).toBe(false);
+    expect(useUIStore.getState().showGrid).toBe(true);
+  });
+
+  it('toggleZenMode flips the flag', () => {
+    useUIStore.getState().toggleZenMode();
+    expect(useUIStore.getState().zenMode).toBe(true);
+    useUIStore.getState().toggleZenMode();
+    expect(useUIStore.getState().zenMode).toBe(false);
+  });
+
+  it('setZenMode sets the flag explicitly', () => {
+    useUIStore.getState().setZenMode(true);
+    expect(useUIStore.getState().zenMode).toBe(true);
+    useUIStore.getState().setZenMode(false);
+    expect(useUIStore.getState().zenMode).toBe(false);
+  });
+
+  it('toggleShowGrid flips the flag', () => {
+    useUIStore.getState().toggleShowGrid();
+    expect(useUIStore.getState().showGrid).toBe(false);
+    useUIStore.getState().toggleShowGrid();
+    expect(useUIStore.getState().showGrid).toBe(true);
+  });
+
+  it('setShowGrid sets the flag explicitly', () => {
+    useUIStore.getState().setShowGrid(false);
+    expect(useUIStore.getState().showGrid).toBe(false);
+    useUIStore.getState().setShowGrid(true);
+    expect(useUIStore.getState().showGrid).toBe(true);
+  });
+});

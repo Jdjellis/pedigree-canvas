@@ -4,6 +4,7 @@ import { HelpIsland } from './HelpIsland';
 
 beforeEach(() => {
   useUIStore.getState().closeModal();
+  useUIStore.setState({ zenMode: false });
 });
 
 test('renders the help button by accessible name', () => {
@@ -23,4 +24,14 @@ test('button has correct title attribute', () => {
     'title',
     'Help & About',
   );
+});
+
+test('renders nothing in zen mode (peripheral chrome the focus mode strips)', () => {
+  useUIStore.setState({ zenMode: true });
+  const { container } = render(<HelpIsland />);
+
+  expect(container).toBeEmptyDOMElement();
+  expect(
+    screen.queryByRole('button', { name: 'Help & About' })
+  ).not.toBeInTheDocument();
 });

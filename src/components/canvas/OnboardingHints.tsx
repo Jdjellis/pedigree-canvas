@@ -30,6 +30,8 @@ export function OnboardingHints(): ReactElement | null {
   );
 
   const onboarded = useUIStore((s) => s.onboarded);
+  const zenMode = useUIStore((s) => s.zenMode);
+  const editingLocked = useUIStore((s) => s.editingLocked);
 
   // Mark onboarded once the first relative is added, so it never returns.
   useEffect(() => {
@@ -67,6 +69,12 @@ export function OnboardingHints(): ReactElement | null {
   const handleHelp = (): void => {
     useUIStore.getState().openModal('help');
   };
+
+  // Zen (focus) and view (read-only) modes strip the welcome/tips chrome — and
+  // its "hover to add relatives" cue is wrong in read-only mode anyway.
+  if (zenMode || editingLocked) {
+    return null;
+  }
 
   if (!shouldShowOnboarding(individualCount, onboarded)) {
     return null;

@@ -12,6 +12,12 @@ export interface CanvasCursorInputs {
   panning: boolean;
   /** The spacebar is held — the canvas is in "pan anywhere" ready state. */
   spaceHeld: boolean;
+  /**
+   * View mode (editing locked) — plain drag pans everywhere, so the canvas is in
+   * the same "pan anywhere" ready state as when the spacebar is held. Defaults to
+   * false when omitted.
+   */
+  editingLocked?: boolean;
   /** A symbol (or other clickable canvas node) is currently hovered. */
   hovering: boolean;
   /** The active tool. The hover pointer affordance only applies in 'select'. */
@@ -33,7 +39,7 @@ export interface CanvasCursorInputs {
  *
  * Priority, highest first:
  *  1. An in-progress pan gesture → `grabbing`.
- *  2. Spacebar held ("pan anywhere" ready) → `grab`.
+ *  2. Spacebar held or view mode ("pan anywhere" ready) → `grab`.
  *  3. The connect gesture is armed → `crosshair` (matches the connect tool).
  *  4. Hovering a clickable node in the select tool → `pointer`.
  *  5. Otherwise `''`, clearing the inline cursor so the per-tool CSS cursor
@@ -45,9 +51,10 @@ export function resolveCanvasCursor({
   hovering,
   tool,
   connectArmed = false,
+  editingLocked = false,
 }: CanvasCursorInputs): CanvasCursor {
   if (panning) return 'grabbing';
-  if (spaceHeld) return 'grab';
+  if (spaceHeld || editingLocked) return 'grab';
   if (connectArmed) return 'crosshair';
   if (hovering && tool === 'select') return 'pointer';
   return '';

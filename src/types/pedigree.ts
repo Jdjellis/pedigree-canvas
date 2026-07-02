@@ -82,6 +82,13 @@ export interface TextAnnotation {
   fontSize: number;
 }
 
+/**
+ * The two documented forms of childlessness (a double cross-bar for infertility,
+ * a single bar for no children), shared by {@link Individual} and
+ * {@link PartnershipRelationship}.
+ */
+export type ChildlessStatus = 'infertility' | 'noChildren';
+
 export interface Individual {
   id: string;
 
@@ -129,13 +136,21 @@ export interface Individual {
    * once the individual has children on the canvas (a marker would contradict the
    * descent line).
    */
-  childlessStatus?: 'infertility' | 'noChildren';
+  childlessStatus?: ChildlessStatus;
   /**
    * Free-text cause/description for this individual's childlessness (e.g.
-   * "vasectomy", "azoospermia"). Meaningful for either {@link childlessStatus}
-   * value.
+   * "vasectomy", "azoospermia"), for the currently selected {@link childlessStatus}.
+   * The cause for the *other* status (if the user ever typed one) is parked in
+   * {@link childlessReasonByStatus} so switching status and back does not lose it.
    */
   childlessReason?: string;
+  /**
+   * Parked causes for the childless status(es) that are not currently selected,
+   * so an accidental status change never discards typed text. The active
+   * status's cause always lives in {@link childlessReason}; this holds only the
+   * inactive one(s).
+   */
+  childlessReasonByStatus?: Partial<Record<ChildlessStatus, string>>;
 
   // Annotations
   investigations: Investigation[];
@@ -168,13 +183,21 @@ export interface PartnershipRelationship {
    * Either may be annotated with a free-text {@link childlessReason}.
    * Absent → an ordinary union that draws no childless marks.
    */
-  childlessStatus?: 'infertility' | 'noChildren';
+  childlessStatus?: ChildlessStatus;
   /**
    * Free-text cause/description for a childless union (e.g. "azoospermia",
-   * "endometriosis", "vasectomy"), rendered below the marks. Meaningful for
-   * either {@link childlessStatus} value.
+   * "endometriosis", "vasectomy"), rendered below the marks, for the currently
+   * selected {@link childlessStatus}. The cause for the *other* status is parked
+   * in {@link childlessReasonByStatus} so switching status and back keeps it.
    */
   childlessReason?: string;
+  /**
+   * Parked causes for the childless status(es) not currently selected, so an
+   * accidental status change never discards typed text. The active status's
+   * cause always lives in {@link childlessReason}; this holds only the inactive
+   * one(s).
+   */
+  childlessReasonByStatus?: Partial<Record<ChildlessStatus, string>>;
 }
 
 export interface ParentChildRelationship {

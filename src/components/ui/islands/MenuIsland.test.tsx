@@ -13,6 +13,8 @@ beforeEach(() => {
   useUIStore.getState().setCommandPaletteOpen(false);
   // Default to persistent storage; individual tests opt into the blocked state.
   useUIStore.setState({ storagePersistent: true });
+  // Reset view preferences so Preferences-section tests are isolated.
+  useUIStore.setState({ zenMode: false, showGrid: true, editingLocked: false });
 });
 
 afterEach(() => {
@@ -246,6 +248,97 @@ test('ArrowUp from the first item wraps to the last item', () => {
 
   const items = screen.getAllByRole('menuitem');
   expect(document.activeElement).toBe(items[items.length - 1]);
+});
+
+// ── Preferences submenu ──────────────────────────────────────────────────────
+
+test('menu contains a Preferences section with Zen mode, View mode, and Toggle grid toggles', () => {
+  render(<MenuIsland />);
+
+  fireEvent.click(screen.getByRole('button', { name: /open document menu/i }));
+
+  expect(
+    screen.getByRole('menuitemcheckbox', { name: /zen mode/i })
+  ).toBeInTheDocument();
+  expect(
+    screen.getByRole('menuitemcheckbox', { name: /view mode/i })
+  ).toBeInTheDocument();
+  expect(
+    screen.getByRole('menuitemcheckbox', { name: /toggle grid/i })
+  ).toBeInTheDocument();
+});
+
+test('the grid toggle reflects showGrid via aria-checked and flips the store', () => {
+  render(<MenuIsland />);
+
+  fireEvent.click(screen.getByRole('button', { name: /open document menu/i }));
+
+  const gridItem = screen.getByRole('menuitemcheckbox', { name: /toggle grid/i });
+  // Grid is on by default.
+  expect(gridItem).toHaveAttribute('aria-checked', 'true');
+
+  fireEvent.click(gridItem);
+
+  expect(useUIStore.getState().showGrid).toBe(false);
+  // Dropdown stays open so the user can flip several preferences in a row.
+  expect(gridItem).toHaveAttribute('aria-checked', 'false');
+});
+
+test('the View mode toggle mirrors editingLocked and flips it on click', () => {
+  render(<MenuIsland />);
+
+  fireEvent.click(screen.getByRole('button', { name: /open document menu/i }));
+
+  const viewItem = screen.getByRole('menuitemcheckbox', { name: /view mode/i });
+  expect(viewItem).toHaveAttribute('aria-checked', 'false');
+
+  fireEvent.click(viewItem);
+
+  expect(useUIStore.getState().editingLocked).toBe(true);
+  expect(viewItem).toHaveAttribute('aria-checked', 'true');
+});
+
+test('clicking Zen mode turns zen mode on but keeps the ☰ button discoverable', () => {
+  render(<MenuIsland />);
+
+  fireEvent.click(screen.getByRole('button', { name: /open document menu/i }));
+  fireEvent.click(screen.getByRole('menuitemcheckbox', { name: /zen mode/i }));
+
+  expect(useUIStore.getState().zenMode).toBe(true);
+  // The ☰ button stays so the menu (and Preferences → Zen mode to exit) is
+  // still reachable, but the title/save-status column collapses away.
+  expect(
+    screen.getByRole('button', { name: /open document menu/i })
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByRole('button', { name: /untitled pedigree/i })
+  ).not.toBeInTheDocument();
+});
+
+test('zen mode collapses to just the ☰ button (no title/status column)', () => {
+  useUIStore.setState({ zenMode: true });
+  render(<MenuIsland />);
+
+  expect(
+    screen.getByRole('button', { name: /open document menu/i })
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByRole('button', { name: /untitled pedigree/i })
+  ).not.toBeInTheDocument();
+  expect(screen.queryByText(/saved locally/i)).not.toBeInTheDocument();
+});
+
+test('the ☰ menu still opens in zen mode, exposing Preferences to exit', () => {
+  useUIStore.setState({ zenMode: true });
+  render(<MenuIsland />);
+
+  fireEvent.click(screen.getByRole('button', { name: /open document menu/i }));
+
+  const zenToggle = screen.getByRole('menuitemcheckbox', { name: /zen mode/i });
+  expect(zenToggle).toHaveAttribute('aria-checked', 'true');
+
+  fireEvent.click(zenToggle);
+  expect(useUIStore.getState().zenMode).toBe(false);
 });
 
 test('local-data notice is never rendered (notice removed)', () => {

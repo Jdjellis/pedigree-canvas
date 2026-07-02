@@ -5,13 +5,20 @@ import styles from './ToolHint.module.css';
  * Per-tool hint shown under the toolbar. Contextual: the select tool swaps
  * between a pan hint (default) and an Alt+drag linking hint when the pointer
  * is over a node — teaching the right thing at the right moment.
+ *
+ * Hidden in zen mode along with the toolbar it annotates, and in view mode —
+ * its hints (pan, Alt+drag to link) are about editing, which is read-only there.
  */
 export function ToolHint(): React.JSX.Element | null {
   const activeTool = useUIStore((s) => s.activeTool);
   const hoveredId = useUIStore((s) => s.hoveredId);
   const linkPending = useUIStore((s) => s.dragLink.active);
+  const zenMode = useUIStore((s) => s.zenMode);
+  const editingLocked = useUIStore((s) => s.editingLocked);
 
   let hint: React.ReactNode = null;
+
+  if (zenMode || editingLocked) return null;
 
   if (activeTool === 'select') {
     if (hoveredId) {

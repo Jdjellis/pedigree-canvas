@@ -9,11 +9,18 @@ import styles from './islands.module.css';
  * Floating tool island: edit-lock and hand helpers, then Select, then Text and
  * Eraser. Reads `activeTool`/`editingLocked` reactively — safe here because
  * this lives in the react-dom tree.
+ *
+ * Hidden in view (read-only) mode — the drawing tools are useless there, so
+ * their absence is what signals read-only (mirroring Excalidraw's view mode).
+ * KEPT in zen mode: zen is a focus mode for editing without distractions, so
+ * the tools stay while the peripheral chrome is what's stripped.
  */
-export function ToolIsland(): React.JSX.Element {
+export function ToolIsland(): React.JSX.Element | null {
   const activeTool = useUIStore((s) => s.activeTool);
   const editingLocked = useUIStore((s) => s.editingLocked);
   const actions = useEditorActions();
+
+  if (editingLocked) return null;
 
   return (
     <Island aria-label="Tools">
@@ -45,7 +52,6 @@ export function ToolIsland(): React.JSX.Element {
         icon={<Type size={19} />}
         active={activeTool === 'text'}
         onClick={actions.textTool}
-        disabled={editingLocked}
       />
       <ToolButton
         label="Eraser"
@@ -53,7 +59,6 @@ export function ToolIsland(): React.JSX.Element {
         icon={<Eraser size={19} />}
         active={activeTool === 'eraser'}
         onClick={actions.eraserTool}
-        disabled={editingLocked}
       />
       <span className={styles.toolDivider} aria-hidden="true" />
       <ToolButton

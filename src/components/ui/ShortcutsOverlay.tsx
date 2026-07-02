@@ -61,7 +61,14 @@ const SHORTCUT_GROUPS: ShortcutGroup[] = [
       { description: 'Eraser tool', keys: ['3', 'E'] },
       { description: 'Connect tool', keys: ['4', 'C'] },
       { description: 'Hand (pan) tool', keys: ['H'] },
-      { description: 'Toggle edit lock', keys: ['L'] },
+    ],
+  },
+  {
+    label: 'View',
+    rows: [
+      { description: 'View mode (edit lock)', keys: ['L'] },
+      { description: 'Zen mode', keys: ['Z'] },
+      { description: 'Toggle grid', keys: ['G'] },
     ],
   },
   {

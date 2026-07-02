@@ -1,26 +1,55 @@
-import type { PedigreeDocument, Individual, PartnershipRelationship } from '../types/pedigree';
+import type {
+  PedigreeDocument,
+  Individual,
+  PartnershipRelationship,
+  ParentChildRelationship,
+} from '../types/pedigree';
 
+/** One set of parents for a child: a partnership plus the edge linking it. */
+export interface ParentSet {
+  father?: Individual;
+  mother?: Individual;
+  partnershipId: string;
+  /** The parent-child edge, carrying its per-edge line style (`isAdoptive`). */
+  link: ParentChildRelationship;
+}
+
+/**
+ * Return **every** parent set for a child, in `parentChildLinks` iteration order.
+ * A child normally has one, but multi-parentage (e.g. a biological couple plus an
+ * adoptive couple, issue #64) attaches more than one — each is its own set.
+ * Links whose partnership is missing from the document are skipped.
+ */
+export function findParentSets(
+  doc: PedigreeDocument,
+  individualId: string
+): ParentSet[] {
+  const sets: ParentSet[] = [];
+  for (const link of Object.values(doc.parentChildLinks)) {
+    if (link.childId !== individualId) continue;
+    const partnership = doc.partnerships[link.parentPartnershipId];
+    if (!partnership) continue;
+    sets.push({
+      father: partnership.partner1Id ? doc.individuals[partnership.partner1Id] : undefined,
+      mother: partnership.partner2Id ? doc.individuals[partnership.partner2Id] : undefined,
+      partnershipId: partnership.id,
+      link,
+    });
+  }
+  return sets;
+}
+
+/**
+ * The **first** parent set for a child, or `{}` when none. Retained for callers
+ * that only need a single couple; use {@link findParentSets} to see all of them.
+ */
 export function findParents(
   doc: PedigreeDocument,
   individualId: string
 ): { father?: Individual; mother?: Individual; partnershipId?: string } {
-  for (const link of Object.values(doc.parentChildLinks)) {
-    if (link.childId === individualId) {
-      const partnership = doc.partnerships[link.parentPartnershipId];
-      if (!partnership) continue;
-
-      const p1 = partnership.partner1Id ? doc.individuals[partnership.partner1Id] : undefined;
-      const p2 = partnership.partner2Id ? doc.individuals[partnership.partner2Id] : undefined;
-
-      // Return by biological role if possible, otherwise by order
-      return {
-        father: p1,
-        mother: p2,
-        partnershipId: partnership.id,
-      };
-    }
-  }
-  return {};
+  const [first] = findParentSets(doc, individualId);
+  if (!first) return {};
+  return { father: first.father, mother: first.mother, partnershipId: first.partnershipId };
 }
 
 export function findChildren(
@@ -48,16 +77,23 @@ export function findSiblings(
   doc: PedigreeDocument,
   individualId: string
 ): Individual[] {
-  const { partnershipId } = findParents(doc, individualId);
-  if (!partnershipId) return [];
-
-  const partnership = doc.partnerships[partnershipId];
-  if (!partnership) return [];
-
-  return partnership.childrenIds
-    .filter((id) => id !== individualId)
-    .map((id) => doc.individuals[id])
-    .filter(Boolean);
+  // Aggregate siblings across every parent set: a child with two parent couples
+  // (multi-parentage, #64) has siblings under each. Dedupe by id and drop the
+  // individual themselves.
+  const seen = new Set<string>([individualId]);
+  const siblings: Individual[] = [];
+  for (const { partnershipId } of findParentSets(doc, individualId)) {
+    const partnership = doc.partnerships[partnershipId];
+    if (!partnership) continue;
+    for (const id of partnership.childrenIds) {
+      if (seen.has(id)) continue;
+      const sib = doc.individuals[id];
+      if (!sib) continue;
+      seen.add(id);
+      siblings.push(sib);
+    }
+  }
+  return siblings;
 }
 
 export function findPartnerships(

@@ -193,6 +193,19 @@
   color: var(--color-text-secondary);
 }
 
+/**
+ * Trailing check indicator for a `menuitemcheckbox` (Preferences toggles).
+ * Fixed-width so labels/shortcuts stay aligned whether or not the ✓ is shown.
+ */
+.menuItemCheck {
+  flex-shrink: 0;
+  width: 14px;
+  text-align: center;
+  color: var(--color-primary, #6c63ff);
+  font-size: 13px;
+  pointer-events: none;
+}
+
 /** Keyboard shortcut badge rendered inside a `.menuItem`. */
 .menuItemKbd {
   font-size: 11px;
