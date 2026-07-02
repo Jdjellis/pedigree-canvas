@@ -89,6 +89,56 @@ describe('SVG export — adoption notation', () => {
   });
 });
 
+describe('SVG export — multi-parentage (#64)', () => {
+  /**
+   * Attach a SECOND parent couple (a biological couple) to `c1`, alongside its
+   * existing couple — the both-families adoption case (Bennett Fig. 3): one
+   * descent line solid (biological), one dashed (adoptive).
+   */
+  function makeTwoParentSets(): PedigreeDocument {
+    const doc = makeFamily();
+    // Mark the FIRST couple as the adoptive one (dashed) and bracket the child.
+    doc.individuals.c1 = { ...doc.individuals.c1, adopted: true };
+    doc.parentChildLinks.l1 = { ...doc.parentChildLinks.l1, isAdoptive: true };
+    // Second (biological) couple, placed clear to the right, with a solid edge.
+    doc.individuals.bioDad = createDefaultIndividual({ id: 'bioDad', generation: 0, position: { x: 300, y: 0 } });
+    doc.individuals.bioMum = createDefaultIndividual({ id: 'bioMum', generation: 0, position: { x: 420, y: 0 } });
+    doc.partnerships.u2 = {
+      id: 'u2',
+      type: RelationshipType.Partnership,
+      partner1Id: 'bioDad',
+      partner2Id: 'bioMum',
+      childrenIds: ['c1'],
+    };
+    doc.parentChildLinks.l3 = {
+      id: 'l3',
+      type: RelationshipType.ParentChild,
+      parentPartnershipId: 'u2',
+      childId: 'c1',
+      isAdoptive: false,
+    };
+    return doc;
+  }
+
+  it('draws a descent line from EACH parent couple to the same child', () => {
+    const svg = buildPedigreeSvg(makeTwoParentSets(), 'Both families');
+    // A child drop lands on c1's x (40). Both couples route a drop down to it,
+    // so the child-x drop segment appears at least twice.
+    const dropsToChild = (svg.match(/x1="40"/g) ?? []).length;
+    expect(dropsToChild).toBeGreaterThanOrEqual(2);
+  });
+
+  it('renders the adoptive edge dashed and the biological edge solid together', () => {
+    const svg = buildPedigreeSvg(makeTwoParentSets(), 'Both families');
+    // Adoptive couple → at least one dashed segment.
+    expect(svg).toContain(`stroke-dasharray="${DASH_PATTERN.join(' ')}"`);
+    // Biological couple → a solid segment coexists (there are undashed lines).
+    const dashed = (svg.match(/stroke-dasharray/g) ?? []).length;
+    const allLines = (svg.match(/<line /g) ?? []).length;
+    expect(allLines).toBeGreaterThan(dashed);
+  });
+});
+
 describe('SVG export — consanguinity degree', () => {
   it('renders the degree annotation above a consanguineous union', () => {
     const doc = makeFamily();

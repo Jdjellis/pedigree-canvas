@@ -228,6 +228,20 @@ interface PedigreeState {
     childId: string,
     childGeneration: number
   ) => void;
+  /**
+   * Attach an ADDITIONAL parent set to a child that already has parents
+   * (multi-parentage, #64): e.g. a biological couple alongside an adoptive one.
+   * Inserts the new couple, their partnership, and the parent-child edge in one
+   * undo step. Unlike {@link addParentsForChild} it does **not** relayout — the
+   * caller places the second couple explicitly, clear of the first, because the
+   * tidy solver roots on a single parent union per family.
+   */
+  addParentSet: (
+    parent1: Individual,
+    parent2: Individual,
+    partnership: PartnershipRelationship,
+    link: ParentChildRelationship,
+  ) => void;
   addPartnerToIndividual: (
     partner: Individual,
     partnership: PartnershipRelationship,
@@ -909,6 +923,37 @@ export const usePedigreeStore = create<PedigreeState>()(
               individuals,
               partnerships,
               parentChildLinks,
+            },
+          };
+        }),
+
+      addParentSet: (parent1, parent2, partnership, link) =>
+        set((state) => {
+          // A pure insert (no relayout): the caller has already positioned the
+          // second couple clear of the first. The child keeps its parent set(s)
+          // and gains this one, so its own generation and blood family are
+          // untouched. Insert and (implicit) render share one undo step.
+          if (!state.document.individuals[link.childId]) return state;
+          return {
+            document: {
+              ...state.document,
+              metadata: {
+                ...state.document.metadata,
+                updatedAt: new Date().toISOString(),
+              },
+              individuals: {
+                ...state.document.individuals,
+                [parent1.id]: parent1,
+                [parent2.id]: parent2,
+              },
+              partnerships: {
+                ...state.document.partnerships,
+                [partnership.id]: partnership,
+              },
+              parentChildLinks: {
+                ...state.document.parentChildLinks,
+                [link.id]: link,
+              },
             },
           };
         }),

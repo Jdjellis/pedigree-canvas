@@ -1022,6 +1022,86 @@ describe('addParentsToParentlessUnion', () => {
   });
 });
 
+describe('addParentSet (multi-parentage #64)', () => {
+  // Build a child that already has one complete parent couple, then attach a
+  // second couple — the biological/adoptive both-families case.
+  function seedChildWithParents(): { childId: string; firstUnionId: string } {
+    const store = usePedigreeStore.getState();
+    const child = createDefaultIndividual({ generation: 1, position: { x: 0, y: 0 } });
+    const dad = createDefaultIndividual({ generation: 0, position: { x: -60, y: -150 } });
+    const mom = createDefaultIndividual({ generation: 0, position: { x: 60, y: -150 } });
+    store.addIndividual(child);
+    const firstUnionId = 'u-bio';
+    store.addParentsForChild(
+      dad, mom,
+      { id: firstUnionId, type: RelationshipType.Partnership, partner1Id: dad.id, partner2Id: mom.id, childrenIds: [child.id] },
+      parentChildLink(firstUnionId, child.id),
+      child.id, 1,
+    );
+    return { childId: child.id, firstUnionId };
+  }
+
+  it('attaches a second parent couple + link without touching the first set', () => {
+    const store = usePedigreeStore.getState();
+    const { childId, firstUnionId } = seedChildWithParents();
+
+    const dad2 = createDefaultIndividual({ generation: 0, position: { x: 300, y: -150 } });
+    const mom2 = createDefaultIndividual({ generation: 0, position: { x: 380, y: -150 } });
+    const secondUnion: PartnershipRelationship = {
+      id: 'u-adopt', type: RelationshipType.Partnership,
+      partner1Id: dad2.id, partner2Id: mom2.id, childrenIds: [childId],
+    };
+    const link = { ...parentChildLink('u-adopt', childId), isAdoptive: true };
+    store.addParentSet(dad2, mom2, secondUnion, link);
+
+    const doc = usePedigreeStore.getState().document;
+    // Both couples exist and both partnerships list the child.
+    expect(doc.individuals[dad2.id]).toBeDefined();
+    expect(doc.partnerships['u-adopt'].childrenIds).toContain(childId);
+    expect(doc.partnerships[firstUnionId].childrenIds).toContain(childId);
+    // The child now has two parent links, the new one marked adoptive.
+    const links = Object.values(doc.parentChildLinks).filter((l) => l.childId === childId);
+    expect(links).toHaveLength(2);
+    expect(links.some((l) => l.parentPartnershipId === 'u-adopt' && l.isAdoptive)).toBe(true);
+    // The second couple is placed exactly where the caller put it (no relayout).
+    expect(doc.individuals[dad2.id].position).toEqual({ x: 300, y: -150 });
+  });
+
+  it('is a single undo step', () => {
+    const store = usePedigreeStore.getState();
+    const { childId } = seedChildWithParents();
+    usePedigreeStore.temporal.getState().clear();
+
+    const dad2 = createDefaultIndividual({ generation: 0 });
+    const mom2 = createDefaultIndividual({ generation: 0 });
+    const secondUnion: PartnershipRelationship = {
+      id: 'u-adopt', type: RelationshipType.Partnership,
+      partner1Id: dad2.id, partner2Id: mom2.id, childrenIds: [childId],
+    };
+    store.addParentSet(dad2, mom2, secondUnion, parentChildLink('u-adopt', childId));
+    usePedigreeStore.temporal.getState().undo();
+
+    const doc = usePedigreeStore.getState().document;
+    expect(doc.individuals[dad2.id]).toBeUndefined();
+    expect(doc.partnerships['u-adopt']).toBeUndefined();
+    expect(Object.values(doc.parentChildLinks).filter((l) => l.childId === childId)).toHaveLength(1);
+  });
+
+  it('no-ops when the child does not exist', () => {
+    const store = usePedigreeStore.getState();
+    const dad2 = createDefaultIndividual();
+    const mom2 = createDefaultIndividual();
+    const secondUnion: PartnershipRelationship = {
+      id: 'u-adopt', type: RelationshipType.Partnership,
+      partner1Id: dad2.id, partner2Id: mom2.id, childrenIds: ['ghost'],
+    };
+    store.addParentSet(dad2, mom2, secondUnion, parentChildLink('u-adopt', 'ghost'));
+    const doc = usePedigreeStore.getState().document;
+    expect(doc.individuals[dad2.id]).toBeUndefined();
+    expect(doc.partnerships['u-adopt']).toBeUndefined();
+  });
+});
+
 describe('autospacing acceptance (#55)', () => {
   beforeEach(() => {
     usePedigreeStore.setState({ document: createDefaultDocument() });
