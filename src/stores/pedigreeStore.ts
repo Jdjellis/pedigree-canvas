@@ -809,6 +809,20 @@ export const usePedigreeStore = create<PedigreeState>()(
             resultId = id;
           }
 
+          // Relayout the family so the newly-grouped twins become contiguous in
+          // the sibling row. Use the locally-updated `groups` (not
+          // state.document.twinGroups) so the layout sees the new twin group.
+          let individuals = { ...state.document.individuals };
+          individuals = relayoutFamily(
+            {
+              individuals,
+              partnerships: state.document.partnerships,
+              parentChildLinks: state.document.parentChildLinks,
+              twinGroups: groups,
+            },
+            ids[0],
+          );
+
           return {
             document: {
               ...state.document,
@@ -816,6 +830,7 @@ export const usePedigreeStore = create<PedigreeState>()(
                 ...state.document.metadata,
                 updatedAt: new Date().toISOString(),
               },
+              individuals,
               twinGroups: groups,
             },
           };
