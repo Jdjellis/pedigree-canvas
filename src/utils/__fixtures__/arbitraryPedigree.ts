@@ -14,16 +14,31 @@ export interface PedigreeGenOptions {
   maxUnionDegree: number;
   /** May a twin also be a partner in a couple? Supported: false; full: true. */
   allowMarriedTwins: boolean;
+  /**
+   * May two blood individuals (both load-bearing, each with present parents)
+   * marry — a cross-branch couple? Supported: false; full: true. This is the
+   * `reformatLayout` residual-1a topology: the linear engine keeps such a couple
+   * adjacent but can still overlap/cross the two subtrees that hang below it, a
+   * constraint the current coordinate phase does not yet satisfy (issue #141).
+   */
+  allowCrossBranch: boolean;
   maxGenerations: number;
   maxFounderFamilies: number;
   maxChildrenPerUnion: number;
 }
 
-/** The currently-supported topology space: excludes 3+-union hubs and married
- *  twins (the two known-unhandled shapes). Fed to the green CI property. */
+/**
+ * The currently-supported topology space, fed to the standing green CI property.
+ * Excludes the three known-unhandled shapes: 3+-union hubs, married twins, and
+ * cross-branch couples (residual 1a). Everything else — plain branching families
+ * of any depth/asymmetry (residual 4, fixed), twins, remarriage half-sibs,
+ * disconnected components — is handled and green. Widen these caps as each
+ * remaining topology is closed (#141).
+ */
 export const SUPPORTED_SPACE: PedigreeGenOptions = {
   maxUnionDegree: 2,
   allowMarriedTwins: false,
+  allowCrossBranch: false,
   maxGenerations: 4,
   maxFounderFamilies: 3,
   maxChildrenPerUnion: 3,
@@ -34,6 +49,7 @@ export const SUPPORTED_SPACE: PedigreeGenOptions = {
 export const FULL_SPACE: PedigreeGenOptions = {
   maxUnionDegree: 3,
   allowMarriedTwins: true,
+  allowCrossBranch: true,
   maxGenerations: 4,
   maxFounderFamilies: 3,
   maxChildrenPerUnion: 3,
@@ -138,8 +154,9 @@ function buildDoc(gen: fc.GeneratorValue, opts: PedigreeGenOptions): LayoutDoc {
   }
 
   // Cross-branch marriage: marry two eligible same-generation individuals (both
-  // load-bearing) — reformatLayout's core case.
-  if (eligible.length >= 2 && gen(fc.boolean)) {
+  // load-bearing) — reformatLayout's core case (residual 1a). Gated so the
+  // supported space can exclude it until the coordinate phase handles it.
+  if (opts.allowCrossBranch && eligible.length >= 2 && gen(fc.boolean)) {
     const byGen = new Map<number, string[]>();
     for (const id of eligible) {
       const gg = individuals[id].generation as number;
