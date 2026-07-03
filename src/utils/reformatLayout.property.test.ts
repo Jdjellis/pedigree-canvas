@@ -23,24 +23,23 @@ function settle(doc: LayoutDoc, moves: Record<string, { x: number; y: number }>)
   };
 }
 
-// STILL SKIPPED — narrowed but not yet green (#141 progress).
+// ARMED — the standing green regression gate over the supported topology space.
 //
-// The first engine gap is FIXED: a *plain* branching family (every union
-// blood × married-in, no hub, no cross-branch couple) is now re-tidied through
-// `computeTreeLayout`'s contour separation, so `subtreeCollisionRegression` and
-// its whole class no longer overlap. What remains red over SUPPORTED_SPACE, found
-// by `npm run test:discovery`:
-//   - cross-branch couples and multi-union hubs are still laid out by the linear
-//     packing (delegating would balloon chart width — see `wideMultiFounderChart`),
-//     which leaves their deep subtrees overlapping (`subtreeNonCollision`) and can
-//     cross descent lines (`noCrossedDescentLines`);
-//   - a hub keeps a foreign node between a stranded union's partners
-//     (`minPartnerSpacing`, `noNodeBetweenPartners`) — the rec 3.2 follow-up; and
-//   - `computeTreeLayout` itself still overlaps cousin subtrees on rare very deep
-//     asymmetric families.
-// When those are closed, remove `.skip`, confirm `npm run test:discovery` is clean,
-// and this becomes the standing green regression gate.
-describe.skip('reformatLayout property (supported space)', () => {
+// SUPPORTED_SPACE excludes the three known-unhandled shapes (3+-union hubs,
+// married twins, cross-branch couples); everything else it generates — plain
+// branching families of any depth/asymmetry, twins, remarriage half-sibs,
+// disconnected components — satisfies every hard invariant and is idempotent.
+//
+// History (#141): the subtree-overlap correctness gap was closed in two steps —
+// plain families are re-tidied through `computeTreeLayout`'s contour separation
+// (#144, `subtreeCollisionRegression`), and the `separateGenerations` sweep now
+// excludes ancestor/descendant blocks so a deep asymmetric family no longer
+// drifts a nested subtree into a shallow cousin (residual 4, `deepAsymmetricSubtree`).
+// Still tracked, and still excluded from this space until their coordinate phases
+// land: cross-branch couples (residual 1a) and multi-union hub / twin-as-hub
+// (residual 1b). Widen the `SUPPORTED_SPACE` caps as each is closed; the opt-in
+// `npm run test:discovery` harness (FULL_SPACE) is where they still surface.
+describe('reformatLayout property (supported space)', () => {
   it('satisfies every hard invariant and is idempotent over random valid docs', () => {
     fc.assert(
       fc.property(arbitraryLayoutDoc(SUPPORTED_SPACE), (doc) => {
@@ -56,7 +55,7 @@ describe.skip('reformatLayout property (supported space)', () => {
           expect(Math.abs(p.y - settled.individuals[id].position.y)).toBeLessThan(1);
         }
       }),
-      { seed: 42, numRuns: 500 },
+      { seed: 42, numRuns: 1000 },
     );
   });
 });

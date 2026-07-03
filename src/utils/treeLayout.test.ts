@@ -14,6 +14,7 @@ import { RelationshipType } from '../types/enums';
 import { createDefaultIndividual } from '../stores/pedigreeStore';
 import { finalPositions, checkAllInvariants } from './__fixtures__/invariants';
 import { SYMBOL_SIZE } from './constants';
+import { deepAsymmetricSubtree } from './__fixtures__/pedigrees';
 
 function ind(id: string, x: number, generation = 0): Individual {
   return createDefaultIndividual({ id, generation, position: { x, y: generation * 150 } });
@@ -479,5 +480,17 @@ describe('findRootUnion — blood-line preference', () => {
     });
     // findRootUnion from C should reach bloodRoot, not stop at low.
     expect(findRootUnion(d, 'C')).toBe('bloodRoot');
+  });
+});
+
+describe('computeTreeLayout — deep asymmetric subtree separation (#141 residual 4)', () => {
+  it('keeps a nested descent block from drifting into a shallow cousin subtree', () => {
+    const { doc: d, rootUnionId } = deepAsymmetricSubtree();
+    const pos = finalPositions(d, computeTreeLayout(d, rootUnionId));
+    // Before the fix, separateGenerations shoved u37 (i32×i36 → i38,i40) past
+    // its ancestor sibling i34 and horizontally into i5's shallow right-branch
+    // sibship — a subtreeNonCollision violation. Every invariant now holds.
+    const res = checkAllInvariants(pos, d);
+    expect(res.violations, JSON.stringify(res.violations, null, 2)).toEqual([]);
   });
 });
