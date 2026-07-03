@@ -23,6 +23,13 @@ full explanation and the fix):
   section of `docs/architecture-reference.md`; `src/utils/__fixtures__/pedigrees.ts`
   + `invariants.ts` are the canonical layout test surface — add a fixture and
   check invariants when changing layout.
+  - When changing `reformatLayout` **or** any layout invariant, also run
+    `npm run test:discovery` (the env-gated property-based full-space harness in
+    `src/utils/reformatLayout.discovery.test.ts`) and triage findings before
+    merge. After an engine fix, re-run it and, once clean, remove `.skip` from
+    `reformatLayout.property.test.ts` to re-arm the standing green gate (and widen
+    the `SUPPORTED_SPACE` caps in `arbitraryPedigree.ts` as topologies become
+    handled). See issue #141.
 
 ## Clinical Standards Reference
 
