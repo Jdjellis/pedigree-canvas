@@ -266,6 +266,62 @@ describe('noNodeBetweenPartners', () => {
     const pos = { blood: { x: 0, y: 150 }, spouse: { x: 400, y: 150 }, other: { x: 200, y: 0 } };
     expect(noNodeBetweenPartners(pos, d).ok).toBe(true);
   });
+
+  it('permits a co-spouse between a 3-union hub and its non-adjacent spouse (structurally unavoidable)', () => {
+    // hub married to s1, s2, s3 (degree 3). Laid out s1, hub, s2, s3 — the union
+    // hub × s3 unavoidably has s2 (another of hub's own spouses) between them,
+    // because a point can be adjacent to at most two neighbours in a line.
+    const d = doc({
+      individuals: {
+        s1: ind('s1', 0, 1), hub: ind('hub', 120, 1),
+        s2: ind('s2', 240, 1), s3: ind('s3', 360, 1),
+      },
+      partnerships: {
+        u1: union('u1', 's1', 'hub', []),
+        u2: union('u2', 'hub', 's2', []),
+        u3: union('u3', 'hub', 's3', []),
+      },
+    });
+    const pos = {
+      s1: { x: 0, y: 150 }, hub: { x: 120, y: 150 },
+      s2: { x: 240, y: 150 }, s3: { x: 360, y: 150 },
+    };
+    expect(noNodeBetweenPartners(pos, d).ok).toBe(true);
+  });
+
+  it('still flags a co-spouse between a 2-union hub’s partners (a fixable bad order)', () => {
+    // hub married to only s1 and s2 (degree 2). Order s1, s2, hub wedges s2
+    // between s1 and hub even though the clean straddle s1, hub, s2 exists — so
+    // the carve-out does NOT apply and this remains a violation.
+    const d = doc({
+      individuals: { s1: ind('s1', 0, 1), s2: ind('s2', 120, 1), hub: ind('hub', 240, 1) },
+      partnerships: { u1: union('u1', 's1', 'hub', []), u2: union('u2', 'hub', 's2', []) },
+    });
+    const pos = { s1: { x: 0, y: 150 }, s2: { x: 120, y: 150 }, hub: { x: 240, y: 150 } };
+    expect(noNodeBetweenPartners(pos, d).ok).toBe(false);
+  });
+
+  it('still flags a foreign sibling between a 3-union hub’s partners', () => {
+    // A hub (degree 3) does NOT license a *non-partner* between its partners:
+    // `sib` is a plain sibling, not one of hub's spouses, so it is still flagged.
+    const d = doc({
+      individuals: {
+        s1: ind('s1', 0, 1), hub: ind('hub', 120, 1), sib: ind('sib', 200, 1),
+        s2: ind('s2', 280, 1), s3: ind('s3', 400, 1),
+      },
+      partnerships: {
+        u1: union('u1', 's1', 'hub', []),
+        u2: union('u2', 'hub', 's2', []),
+        u3: union('u3', 'hub', 's3', []),
+      },
+    });
+    const pos = {
+      s1: { x: 0, y: 150 }, hub: { x: 120, y: 150 }, sib: { x: 200, y: 150 },
+      s2: { x: 280, y: 150 }, s3: { x: 400, y: 150 },
+    };
+    // sib sits between hub and s2 (and hub and s3) but is not a co-spouse.
+    expect(noNodeBetweenPartners(pos, d).ok).toBe(false);
+  });
 });
 
 /** Build a cross-branch couple: x (child of fam1) × y (child of fam2), both

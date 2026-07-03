@@ -424,17 +424,33 @@ export function subtreeNonCollision(
 }
 
 /**
- * Assert that no non-partner individual sits strictly between the two partners
- * of any couple on the same generation row. This is the hard invariant that the
- * reported "a sibling/cousin renders between a couple" bug violates.
+ * Assert that no *foreign* individual sits strictly between the two partners of a
+ * couple on the same generation row. This is the hard invariant that the reported
+ * "a sibling/cousin renders between a couple" bug violates.
  *
  * For each union with both partners present, the partners define an x-interval on
  * their shared row (matched by rounded y within 1 px). Any *other* individual on
  * that row whose x lies strictly inside the interval — inset by `tol` on each
- * side so a near-coincident node is not flagged — is a violation. A multi-union
- * hub between its own two spouses is permitted: for each of the hub's unions the
- * hub and that spouse are the interval endpoints, so neither spouse counts as
- * "between".
+ * side so a near-coincident node is not flagged — is a violation, **unless it is
+ * a structurally-unavoidable co-spouse of a hub** (see below).
+ *
+ * ### Achievable form (issue #137)
+ *
+ * The original formulation asserted that a couple's partners are *always*
+ * x-adjacent. That is geometrically impossible for a **hub** — an individual with
+ * three or more same-row unions. A point has only two neighbours in a line, so a
+ * hub can be adjacent to at most two of its spouses; every further union
+ * necessarily has one of the hub's *other* spouses between its partners. Asserting
+ * the impossible would make this oracle either falsely green (no such fixture) or
+ * permanently red once one exists.
+ *
+ * So a between-node `X` is permitted **iff** it is a co-spouse of an endpoint that
+ * is a genuine hub: `X` partners `P1` (or `P2`) in another union *and* that
+ * endpoint has ≥ 3 same-row unions. This still flags:
+ * - any **foreign** node (sibling, cousin, unrelated) between a couple — the real
+ *   reported bug; and
+ * - a co-spouse between the partners of a **≤ 2-union** node, where a clean
+ *   straddle exists and the betweenness is a fixable bad order.
  *
  * @param tol - Inset from each partner (default `SYMBOL_SIZE / 2`) that an
  *   interior node must clear before it is flagged.
@@ -446,6 +462,32 @@ export function noNodeBetweenPartners(
 ): InvariantResult {
   const violations: Violation[] = [];
   const rowTol = 1;
+
+  // Same-row partner graph, for the hub carve-out. `partnersOf` maps each
+  // individual to its partners across all unions; `sameRowDegree` counts how many
+  // of those partners are placed on the individual's own row — i.e. its effective
+  // union degree in the linear row it is being laid out on.
+  const partnersOf = new Map<string, Set<string>>();
+  for (const u of Object.values(doc.partnerships)) {
+    const a = u.partner1Id;
+    const b = u.partner2Id;
+    if (!a || !b || a === b) continue;
+    (partnersOf.get(a) ?? partnersOf.set(a, new Set()).get(a)!).add(b);
+    (partnersOf.get(b) ?? partnersOf.set(b, new Set()).get(b)!).add(a);
+  }
+  const sameRowDegree = (id: string, y: number): number => {
+    let n = 0;
+    for (const q of partnersOf.get(id) ?? []) {
+      if (q in pos && Math.abs(pos[q].y - y) <= rowTol) n++;
+    }
+    return n;
+  };
+  /** A hub (≥3 same-row unions) may keep one of its own spouses between it and a
+   *  non-adjacent spouse — the only structurally-unavoidable betweenness. */
+  const isUnavoidableHubSpouse = (x: string, p1: string, p2: string, y: number): boolean =>
+    (partnersOf.get(p1)?.has(x) === true && sameRowDegree(p1, y) >= 3) ||
+    (partnersOf.get(p2)?.has(x) === true && sameRowDegree(p2, y) >= 3);
+
   for (const [uid, u] of Object.entries(doc.partnerships)) {
     const p1 = u.partner1Id;
     const p2 = u.partner2Id;
@@ -458,6 +500,7 @@ export function noNodeBetweenPartners(
       if (id === p1 || id === p2) continue;
       if (Math.abs(pos[id].y - rowY) > rowTol) continue;
       if (pos[id].x > lo + tol && pos[id].x < hi - tol) {
+        if (isUnavoidableHubSpouse(id, p1, p2, rowY)) continue;
         violations.push({
           rule: 'noNodeBetweenPartners',
           ids: [uid, p1, p2, id],

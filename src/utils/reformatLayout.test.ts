@@ -109,29 +109,42 @@ describe('reformatLayout is idempotent', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Known gaps surfaced while reviewing #137 PR1. These fixtures reproduce two
-// topologies the layered engine does NOT yet handle. They are *characterization*
-// tests: each pins the CURRENT (incorrect) output so the suite stays honest and
-// green while documenting the defect executably. When the engine is fixed, the
-// asserted `.ok` values below will flip and these tests will fail — that is the
-// signal to rewrite them to assert correctness and fold the fixtures into
-// REFORMAT_FIXTURES / ALL_FIXTURES.
+// Multi-union hub (issue #137 review). A hub with 3+ same-row unions cannot place
+// every spouse adjacent in a linear row, so `noNodeBetweenPartners` was redefined
+// to its *achievable* form: a hub's own co-spouse may sit between the hub and a
+// non-adjacent spouse, but foreign nodes never may. reformatLayout satisfies the
+// achievable hard invariant here. What it does NOT yet do is compact the stranded
+// spouse to partner spacing — that residual coordinate-phase gap trips
+// `minPartnerSpacing` and is tracked as a follow-up (see the #137 gaps issue).
 // ---------------------------------------------------------------------------
-describe('reformatLayout — known gaps (review of #137 PR1)', () => {
-  it('threeUnionHub: a hub with 3 same-row unions strands its 3rd spouse (HARD noNodeBetweenPartners not met)', () => {
+describe('reformatLayout — multi-union hub (#137)', () => {
+  it('threeUnionHub: satisfies the achievable HARD noNodeBetweenPartners (co-spouse carve-out)', () => {
     const { doc } = threeUnionHub();
     const pos = reformatted(doc);
-    // BUG: the hard guarantee should hold (`.ok === true`). It does not for a hub
-    // with more than two same-row unions — `orderChainMembers` walks the partner
-    // graph as a path and can keep only two spouses adjacent, so the third union
-    // (`hub × s3`) renders `s2` strictly between its partners.
-    expect(noNodeBetweenPartners(pos, doc).ok).toBe(false);
-    // Same root cause also strands the 3rd spouse beyond partnerSpacing, so even
-    // the geometry suite fails here (minPartnerSpacing) — not just the special
-    // between-partners invariant.
-    expect(checkAllInvariants(pos, doc).ok).toBe(false);
+    // The 3rd union (hub × s3) has s2 between its partners, but s2 is another of
+    // hub's own spouses and hub is a genuine hub (3 unions) — structurally
+    // unavoidable, so permitted. No *foreign* node is between any couple.
+    expect(noNodeBetweenPartners(pos, doc).ok).toBe(true);
   });
 
+  it('threeUnionHub: KNOWN GAP — the stranded 3rd spouse is not compacted to partner spacing', () => {
+    const { doc } = threeUnionHub();
+    const pos = reformatted(doc);
+    // BUG (residual, tracked): the coordinate phase leaves hub × s3 wider than
+    // partnerSpacing, so the geometry suite still fails via minPartnerSpacing.
+    // Flip to `true` and fold threeUnionHub into REFORMAT_FIXTURES once fixed.
+    expect(checkAllInvariants(pos, doc).ok).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Known gap surfaced while reviewing #137 PR1. Characterization test: it pins the
+// CURRENT (incorrect) output so the suite stays honest and green while documenting
+// the defect executably. When the engine is fixed the asserted `.ok` will flip and
+// this test will fail — the signal to rewrite it to assert correctness and fold
+// the fixture into ALL_FIXTURES.
+// ---------------------------------------------------------------------------
+describe('reformatLayout — known gaps (review of #137 PR1)', () => {
   it('marriedTwinInterleaved: a married twin is separated from its co-twin by a sibling (twinContiguity not met)', () => {
     const { doc, twinGroups } = marriedTwinInterleaved();
     const pos = reformatted(doc);
