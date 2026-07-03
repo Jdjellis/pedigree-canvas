@@ -31,6 +31,10 @@ export function parseSavedDocument(raw: string | null): PedigreeDocument | null 
     for (const ind of Object.values(doc.individuals)) {
       const individual = ind as Record<string, unknown>;
       if (!individual.conditionIds) individual.conditionIds = [];
+      // `investigations` was added after some documents were autosaved; restoring
+      // one without it leaves the field undefined, and both the on-canvas symbol
+      // label and the SVG export iterate it directly (crashing on undefined).
+      if (!individual.investigations) individual.investigations = [];
     }
     return migrateAdoption(doc as PedigreeDocument);
   } catch {
