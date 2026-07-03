@@ -16,10 +16,10 @@ export interface PedigreeGenOptions {
   allowMarriedTwins: boolean;
   /**
    * May two blood individuals (both load-bearing, each with present parents)
-   * marry — a cross-branch couple? Supported: false; full: true. This is the
-   * `reformatLayout` residual-1a topology: the linear engine keeps such a couple
-   * adjacent but can still overlap/cross the two subtrees that hang below it, a
-   * constraint the current coordinate phase does not yet satisfy (issue #141).
+   * marry — a cross-branch couple? Now true in BOTH spaces: the residual-1a
+   * topology is handled by `reformatLayout`'s cross-branch coordinate phase
+   * (detect-then-correct split at the cross union, issue #141). The flag stays
+   * so the class can be excluded again while diagnosing a regression.
    */
   allowCrossBranch: boolean;
   maxGenerations: number;
@@ -29,16 +29,17 @@ export interface PedigreeGenOptions {
 
 /**
  * The currently-supported topology space, fed to the standing green CI property.
- * Excludes the three known-unhandled shapes: 3+-union hubs, married twins, and
- * cross-branch couples (residual 1a). Everything else — plain branching families
- * of any depth/asymmetry (residual 4, fixed), twins, remarriage half-sibs,
- * disconnected components — is handled and green. Widen these caps as each
- * remaining topology is closed (#141).
+ * Excludes the two remaining known-unhandled shapes: 3+-union hubs and married
+ * twins (residual 1b). Everything else — plain branching families of any
+ * depth/asymmetry (residual 4, fixed), twins, remarriage half-sibs,
+ * disconnected components, and cross-branch couples (residual 1a, fixed by the
+ * cross-branch coordinate phase) — is handled and green. Widen these caps as
+ * each remaining topology is closed (#141).
  */
 export const SUPPORTED_SPACE: PedigreeGenOptions = {
   maxUnionDegree: 2,
   allowMarriedTwins: false,
-  allowCrossBranch: false,
+  allowCrossBranch: true,
   maxGenerations: 4,
   maxFounderFamilies: 3,
   maxChildrenPerUnion: 3,

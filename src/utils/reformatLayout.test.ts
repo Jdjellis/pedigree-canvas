@@ -6,6 +6,9 @@ import {
   threeUnionHub,
   marriedTwinInterleaved,
   subtreeCollisionRegression,
+  consanguineousSibCouple,
+  crossBranchChainCrossing,
+  cousinCoupleSubtreeCollision,
 } from './__fixtures__/pedigrees';
 import {
   REFORMAT_FIXTURES,
@@ -170,4 +173,49 @@ describe('reformatLayout — regression pins (review of #137 PR1)', () => {
     expect(checkAllInvariants(pos, doc).ok).toBe(true);
     expect(noNodeBetweenPartners(pos, doc).ok).toBe(true);
   });
+});
+
+// ---------------------------------------------------------------------------
+// Cross-branch coordinate phase (issue #141, residual 1a). A component whose
+// only non-plain feature is a single cross-branch couple keeps its aligned
+// linear layout while that layout satisfies the hard invariants; otherwise the
+// component is split at the cross union, each blood side re-tidied as a plain
+// family, and the sides composed at the couple (retidyCrossBranchComponent).
+// These pins hold both halves of that behaviour: the two harvested fixtures
+// fail on the pre-phase engine (crossed descent lines / overlapping cousin
+// sibships), and every cross-branch fixture must stay idempotent — the phase
+// iterates internally to the engine's fixed point, which a single pass of the
+// old engine did not reach. Deliberately NOT in REFORMAT_FIXTURES: a deep
+// corrective layout may legitimately exceed the boundedPartnerDistance /
+// chartWidth factors those fixtures pin (both best-effort bounds, not part of
+// the property gate).
+// ---------------------------------------------------------------------------
+describe('reformatLayout — cross-branch coordinate phase (#141 residual 1a)', () => {
+  for (const build of [consanguineousSibCouple, crossBranchChainCrossing, cousinCoupleSubtreeCollision]) {
+    const { name, doc } = build();
+
+    it(`${name}: satisfies the hard invariants and couple adjacency`, () => {
+      const pos = reformatted(doc);
+      expect(checkAllInvariants(pos, doc).violations).toEqual([]);
+      expect(noNodeBetweenPartners(pos, doc).ok).toBe(true);
+    });
+
+    it(`${name}: a second pass moves nothing`, () => {
+      const once = reformatLayout(doc);
+      const settled: LayoutDoc = {
+        ...doc,
+        individuals: Object.fromEntries(
+          Object.entries(doc.individuals).map(([id, node]) => [
+            id,
+            once[id] ? { ...node, position: { x: once[id].x, y: once[id].y } } : node,
+          ]),
+        ),
+      };
+      const twice = reformatLayout(settled);
+      for (const [id, p] of Object.entries(twice)) {
+        expect(Math.abs(p.x - settled.individuals[id].position.x)).toBeLessThan(1);
+        expect(Math.abs(p.y - settled.individuals[id].position.y)).toBeLessThan(1);
+      }
+    });
+  }
 });

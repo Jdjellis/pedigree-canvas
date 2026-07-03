@@ -2,6 +2,7 @@ import {
   DEFAULT_LAYOUT_SPACING,
   resolveGenerationRows,
   computeTreeLayout,
+  unionDescendants,
 } from './treeLayout';
 import type { LayoutDoc, LayoutSpacing } from './treeLayout';
 import type {
@@ -31,8 +32,58 @@ export function reformatLayout(
   doc: LayoutDoc,
   spacing: LayoutSpacing = DEFAULT_LAYOUT_SPACING,
 ): Record<string, { x: number; y: number }> {
+  const first = reformatPass(doc, spacing);
+  if (!first.crossBranchSeen) return first.moves;
+
+  // On a document with a cross-branch couple, one pass may not be the engine's
+  // fixed point: the corrective changes the row order it hands the next pass
+  // (whose linear re-pack may then be clean, flipping the detect-then-correct
+  // decision — see retidyCrossBranchComponent), and the barycentric ordering
+  // itself can re-settle on a cross-branch component's geometry. Iterate
+  // internally to the fixed point (small cap; measured convergence is 1–2
+  // extra passes) so a second user-visible pass moves nothing.
+  const settle = (
+    base: LayoutDoc,
+    moves: Record<string, { x: number; y: number }>,
+  ): LayoutDoc => ({
+    ...base,
+    individuals: Object.fromEntries(
+      Object.entries(base.individuals).map(([id, node]) => [
+        id,
+        moves[id] ? { ...node, position: { x: moves[id].x, y: moves[id].y } } : node,
+      ]),
+    ),
+  });
+  let settled = settle(doc, first.moves);
+  for (let i = 0; i < 6; i++) {
+    const next = reformatPass(settled, spacing);
+    let maxDelta = 0;
+    for (const [id, p] of Object.entries(next.moves)) {
+      const cur = settled.individuals[id].position;
+      maxDelta = Math.max(maxDelta, Math.abs(p.x - cur.x), Math.abs(p.y - cur.y));
+    }
+    if (maxDelta < 0.5) break;
+    settled = settle(settled, next.moves);
+  }
+  const result: Record<string, { x: number; y: number }> = {};
+  for (const id of Object.keys(doc.individuals)) {
+    const p = settled.individuals[id].position;
+    const cur = doc.individuals[id].position;
+    if (Math.abs(cur.x - p.x) > 1e-6 || Math.abs(cur.y - p.y) > 1e-6) {
+      result[id] = { x: p.x, y: p.y };
+    }
+  }
+  return result;
+}
+
+/** One full engine pass; `crossBranchSeen` reports whether any component was
+ *  eligible for the cross-branch phase (and so needs the convergence re-run). */
+function reformatPass(
+  doc: LayoutDoc,
+  spacing: LayoutSpacing,
+): { moves: Record<string, { x: number; y: number }>; crossBranchSeen: boolean } {
   const ids = Object.keys(doc.individuals);
-  if (ids.length === 0) return {};
+  if (ids.length === 0) return { moves: {}, crossBranchSeen: false };
 
   const genOfMap = resolveGenerationRows(doc, 0);
   const genOf = (id: string): number => genOfMap.get(id) ?? 0;
@@ -231,7 +282,7 @@ export function reformatLayout(
   //      while two independent families (however many rows apart) never overlap.
   const finalX: Record<string, number> = {};
   for (const id of ids) finalX[id] = x.get(id)!;
-  retidyHubFreeComponents(doc, finalX, componentOf, genOf, parentsOf, spacing);
+  const crossBranchSeen = retidyHubFreeComponents(doc, finalX, componentOf, genOf, parentsOf, spacing);
   separateComponents(finalX, betweenGap, ids, componentOf, compRank);
   for (const id of ids) x.set(id, finalX[id]);
 
@@ -256,7 +307,7 @@ export function reformatLayout(
       result[id] = { x: nx, y: ny };
     }
   }
-  return result;
+  return { moves: result, crossBranchSeen };
 }
 
 /** Mean of `f` over `xs`. */
@@ -274,9 +325,9 @@ function meanBy<T>(xs: readonly T[], f: (x: T) => number): number {
  * order is preserved, and only the resulting x is written back — y is assigned by
  * the caller's generation anchor.
  *
- * A family is **skipped** (kept in its linear form) when `computeTreeLayout` would
- * lay it out *wider* than the compacting packing here, which is the whole reason
- * this whole-document engine exists:
+ * A family is **not delegated whole** when `computeTreeLayout` would lay it out
+ * *wider* than the compacting packing here, which is the whole reason this
+ * whole-document engine exists:
  *   - a **multi-union hub** (a node with ≥2 same-slice unions) — its remarriage
  *     frame spaces the hub's second-and-later spouses by sibling spacing, wider
  *     than the adjacent partner spacing the linear packing gives (the reported
@@ -284,13 +335,17 @@ function meanBy<T>(xs: readonly T[], f: (x: T) => number): number {
  *   - a **cross-branch couple** (both partners have present parents) — its frame
  *     spreads the two grandparent families apart, whereas the packing pulls them
  *     together, so delegating would balloon the chart width.
- * These families keep the aligned layout; a hub's stranded union and a deep
- * cross-branch subtree overlap are the tracked follow-ups (#141 rec 3.1–3.2). A
- * plain branching family (every union is blood × married-in) is re-tidied, which
- * is exactly where the linear packing left cousin subtrees overlapping.
+ * A component whose only such feature is a single cross-branch couple gets the
+ * purpose-built {@link retidyCrossBranchComponent} coordinate phase (issue #141
+ * residual 1a); the remaining hub shapes keep the aligned linear layout (the
+ * tracked residual 1b). A plain branching family (every union is blood ×
+ * married-in) is re-tidied by whole-slice delegation, which is exactly where the
+ * linear packing left cousin subtrees overlapping.
  *
  * Mutates `finalX` in place. Deterministic and order-preserving, so a document
- * that is already tidy is left unchanged (idempotent).
+ * that is already tidy is left unchanged (idempotent). Returns whether any
+ * component was eligible for the cross-branch phase (the caller then iterates
+ * to the engine's fixed point — see `reformatLayout`).
  */
 function retidyHubFreeComponents(
   doc: LayoutDoc,
@@ -299,8 +354,9 @@ function retidyHubFreeComponents(
   genOf: (id: string) => number,
   parentsOf: Map<string, string[]>,
   spacing: LayoutSpacing,
-): void {
+): boolean {
   const hasParents = (id: string): boolean => (parentsOf.get(id)?.length ?? 0) > 0;
+  let crossBranchSeen = false;
   const members = new Map<string, string[]>();
   for (const [id, root] of componentOf) {
     const arr = members.get(root);
@@ -320,52 +376,573 @@ function retidyHubFreeComponents(
     // Keep the linear layout for a family `computeTreeLayout` would widen: one
     // with a multi-union hub, or a cross-branch couple (both partners blood).
     const degree = new Map<string, number>();
-    let crossBranch = false;
+    const crossUnions: PartnershipRelationship[] = [];
     for (const u of Object.values(partnerships)) {
       for (const p of [u.partner1Id, u.partner2Id]) if (p && present.has(p)) degree.set(p, (degree.get(p) ?? 0) + 1);
-      if (u.partner1Id && u.partner2Id && present.has(u.partner1Id) && present.has(u.partner2Id) &&
-        hasParents(u.partner1Id) && hasParents(u.partner2Id)) crossBranch = true;
+      if (u.partner1Id && u.partner2Id && u.partner1Id !== u.partner2Id &&
+        present.has(u.partner1Id) && present.has(u.partner2Id) &&
+        hasParents(u.partner1Id) && hasParents(u.partner2Id)) crossUnions.push(u);
     }
-    if (crossBranch || [...degree.values()].some((d) => d >= 2)) continue;
-
-    // Candidate root unions: any childbearing union (≥1 present child) with at
-    // least one present partner. A **single-parent apex** union (one partner
-    // undefined) must be eligible — it is often the family's topmost union, and
-    // rooting instead at a deeper childless couple lays the family out wrong
-    // (e.g. `computeTreeLayout` strands a married twin's spouse across a non-twin
-    // sibling). Requiring a present child skips isolated childless couples, which
-    // the linear packing already spaces correctly.
-    // Regression guard: the `marriedTwinInterleaved` fixture (ALL_FIXTURES) —
-    // reverting this to a two-partner-only root makes its `twinContiguity` fail.
-    const isPresent = (id: string | undefined): id is string => !!id && present.has(id);
-    const rootCandidates = Object.keys(partnerships).filter((uid) => {
-      const u = partnerships[uid];
-      return (isPresent(u.partner1Id) || isPresent(u.partner2Id)) &&
-        u.childrenIds.some((id) => present.has(id));
-    });
-    if (rootCandidates.length === 0) continue; // no childbearing union: nothing to tidy
-
-    const parentChildLinks: Record<string, ParentChildRelationship> = {};
-    for (const [lid, l] of Object.entries(doc.parentChildLinks)) {
-      if (present.has(l.childId) && partnerships[l.parentPartnershipId]) parentChildLinks[lid] = l;
+    if (crossUnions.length > 0 || [...degree.values()].some((d) => d >= 2)) {
+      // A component whose ONLY departure from a plain family is a single
+      // same-row cross-branch couple gets the purpose-built cross-branch
+      // coordinate phase (issue #141, residual 1a). Anything else — a ≥3-union
+      // hub, a non-cross-branch remarriage, chained cross-branch couples, or a
+      // MARRIED TWIN in the component (the corrective is validated only for the
+      // supported space, which excludes married twins) — keeps the aligned
+      // linear layout (residual 1b and the tracked follow-ups).
+      const cross = crossUnions.length === 1 ? crossUnions[0] : null;
+      const marriedTwin = Object.values(doc.twinGroups ?? {}).some((t) =>
+        t.individualIds.some((id) => present.has(id) && (degree.get(id) ?? 0) > 0),
+      );
+      const eligible =
+        cross !== null &&
+        !marriedTwin &&
+        genOf(cross.partner1Id!) === genOf(cross.partner2Id!) &&
+        [...degree.entries()].every(
+          ([id, d]) =>
+            d <= 2 && (d < 2 || id === cross.partner1Id || id === cross.partner2Id),
+        );
+      if (eligible) {
+        crossBranchSeen = true;
+        retidyCrossBranchComponent(doc, finalX, group, genOf, spacing, cross);
+      }
+      continue;
     }
-    const individuals: Record<string, Individual> = {};
-    for (const id of group) {
-      // Seed x with the aligned x so computeTreeLayout preserves the phase-2 order.
-      individuals[id] = { ...doc.individuals[id], position: { x: finalX[id], y: genOf(id) * spacing.generationSpacing } };
-    }
-    const slice: LayoutDoc = { individuals, partnerships, parentChildLinks, twinGroups: doc.twinGroups };
 
-    // Root at the topmost childbearing union (min partner generation; id tie-break).
-    const rootUnionId = [...rootCandidates].sort((a, b) => {
-      const gen = (uid: string): number =>
-        Math.min(...[partnerships[uid].partner1Id, partnerships[uid].partner2Id].filter(isPresent).map(genOf));
-      return gen(a) - gen(b) || (a < b ? -1 : a > b ? 1 : 0);
-    })[0];
+    // Seed x with the aligned x so computeTreeLayout preserves the phase-2 order.
+    const slice = sliceFor(doc, group, (id) => finalX[id], genOf, spacing);
+    const rootUnionId = pickRootUnion(slice, genOf);
+    if (rootUnionId === null) continue; // no childbearing union: nothing to tidy
 
     const moves = computeTreeLayout(slice, rootUnionId, spacing);
     for (const id of group) if (moves[id]) finalX[id] = moves[id].x;
   }
+  return crossBranchSeen;
+}
+
+/** Options for {@link sliceFor}. */
+interface SliceOptions {
+  /**
+   * An extra individual admitted as a married-in LEAF spouse: present in the
+   * slice's `individuals` (so its couple frame can place and orient around it)
+   * but not counted for union inclusion and carrying no parent links there, so
+   * within the slice it is never load-bearing.
+   */
+  leafSpouse?: { id: string; seedX: number };
+  /** A union excluded from the slice (a split side drops the cross union). */
+  excludeUnionId?: string;
+  /** Seed-x overrides (the spine bias of the cross-branch order derivation). */
+  seedXOverrides?: ReadonlyMap<string, number>;
+}
+
+/**
+ * Build the {@link LayoutDoc} slice for a set of component members: the unions
+ * with at least one member partner, the parent-child links whose child and union
+ * are both in the slice, and the individuals re-seeded at `xOf` (with the row's
+ * generation y), so `computeTreeLayout` preserves the seeded order.
+ */
+function sliceFor(
+  doc: LayoutDoc,
+  ids: readonly string[],
+  xOf: (id: string) => number,
+  genOf: (id: string) => number,
+  spacing: LayoutSpacing,
+  opts: SliceOptions = {},
+): LayoutDoc {
+  const present = new Set(ids);
+  const partnerships: Record<string, PartnershipRelationship> = {};
+  for (const [uid, u] of Object.entries(doc.partnerships)) {
+    if (uid === opts.excludeUnionId) continue;
+    if ((u.partner1Id && present.has(u.partner1Id)) || (u.partner2Id && present.has(u.partner2Id))) {
+      partnerships[uid] = u;
+    }
+  }
+  const parentChildLinks: Record<string, ParentChildRelationship> = {};
+  for (const [lid, l] of Object.entries(doc.parentChildLinks)) {
+    if (present.has(l.childId) && partnerships[l.parentPartnershipId]) parentChildLinks[lid] = l;
+  }
+  const individuals: Record<string, Individual> = {};
+  const seedX = (id: string): number => opts.seedXOverrides?.get(id) ?? xOf(id);
+  for (const id of ids) {
+    individuals[id] = { ...doc.individuals[id], position: { x: seedX(id), y: genOf(id) * spacing.generationSpacing } };
+  }
+  if (opts.leafSpouse) {
+    const ls = opts.leafSpouse;
+    individuals[ls.id] = { ...doc.individuals[ls.id], position: { x: ls.seedX, y: genOf(ls.id) * spacing.generationSpacing } };
+  }
+  return { individuals, partnerships, parentChildLinks, twinGroups: doc.twinGroups };
+}
+
+/**
+ * Root a re-tidy at the topmost childbearing union of a slice: any union with at
+ * least one present partner and ≥1 present child, at the minimum partner
+ * generation (id tie-break). A **single-parent apex** union (one partner
+ * undefined) must be eligible — it is often the family's topmost union, and
+ * rooting instead at a deeper childless couple lays the family out wrong (e.g.
+ * `computeTreeLayout` strands a married twin's spouse across a non-twin
+ * sibling). Requiring a present child skips isolated childless couples, which
+ * the linear packing already spaces correctly. Returns null when the slice has
+ * no childbearing union.
+ * Regression guard: the `marriedTwinInterleaved` fixture (ALL_FIXTURES) —
+ * reverting this to a two-partner-only root makes its `twinContiguity` fail.
+ */
+function pickRootUnion(slice: LayoutDoc, genOf: (id: string) => number): string | null {
+  const isPresent = (id: string | undefined): id is string => !!id && !!slice.individuals[id];
+  const candidates = Object.keys(slice.partnerships).filter((uid) => {
+    const u = slice.partnerships[uid];
+    return (
+      (isPresent(u.partner1Id) || isPresent(u.partner2Id)) &&
+      u.childrenIds.some((id) => isPresent(id))
+    );
+  });
+  if (candidates.length === 0) return null;
+  const gen = (uid: string): number =>
+    Math.min(
+      ...[slice.partnerships[uid].partner1Id, slice.partnerships[uid].partner2Id]
+        .filter(isPresent)
+        .map(genOf),
+    );
+  return candidates.sort((a, b) => gen(a) - gen(b) || (a < b ? -1 : a > b ? 1 : 0))[0];
+}
+
+// ---------------------------------------------------------------------------
+// Cross-branch coordinate phase (issue #141, residual 1a)
+// ---------------------------------------------------------------------------
+
+/**
+ * Seed-x magnitude used to bias a partner's blood spine to its family's edge
+ * during cross-branch order derivation. Far outside any packed coordinate, so a
+ * biased node always sorts to the intended end of every sibship on its path.
+ */
+const SPINE_BIAS = 1e7;
+
+/**
+ * Coordinate phase for a component whose only non-plain feature is a single
+ * cross-branch couple — a union whose BOTH partners are load-bearing (each has
+ * present parents). The linear engine keeps the couple adjacent but cannot stop
+ * the two subtrees hanging below it from overlapping or crossing descent lines;
+ * whole-component `computeTreeLayout` delegation keeps the subtrees apart but
+ * pins the far partner's family and balloons the chart width (both measured and
+ * rejected, see #141). This phase splits the difference by SPLITTING THE
+ * COMPONENT AT THE CROSS UNION:
+ *
+ * - each resulting blood side is a hub-free plain family — exactly the space
+ *   the standing property gate proves green — tidied on its own with
+ *   `computeTreeLayout` (no pinning: the far partner is either absent or a
+ *   parentless leaf spouse in the side's slice), seed-biased so partner `a`
+ *   hugs its family's right edge and partner `b` its family's left edge;
+ * - the sides' laid-out geometries are then composed with the couple at
+ *   `partnerSpacing`, pushed apart only by what same-row clearance and
+ *   unrelated cross-side sibship extents demand ({@link retidyTwoSided});
+ * - a consanguineous component (still connected without the cross union) is a
+ *   single plain family instead, delegated whole with a divergence-sibship bias
+ *   that makes the couple's branches adjacent ({@link retidyConsanguineous}).
+ *
+ * An earlier prototype re-packed the derived per-row ORDERS tightly and
+ * re-separated with anchored rigid blocks; it was measurably better than the
+ * linear layout but structurally leaky — per-row sweeps cannot see
+ * `subtreeNonCollision`'s CROSS-ROW extent constraint, which the recursive
+ * frame geometry satisfies by construction. Keeping the sides' geometry closes
+ * that gap.
+ *
+ * Mutates `finalX` in place; falls back to the aligned linear layout when no
+ * side layout can be derived. Deterministic; returns whether a corrective was
+ * applied.
+ */
+function retidyCrossBranchComponent(
+  doc: LayoutDoc,
+  finalX: Record<string, number>,
+  group: readonly string[],
+  genOf: (id: string) => number,
+  spacing: LayoutSpacing,
+  cross: PartnershipRelationship,
+): boolean {
+  const p1 = cross.partner1Id!;
+  const p2 = cross.partner2Id!;
+  // a = the partner the aligned layout put on the left; b = the right partner.
+  const [a, b] =
+    finalX[p1] < finalX[p2] || (finalX[p1] === finalX[p2] && p1 < p2)
+      ? [p1, p2]
+      : [p2, p1];
+
+  const slice = sliceFor(doc, group, (id) => finalX[id], genOf, spacing);
+
+  // Detect-then-correct: the aligned linear layout is KEPT whenever it already
+  // satisfies the hard geometric invariants — it is the tightest packing the
+  // engine produces (the compaction the reformat fixtures pin), and most
+  // cross-branch components are shallow enough for it. The corrective below is
+  // wider (rigid per-side frames cannot slant a kid row toward the seam the way
+  // the aligned rows do), so it runs only where the linear layout genuinely
+  // fails: a deep subtree overlap or crossed descent (the #141 residual-1a
+  // taxonomy).
+  if (alignedCrossBranchIsClean(slice, finalX, genOf)) return false;
+
+  // b's blood side: everything reachable from b without traversing the cross
+  // union. If it reaches a, the families share ancestry (consanguineous).
+  const bSide = sideOf(slice, b, cross.id);
+
+  return bSide.has(a)
+    ? retidyConsanguineous(doc, finalX, group, slice, a, b, cross, genOf, spacing)
+    : retidyTwoSided(doc, finalX, group, slice, bSide, a, b, cross, genOf, spacing);
+}
+
+/**
+ * Production-local check of the two hard invariants the linear layout can break
+ * on a cross-branch component (mirrors the test oracle's `subtreeNonCollision`
+ * and `noCrossedDescentLines`, evaluated on the component slice only — see
+ * `reformatSuggestion.ts` for the same production-copy precedent):
+ *
+ * - no two non-ancestor-related sibship extents overlap in x, and
+ * - for two sibships on the same child row, the left parent anchor's children
+ *   all sit left of the right anchor's children.
+ */
+function alignedCrossBranchIsClean(
+  slice: LayoutDoc,
+  x: Record<string, number>,
+  genOf: (id: string) => number,
+): boolean {
+  const tol = 0.5;
+  const placed = new Set(Object.keys(slice.individuals));
+  const exts = sibshipExtents(slice, placed, x, 0);
+  const desc = unionDescendants(slice);
+  const related = (u: string, v: string): boolean =>
+    desc.get(u)?.has(v) === true || desc.get(v)?.has(u) === true;
+
+  for (let i = 0; i < exts.length; i++) {
+    for (let j = i + 1; j < exts.length; j++) {
+      if (related(exts[i].unionId, exts[j].unionId)) continue;
+      const overlap = Math.min(exts[i].max, exts[j].max) - Math.max(exts[i].min, exts[j].min);
+      if (overlap > tol) return false;
+    }
+  }
+
+  // Crossed descent lines: same child-row sibships must order children like
+  // their parent anchors.
+  const anchorX = (uid: string): number => {
+    const u = slice.partnerships[uid];
+    const partnerXs = [u.partner1Id, u.partner2Id]
+      .filter((id): id is string => !!id && placed.has(id))
+      .map((id) => x[id]);
+    if (partnerXs.length > 0) return meanBy(partnerXs, (v) => v);
+    const kids = u.childrenIds.filter((id) => placed.has(id));
+    return meanBy(kids, (id) => x[id]);
+  };
+  const byRow = new Map<number, SibshipExtent[]>();
+  for (const e of exts) {
+    const kids = slice.partnerships[e.unionId].childrenIds.filter((id) => placed.has(id));
+    const row = Math.min(...kids.map(genOf));
+    (byRow.get(row) ?? byRow.set(row, []).get(row)!).push(e);
+  }
+  for (const rowExts of byRow.values()) {
+    for (let i = 0; i < rowExts.length; i++) {
+      for (let j = i + 1; j < rowExts.length; j++) {
+        const axI = anchorX(rowExts[i].unionId);
+        const axJ = anchorX(rowExts[j].unionId);
+        const [l, r] = axI < axJ ? [rowExts[i], rowExts[j]] : [rowExts[j], rowExts[i]];
+        if (Math.abs(axI - axJ) <= tol) continue;
+        if (l.max >= r.min - tol) return false;
+      }
+    }
+  }
+  return true;
+}
+
+/**
+ * Lay out and compose a two-family cross-branch component. Each side is tidied
+ * as its own plain family (`a`'s side right-edge-biased and carrying the cross
+ * union — with `b` as a parentless leaf spouse, so the couple's own children
+ * are laid out under the couple on that side; `b`'s side left-edge-biased with
+ * the cross union removed). The right side is then translated so the couple
+ * sits at exactly `partnerSpacing`, plus whatever extra the hard constraints
+ * demand:
+ *
+ * 1. same-row symbol clearance (`minGap`) between the sides, and
+ * 2. disjointness of every unrelated cross-side pair of sibship extents —
+ *    `subtreeNonCollision` compares child-x extents ACROSS rows, so a deep left
+ *    subtree must not reach under the right family's children even when they
+ *    share no row. Ancestor/descendant pairs (the cross union's own descent vs
+ *    the partners' blood spines) are exempt, exactly as the invariant exempts
+ *    them.
+ *
+ * The couple therefore reads adjacent (nothing between the partners; gap grows
+ * past `partnerSpacing` only when a subtree genuinely needs the room), while
+ * each side keeps the frame-built geometry whose internal validity the plain
+ * property gate already proves.
+ */
+function retidyTwoSided(
+  doc: LayoutDoc,
+  finalX: Record<string, number>,
+  group: readonly string[],
+  slice: LayoutDoc,
+  bSide: ReadonlySet<string>,
+  a: string,
+  b: string,
+  cross: PartnershipRelationship,
+  genOf: (id: string) => number,
+  spacing: LayoutSpacing,
+): boolean {
+  const leftIds = group.filter((id) => !bSide.has(id));
+  const rightIds = group.filter((id) => bSide.has(id));
+
+  const leftSlice = sliceFor(doc, leftIds, (id) => finalX[id], genOf, spacing, {
+    leafSpouse: { id: b, seedX: SPINE_BIAS + spacing.partnerSpacing },
+    seedXOverrides: new Map(spineOf(doc, a, new Set(leftIds)).map((id) => [id, SPINE_BIAS])),
+  });
+  const rightSlice = sliceFor(doc, rightIds, (id) => finalX[id], genOf, spacing, {
+    excludeUnionId: cross.id,
+    seedXOverrides: new Map(spineOf(doc, b, new Set(rightIds)).map((id) => [id, -SPINE_BIAS])),
+  });
+  const xL = deriveSideLayout(leftSlice, genOf, spacing);
+  const xR = deriveSideLayout(rightSlice, genOf, spacing);
+  if (!xL || !xR) return false; // no childbearing root — keep the aligned layout
+
+  const minGap = Math.max(spacing.siblingSpacing, MIN_GENERATION_NODE_SPACING);
+  // Compose with the couple at exactly partnerSpacing…
+  let shift = xL[a] + spacing.partnerSpacing - xR[b];
+
+  // …then push the right side out by what clearance demands.
+  let extra = 0;
+  // (1) Same-row clearance between the sides.
+  const rowMax = new Map<number, number>();
+  for (const id of leftIds) {
+    const g = genOf(id);
+    const m = rowMax.get(g);
+    if (m === undefined || xL[id] > m) rowMax.set(g, xL[id]);
+  }
+  for (const id of rightIds) {
+    const m = rowMax.get(genOf(id));
+    if (m === undefined) continue;
+    const need = m + minGap - (xR[id] + shift);
+    if (need > extra) extra = need;
+  }
+  // (2) Unrelated cross-side sibship extents must not overlap (cross-row).
+  const desc = unionDescendants(slice);
+  const related = (u: string, v: string): boolean =>
+    desc.get(u)?.has(v) === true || desc.get(v)?.has(u) === true;
+  for (const le of sibshipExtents(slice, new Set(leftIds), xL, 0)) {
+    for (const re of sibshipExtents(slice, new Set(rightIds), xR, shift)) {
+      if (related(le.unionId, re.unionId)) continue;
+      const need = le.max + minGap - re.min;
+      if (need > extra) extra = need;
+    }
+  }
+  shift += Math.max(0, extra);
+
+  for (const id of leftIds) finalX[id] = xL[id];
+  for (const id of rightIds) finalX[id] = xR[id] + shift;
+  return true;
+}
+
+/**
+ * Lay out a consanguineous cross-branch component (the couple shares blood
+ * ancestry, so the component minus the cross union is still ONE connected plain
+ * family). The whole slice is delegated with the cross union removed — keeping
+ * it would pin the far partner inside the frame and split the couple across
+ * rigid blocks, which measurably corrupts the layout — and seed-biased so the
+ * couple reads adjacent:
+ *
+ * - at the DIVERGENCE sibship (where the two blood spines are siblings under
+ *   their deepest shared union), `a`'s branch is pushed to the right end with
+ *   `b`'s branch immediately after it;
+ * - below the divergence, `a` hugs its branch's right edge and `b` its branch's
+ *   left edge.
+ *
+ * Every row then reads `… a's branch …, sa, a, b, sb, … b's branch …`, and the
+ * frame geometry keeps all sibship extents disjoint by construction. Children
+ * of the cross union (fixture-only; the generator's cross unions are childless)
+ * are disconnected in the sliced graph and keep their aligned-linear
+ * arrangement, re-centred under the couple.
+ */
+function retidyConsanguineous(
+  doc: LayoutDoc,
+  finalX: Record<string, number>,
+  group: readonly string[],
+  slice: LayoutDoc,
+  a: string,
+  b: string,
+  cross: PartnershipRelationship,
+  genOf: (id: string) => number,
+  spacing: LayoutSpacing,
+): boolean {
+  const present = new Set(group);
+  const spineA = spineOf(doc, a, present);
+  const spineB = spineOf(doc, b, present);
+  const parentUnionOf = (id: string): string | undefined =>
+    Object.values(doc.parentChildLinks).find((l) => l.childId === id)?.parentPartnershipId;
+
+  // Deepest shared parent union: the sibship where the two spines diverge.
+  const bLevel = new Map<string, number>();
+  spineB.forEach((id, j) => {
+    const u = parentUnionOf(id);
+    if (u !== undefined && !bLevel.has(u)) bLevel.set(u, j);
+  });
+  let ai = -1;
+  let bj = -1;
+  for (let i = 0; i < spineA.length; i++) {
+    const u = parentUnionOf(spineA[i]);
+    if (u !== undefined && bLevel.has(u)) {
+      ai = i;
+      bj = bLevel.get(u)!;
+      break;
+    }
+  }
+  if (ai < 0) return false; // no shared blood sibship: keep the aligned layout
+
+  const bias = new Map<string, number>();
+  for (let i = 0; i <= ai; i++) bias.set(spineA[i], SPINE_BIAS);
+  for (let j = 0; j < bj; j++) bias.set(spineB[j], -SPINE_BIAS);
+  bias.set(spineB[bj], SPINE_BIAS + 1);
+  // When b itself sits at the divergence (the couple are siblings), its own
+  // huge seed would flip its married-in spouse to its LEFT — between the cross
+  // couple. Bias the spouse past b so it stays on the outside.
+  if (bj === 0) {
+    for (const u of Object.values(doc.partnerships)) {
+      if (u.id === cross.id) continue;
+      const s = u.partner1Id === b ? u.partner2Id : u.partner2Id === b ? u.partner1Id : undefined;
+      if (s && s !== b && present.has(s) && !bias.has(s)) bias.set(s, SPINE_BIAS + 2);
+    }
+  }
+
+  const biased = sliceFor(doc, group, (id) => finalX[id], genOf, spacing, {
+    excludeUnionId: cross.id,
+    seedXOverrides: bias,
+  });
+  const xo = deriveSideLayout(biased, genOf, spacing);
+  if (!xo) return false; // no childbearing root — keep the aligned layout
+
+  // The cross union's own descent (if any) is disconnected in the sliced graph
+  // and never placed by the frame; re-centre its aligned-linear arrangement
+  // under the couple. Everything reachable from `a` takes the frame geometry.
+  const placedSet = sideOf(slice, a, cross.id);
+  const floaters: string[] = [];
+  for (const id of group) {
+    if (placedSet.has(id)) finalX[id] = xo[id];
+    else floaters.push(id);
+  }
+  if (floaters.length > 0) {
+    const target = (xo[a] + xo[b]) / 2;
+    const shift = target - meanBy(floaters, (id) => finalX[id]);
+    for (const id of floaters) finalX[id] += shift;
+  }
+  return true;
+}
+
+/** One union's placed-children x-extent (its sibship footprint). */
+interface SibshipExtent {
+  unionId: string;
+  min: number;
+  max: number;
+}
+
+/**
+ * The x-extent of every union's placed children within `ids`, offset by
+ * `offset` — the footprint {@link subtreeNonCollision} compares across rows.
+ */
+function sibshipExtents(
+  slice: LayoutDoc,
+  ids: ReadonlySet<string>,
+  x: Record<string, number>,
+  offset: number,
+): SibshipExtent[] {
+  const out: SibshipExtent[] = [];
+  for (const [uid, u] of Object.entries(slice.partnerships)) {
+    const xs = u.childrenIds
+      .filter((id) => ids.has(id) && x[id] !== undefined)
+      .map((id) => x[id] + offset);
+    if (xs.length === 0) continue;
+    out.push({ unionId: uid, min: Math.min(...xs), max: Math.max(...xs) });
+  }
+  return out;
+}
+
+/**
+ * The set of slice members reachable from `start` over partner and parent-child
+ * edges, with the union `excludeUnionId` (and its child links) removed — one
+ * blood side of a cross-branch split.
+ */
+function sideOf(slice: LayoutDoc, start: string, excludeUnionId: string): Set<string> {
+  const adj = new Map<string, string[]>();
+  const addEdge = (x: string, y: string): void => {
+    (adj.get(x) ?? adj.set(x, []).get(x)!).push(y);
+    (adj.get(y) ?? adj.set(y, []).get(y)!).push(x);
+  };
+  for (const [uid, u] of Object.entries(slice.partnerships)) {
+    if (uid === excludeUnionId) continue;
+    const q1 = u.partner1Id;
+    const q2 = u.partner2Id;
+    if (q1 && q2 && q1 !== q2 && slice.individuals[q1] && slice.individuals[q2]) addEdge(q1, q2);
+  }
+  for (const l of Object.values(slice.parentChildLinks)) {
+    if (l.parentPartnershipId === excludeUnionId) continue;
+    const u = slice.partnerships[l.parentPartnershipId];
+    if (!u || !slice.individuals[l.childId]) continue;
+    for (const p of [u.partner1Id, u.partner2Id]) {
+      if (p && slice.individuals[p]) addEdge(p, l.childId);
+    }
+  }
+  const side = new Set<string>([start]);
+  const stack = [start];
+  while (stack.length) {
+    const cur = stack.pop()!;
+    for (const n of adj.get(cur) ?? []) {
+      if (!side.has(n)) {
+        side.add(n);
+        stack.push(n);
+      }
+    }
+  }
+  return side;
+}
+
+/**
+ * The blood spine of `start` within `within`: the node itself plus, at each
+ * parent union above, the partner who continues the blood line (has their own
+ * parent link). Every sibship along this path contains exactly one spine node,
+ * so seeding the whole spine to one extreme x pushes `start`'s branch to that
+ * edge of its family at every level. Cycle-guarded.
+ */
+function spineOf(doc: LayoutDoc, start: string, within: ReadonlySet<string>): string[] {
+  const out: string[] = [start];
+  const seen = new Set<string>([start]);
+  let cur = start;
+  for (;;) {
+    const l = Object.values(doc.parentChildLinks).find((l2) => l2.childId === cur);
+    if (!l) break;
+    const u = doc.partnerships[l.parentPartnershipId];
+    if (!u) break;
+    const next = [u.partner1Id, u.partner2Id].find(
+      (p): p is string =>
+        !!p && within.has(p) && !seen.has(p) &&
+        Object.values(doc.parentChildLinks).some((l2) => l2.childId === p),
+    );
+    if (!next) break;
+    seen.add(next);
+    out.push(next);
+    cur = next;
+  }
+  return out;
+}
+
+/**
+ * Lay out one blood side of a cross-branch split: delegate the slice to
+ * `computeTreeLayout` rooted at its topmost childbearing union, and return
+ * every slice member's resulting x (an unmoved member keeps its seed). Null
+ * when the slice has no childbearing union to root at.
+ */
+function deriveSideLayout(
+  slice: LayoutDoc,
+  genOf: (id: string) => number,
+  spacing: LayoutSpacing,
+): Record<string, number> | null {
+  const root = pickRootUnion(slice, genOf);
+  if (root === null) return null;
+  const moves = computeTreeLayout(slice, root, spacing);
+  const out: Record<string, number> = {};
+  for (const id of Object.keys(slice.individuals)) {
+    out[id] = moves[id]?.x ?? slice.individuals[id].position.x;
+  }
+  return out;
 }
 
 /**

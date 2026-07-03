@@ -801,9 +801,12 @@ function clearExternalObstacles(
  * Strict-descendant union sets: `result.get(u)` is every union that descends from
  * `u` (its children's unions, recursively), excluding `u` itself. Used by
  * {@link separateGenerations} to tell an ancestor/descendant block pair apart from
- * a cousin pair. Guards against consanguinity cycles.
+ * a cousin pair, and exported for `reformatLayout`'s cross-branch composition
+ * (issue #141), which needs the same ancestor exemption `subtreeNonCollision`
+ * applies when clearing one blood side's sibship extents past the other's.
+ * Guards against consanguinity cycles.
  */
-function unionDescendants(doc: LayoutDoc): Map<string, Set<string>> {
+export function unionDescendants(doc: LayoutDoc): Map<string, Set<string>> {
   // Each individual → the unions they partner in.
   const unionsOf = new Map<string, string[]>();
   for (const u of Object.values(doc.partnerships)) {
