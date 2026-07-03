@@ -797,6 +797,49 @@ function clearExternalObstacles(
  * @param blocks - The rigid blocks (from {@link computeRigidBlocks}); each block's
  *   members are shifted together. Reused across calls so shifts accumulate.
  */
+/**
+ * Strict-descendant union sets: `result.get(u)` is every union that descends from
+ * `u` (its children's unions, recursively), excluding `u` itself. Used by
+ * {@link separateGenerations} to tell an ancestor/descendant block pair apart from
+ * a cousin pair. Guards against consanguinity cycles.
+ */
+function unionDescendants(doc: LayoutDoc): Map<string, Set<string>> {
+  // Each individual → the unions they partner in.
+  const unionsOf = new Map<string, string[]>();
+  for (const u of Object.values(doc.partnerships)) {
+    for (const p of [u.partner1Id, u.partner2Id]) {
+      if (!p) continue;
+      const arr = unionsOf.get(p);
+      if (arr) arr.push(u.id);
+      else unionsOf.set(p, [u.id]);
+    }
+  }
+  // Direct child-union edges: u → the unions its children head.
+  const childUnions = new Map<string, Set<string>>();
+  for (const u of Object.values(doc.partnerships)) {
+    const set = new Set<string>();
+    for (const c of u.childrenIds) {
+      for (const cu of unionsOf.get(c) ?? []) if (cu !== u.id) set.add(cu);
+    }
+    childUnions.set(u.id, set);
+  }
+  // Transitive closure by BFS from each union (cycle-guarded).
+  const desc = new Map<string, Set<string>>();
+  for (const uid of Object.keys(doc.partnerships)) {
+    const set = new Set<string>();
+    const queue = [...(childUnions.get(uid) ?? [])];
+    while (queue.length) {
+      const cur = queue.pop()!;
+      if (set.has(cur)) continue;
+      set.add(cur);
+      for (const n of childUnions.get(cur) ?? []) if (!set.has(n)) queue.push(n);
+    }
+    set.delete(uid); // strict: a union is not its own descendant
+    desc.set(uid, set);
+  }
+  return desc;
+}
+
 function separateGenerations(
   doc: LayoutDoc,
   finalX: Record<string, number>,
@@ -806,6 +849,16 @@ function separateGenerations(
 ): void {
   const blockOf = new Map<string, DescentBlock>();
   for (const b of blocks) for (const id of b.members) blockOf.set(id, b);
+
+  // Ancestor/descendant relation between block keys (union ids), so the row sweep
+  // never pushes a nested descendant block to clear its own ancestor's far edge —
+  // a descendant that sits inside its ancestor's sibship span is legitimate (this
+  // is exactly the pair `subtreeNonCollision` skips). Cousin blocks are unrelated
+  // and are still separated. A singleton block keyed by a node id has no entry and
+  // so is related to nothing (separated from all).
+  const descOf = unionDescendants(doc);
+  const related = (a: string, b: string): boolean =>
+    descOf.get(a)?.has(b) === true || descOf.get(b)?.has(a) === true;
 
   // Fixed obstacles: every node present in the doc but absent from the frame —
   // a pinned in-law and its external family. They occupy their row but never move.
@@ -859,23 +912,35 @@ function separateGenerations(
       a.minX !== b.minX ? a.minX - b.minX : a.key < b.key ? -1 : 1,
     );
 
-    // Right-shift each movable block to clear its predecessor's extent by minGap;
-    // a fixed obstacle cannot move, so it re-anchors the running edge in place.
-    let prevMax = -Infinity;
+    // Right-shift each movable block to clear the extent of every already-placed
+    // item that it must not overlap — fixed obstacles and *cousin* blocks — by
+    // minGap. An ancestor/descendant block is excluded from a block's barrier: a
+    // nested descendant legitimately sits within its ancestor's sibship span, so
+    // the old single running edge (which treated an ancestor's span as solid,
+    // hole and all) would spuriously shove the descendant clear past it. A fixed
+    // obstacle cannot move; it re-anchors the edge in place. With no related
+    // blocks in the row this is identical to the former monotone sweep.
+    const placed: Array<{ maxX: number; key: string; isObstacle: boolean }> = [];
     for (const item of items) {
       if (item.block === null) {
-        prevMax = Math.max(prevMax, item.maxX);
+        placed.push({ maxX: item.maxX, key: item.key, isObstacle: true });
         continue;
       }
+      let barrier = -Infinity;
+      for (const p of placed) {
+        if ((p.isObstacle || !related(p.key, item.key)) && p.maxX > barrier) {
+          barrier = p.maxX;
+        }
+      }
       let shift = 0;
-      if (prevMax !== -Infinity) {
-        const need = prevMax + minGap - item.minX;
+      if (barrier !== -Infinity) {
+        const need = barrier + minGap - item.minX;
         if (need > 0) shift = need;
       }
       if (shift > 0) {
         for (const m of item.block.members) finalX[m] += shift;
       }
-      prevMax = Math.max(prevMax, item.maxX + shift);
+      placed.push({ maxX: item.maxX + shift, key: item.key, isObstacle: false });
     }
   }
 }

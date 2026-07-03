@@ -892,6 +892,59 @@ export function subtreeCollisionRegression(): Fixture {
   };
 }
 
+/**
+ * A deep, asymmetric single-family pedigree that `computeTreeLayout` (the
+ * incremental engine, and the delegate `reformatLayout` uses for a plain family)
+ * laid out with **overlapping cousin subtrees** (`subtreeNonCollision`). Found by
+ * the property harness and shrunk to 18 nodes; no hub, no twins, no
+ * cross-branch — an ordinary branching family whose left spine runs a generation
+ * deeper than its right.
+ *
+ *   i0 × i1 → i3, i5
+ *   i3 × i7  → i13                 (left spine)
+ *   i13 × i17 → i30, i32, i34      (i32 sits between its siblings)
+ *   i32 × i36 → i38, i40           (deep subtree hanging under i32)
+ *   i5 × i9  → i19, i21, i23       (right branch, shallow and wide)
+ *
+ * `i32`'s descent block (`u37`) is nested *between* its parent `u18`'s children
+ * (`i30 … i34`). The per-row separation sweep in `separateGenerations` treated
+ * `u18`'s row span as solid — hole and all — and so shoved the nested `u37` block
+ * clear past `i34`, out of the left band and horizontally into `i5`'s shallow
+ * right-branch sibship. Fixed in #141 (residual 4): the sweep excludes an
+ * ancestor/descendant block from a block's separation barrier, so a nested
+ * descendant is no longer spuriously pushed. Member of `ALL_FIXTURES`.
+ */
+export function deepAsymmetricSubtree(): Fixture {
+  return {
+    name: 'deepAsymmetricSubtree',
+    doc: doc({
+      individuals: {
+        i0: ind('i0', 0, 0), i1: ind('i1', 0, 0),
+        i3: ind('i3', 0, 1), i5: ind('i5', 0, 1), i7: ind('i7', 0, 1), i9: ind('i9', 0, 1),
+        i13: ind('i13', 0, 2), i17: ind('i17', 0, 2),
+        i19: ind('i19', 0, 2), i21: ind('i21', 0, 2), i23: ind('i23', 0, 2),
+        i30: ind('i30', 0, 3), i32: ind('i32', 0, 3), i34: ind('i34', 0, 3), i36: ind('i36', 0, 3),
+        i38: ind('i38', 0, 4), i40: ind('i40', 0, 4),
+      },
+      partnerships: {
+        u2: union('u2', 'i0', 'i1', ['i3', 'i5']),
+        u8: union('u8', 'i3', 'i7', ['i13']),
+        u18: union('u18', 'i13', 'i17', ['i30', 'i32', 'i34']),
+        u37: union('u37', 'i32', 'i36', ['i38', 'i40']),
+        u10: union('u10', 'i5', 'i9', ['i19', 'i21', 'i23']),
+      },
+      parentChildLinks: {
+        l3: link('l3', 'u2', 'i3'), l5: link('l5', 'u2', 'i5'),
+        l13: link('l13', 'u8', 'i13'),
+        l30: link('l30', 'u18', 'i30'), l32: link('l32', 'u18', 'i32'), l34: link('l34', 'u18', 'i34'),
+        l38: link('l38', 'u37', 'i38'), l40: link('l40', 'u37', 'i40'),
+        l19: link('l19', 'u10', 'i19'), l21: link('l21', 'u10', 'i21'), l23: link('l23', 'u10', 'i23'),
+      },
+    }),
+    rootUnionId: 'u2',
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Exported fixture array
 // ---------------------------------------------------------------------------
@@ -921,5 +974,6 @@ export const ALL_FIXTURES: Array<() => Fixture> = [
   selfPartneredUnion,
   wideCousinFan,
   subtreeCollisionRegression,
+  deepAsymmetricSubtree,
   marriedTwinInterleaved,
 ];
