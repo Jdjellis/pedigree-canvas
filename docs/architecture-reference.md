@@ -114,11 +114,45 @@ This is the crown-jewel test surface for the auto-spacing feature.
    fixed (no canvas jump) and each node's y is derived from its resolved
    generation row: `rootY + (gen − rootGen) × generationSpacing`.
 
+### Whole-document reformat (`reformatLayout`, issue #137)
+
+`computeTreeLayout` is **order-preserving** and rooted at a single blood family:
+it deliberately pins a cross-branch in-law's family as a fixed obstacle, so it
+cannot bring a couple whose *both* partners are load-bearing adjacent, and it
+never compacts the slack between multiple founder families. That is by design —
+it runs on every incremental edit and must respect the user's manual arrangement.
+
+`reformatLayout(doc, spacing?)` in `src/utils/reformatLayout.ts` is a **separate,
+new engine** for the explicit user-triggered "re-tidy" (the reformat action). It
+is a layered (Sugiyama / Brandes–Köpf-style) layout that **is allowed to
+reorder** rows, and fixes both #137 symptoms by construction:
+
+1. **Layers** — bucket individuals by generation via the shared
+   `resolveGenerationRows` helper (extracted from `computeTreeLayout`).
+2. **Ordering** — partition each row into partnership **chains** (a couple, or a
+   multi-union hub ordered between its spouses) and order the chains by an
+   iterated, **row-size-normalised barycentre** of their cross-row neighbours. A
+   no-neighbour founder spouse is skipped from the barycentre (it would otherwise
+   skew the chain). This drops a cross-branch couple *between* its two families
+   and keeps a hub's spouses straddling it.
+3. **Coordinates** — pack each row tightly (partners at `PARTNER_SPACING`,
+   otherwise `minGap`), then rigidly align rows over their neighbours. Because the
+   invariants never require x-*centring* of parents over children (only correct
+   ordering, spacing, no-overlap, bounded width), no full coordinate-assignment
+   solve is needed.
+4. **Anchor + y** — keep the document centroid's x fixed and derive y from the
+   generation row, so the canvas does not jump.
+
+`reformatLayout` is **only** reached by the reformat trigger; the per-edit path
+and its invariant suite are untouched. It satisfies every positional invariant
+plus `noNodeBetweenPartners`, and is idempotent.
+
 ### Known limitations
 
-- **Over-constrained cross-branch case**: when a sibship sits between a pinned
-  in-law and a cousin, centering is clamped rather than exact — no-overlap wins
-  over exact centering.
+- **Over-constrained cross-branch case** (single-family `computeTreeLayout` only):
+  when a sibship sits between a pinned in-law and a cousin, centering is clamped
+  rather than exact. Resolved for the whole document by `reformatLayout`, which
+  lays out every family together and brings cross-branch couples adjacent.
 - **3+ child-bearing unions on one hub**: a single point cannot be at exactly
   `partnerSpacing` from three different spouses, so the exact partner-spacing
   aesthetic degrades for the 3rd+ union (sibships are still separated; only the
@@ -133,16 +167,22 @@ This is the crown-jewel test surface for the auto-spacing feature.
 (`coupleWithSibship`, `crossBranchMarriage`, `remarriageHalfSibs`,
 `chainedWideCouples`, `twins`, `consanguinity`, `wideCousinFan`, and more;
 exported as `ALL_FIXTURES`). Each fixture is a `{ doc, rootUnionId }` pair with
-seed positions that reproduce a known bug or document a passing case.
+seed positions that reproduce a known bug or document a passing case. The
+whole-document reformat cases live in `REFORMAT_FIXTURES` (`reportedLayoutBugs`
+— the real reported `layout-bugs.json` saved verbatim as an asset;
+`farApartCrossBranchCouple`; `wideMultiFounderChart`).
 
 `src/utils/__fixtures__/invariants.ts` — reusable invariant matchers
 (`noSymbolOverlap`, `minSiblingSpacing`, `minPartnerSpacing`,
 `generationRowAlignment`, `noCrossedDescentLines`, `subtreeNonCollision`,
 `manualOrderPreserved`, `twinContiguity`, `anchorStability`,
-`checkAllInvariants`). Framework-agnostic pure functions — no React, no Konva.
+`checkAllInvariants`, plus the #137 additions `noNodeBetweenPartners`,
+`boundedPartnerDistance`, `chartWidth`). Framework-agnostic pure functions — no
+React, no Konva.
 
-Both are consumed by `src/utils/__fixtures__/pedigrees.test.ts` /
-`treeLayout.invariants.test.ts` (unit suite) and by
+These are consumed by `src/utils/__fixtures__/pedigrees.test.ts` /
+`treeLayout.invariants.test.ts` (single-family engine) and
+`src/utils/reformatLayout.test.ts` (the layered reformat engine), plus
 `e2e/layout-render-guard.spec.ts` (Playwright guard). **When changing layout,
 add a fixture that exposes the new structure, then check it against the matchers
 before merging.**
