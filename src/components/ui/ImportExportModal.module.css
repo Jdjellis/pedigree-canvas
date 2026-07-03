@@ -80,10 +80,14 @@
   background: var(--color-surface-hover);
 }
 
+.option:hover .optionIcon {
+  color: var(--color-primary);
+}
+
 .optionIcon {
   font-size: 16px;
   font-weight: 700;
-  color: var(--color-primary);
+  color: var(--color-text);
   font-family: var(--font-mono, monospace);
 }
 

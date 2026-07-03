@@ -1,8 +1,16 @@
+/*
+ * Recessed track with a white, softly-lifted active thumb (DESIGN.md §5 — the
+ * "Segment Lift"). The accent appears only as the *active label colour*, never
+ * as a fill, so Clinical Indigo stays rare per the One Accent Rule. Mirrors the
+ * sex-default control's idiom (islands.module.css .sexControl) for a single
+ * segmented-control vocabulary across the app.
+ */
 .segmented {
   display: flex;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  overflow: hidden;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--radius-md, 10px);
+  background: rgba(120, 120, 140, 0.08);
 }
 
 .segment {
@@ -11,20 +19,17 @@
   font-size: 12px;
   font-weight: 500;
   text-align: center;
-  color: var(--color-text);
-  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  background: transparent;
   border: none;
-  border-right: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: background 0.1s, color 0.1s;
-}
-
-.segment:last-child {
-  border-right: none;
+  transition: background 0.1s, color 0.1s, box-shadow 0.1s;
 }
 
 .segment:hover:not(.segmentActive):not(:disabled) {
-  background: color-mix(in srgb, var(--color-border) 50%, transparent);
+  color: var(--color-text);
+  background: rgba(120, 120, 140, 0.1);
 }
 
 .segment:disabled {
@@ -32,7 +37,13 @@
   opacity: 0.5;
 }
 
+/* Active = a raised white thumb; the indigo lives in the label, not a fill. */
 .segmentActive {
-  background: var(--color-primary);
-  color: white;
+  background: var(--color-surface);
+  color: var(--color-primary);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+
+.segmentActive:hover {
+  color: var(--color-primary);
 }
