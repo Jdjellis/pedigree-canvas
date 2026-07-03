@@ -145,7 +145,10 @@ reorder** rows, and fixes both #137 symptoms by construction:
 
 `reformatLayout` is **only** reached by the reformat trigger; the per-edit path
 and its invariant suite are untouched. It satisfies every positional invariant
-plus `noNodeBetweenPartners`, and is idempotent.
+plus `noNodeBetweenPartners` **in its achievable form** — no *foreign*
+(non-partner) node sits between a couple; a **hub** with 3+ same-row unions may
+keep one of its own co-spouses between it and a non-adjacent spouse, which no
+linear row can avoid (see Known limitations) — and is idempotent.
 
 ### Known limitations
 
@@ -153,10 +156,17 @@ plus `noNodeBetweenPartners`, and is idempotent.
   when a sibship sits between a pinned in-law and a cousin, centering is clamped
   rather than exact. Resolved for the whole document by `reformatLayout`, which
   lays out every family together and brings cross-branch couples adjacent.
-- **3+ child-bearing unions on one hub**: a single point cannot be at exactly
-  `partnerSpacing` from three different spouses, so the exact partner-spacing
-  aesthetic degrades for the 3rd+ union (sibships are still separated; only the
-  aesthetic spacing widens).
+- **3+ same-row unions on one hub** (both engines): a single point cannot be
+  adjacent to — or at exactly `partnerSpacing` from — three spouses in a linear
+  row, so the 3rd+ union's spouse is left non-adjacent. `reformatLayout` keeps
+  the hub's other unions tidy and `noNodeBetweenPartners` permits the co-spouse
+  between by construction, but the stranded spouse still trips `minPartnerSpacing`
+  (its aesthetic spacing widens). Fixing it properly needs line-routing or hub
+  duplication — tracked in [issue #141](https://github.com/Jdjellis/pedigree-canvas/issues/141).
+- **A married twin** is excluded from `reformatLayout`'s `makeTwinsContiguous`
+  post-pass (which pulls single-node chains only), so a non-twin sibling can
+  tie-break between a coupled twin and its co-twin, violating `twinContiguity`.
+  Also tracked in [issue #141](https://github.com/Jdjellis/pedigree-canvas/issues/141).
 - **Disconnected components**: an unrelated family that shares a generation row is
   treated as a fixed obstacle, so the rooted family may be translated sideways to
   clear it (no overlap or crossing results; the unrelated family never moves).
