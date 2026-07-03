@@ -5,6 +5,7 @@ import {
   ALL_FIXTURES,
   threeUnionHub,
   marriedTwinInterleaved,
+  subtreeCollisionRegression,
 } from './__fixtures__/pedigrees';
 import {
   REFORMAT_FIXTURES,
@@ -155,5 +156,18 @@ describe('reformatLayout — known gaps (review of #137 PR1)', () => {
     // only pulls single-node chains into a group's run, so the coupled twin is
     // excluded and a non-twin sibling tie-breaks between the twins.
     expect(twinContiguity(pos, doc, twinGroups ?? {}).ok).toBe(false);
+  });
+
+  it('subtreeCollisionRegression: reorders a connected family into overlapping subtrees (subtreeNonCollision not met)', () => {
+    // Found by the property-based discovery harness (arbitraryPedigree.ts). An
+    // ordinary connected single family — no hub, no twins, no disconnection.
+    const { doc } = subtreeCollisionRegression();
+    const pos = reformatted(doc);
+    // BUG: the coordinate phase has no contour/subtree-separation step, so a deep
+    // subtree slides over its sibling. `checkAllInvariants` should hold once the
+    // engine gains subtree separation (#141) — flip this to `true` then.
+    expect(checkAllInvariants(pos, doc).ok).toBe(false);
+    const rules = checkAllInvariants(pos, doc).violations.map((v) => v.rule);
+    expect(rules).toContain('subtreeNonCollision');
   });
 });

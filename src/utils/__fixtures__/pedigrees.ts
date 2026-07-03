@@ -843,6 +843,52 @@ export function marriedTwinInterleaved(): Fixture {
   };
 }
 
+/**
+ * A connected single-family pedigree that `reformatLayout` lays out with
+ * **overlapping subtrees** (`subtreeNonCollision` fails). Found by the
+ * property-based discovery harness and shrunk to 14 nodes; no hub, no twins, no
+ * disconnection — an ordinary branching family four generations deep.
+ *
+ *   i0 × i1 → i3, i5, i7
+ *   i5 × i9  → i13, i15      i7 × i11 → i19, i21
+ *   i15 × i17 → i23
+ *   i23 × i25 → (childless)
+ *
+ * `reformatLayout` reorders the rows, then packs each row and does a rigid
+ * per-row shift — but it has no contour/subtree-separation step (unlike
+ * `computeTreeLayout`'s `separateGenerations`), so a deep subtree slides over its
+ * sibling subtree. This is the canonical failing case for the #141 engine fix.
+ */
+export function subtreeCollisionRegression(): Fixture {
+  return {
+    name: 'subtreeCollisionRegression',
+    doc: doc({
+      individuals: {
+        i0: ind('i0', 0, 0), i1: ind('i1', 0, 0),
+        i3: ind('i3', 0, 1), i5: ind('i5', 0, 1), i7: ind('i7', 0, 1),
+        i9: ind('i9', 0, 1), i11: ind('i11', 0, 1),
+        i13: ind('i13', 0, 2), i15: ind('i15', 0, 2), i17: ind('i17', 0, 2),
+        i19: ind('i19', 0, 2), i21: ind('i21', 0, 2),
+        i23: ind('i23', 0, 3), i25: ind('i25', 0, 3),
+      },
+      partnerships: {
+        u2: union('u2', 'i0', 'i1', ['i3', 'i5', 'i7']),
+        u10: union('u10', 'i5', 'i9', ['i13', 'i15']),
+        u12: union('u12', 'i7', 'i11', ['i19', 'i21']),
+        u18: union('u18', 'i15', 'i17', ['i23']),
+        u26: union('u26', 'i23', 'i25', []),
+      },
+      parentChildLinks: {
+        l3: link('l3', 'u2', 'i3'), l5: link('l5', 'u2', 'i5'), l7: link('l7', 'u2', 'i7'),
+        l13: link('l13', 'u10', 'i13'), l15: link('l15', 'u10', 'i15'),
+        l19: link('l19', 'u12', 'i19'), l21: link('l21', 'u12', 'i21'),
+        l23: link('l23', 'u18', 'i23'),
+      },
+    }),
+    rootUnionId: 'u2',
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Exported fixture array
 // ---------------------------------------------------------------------------
