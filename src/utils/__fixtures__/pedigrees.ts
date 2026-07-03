@@ -20,6 +20,7 @@ import type {
 import { RelationshipType, TwinType } from '../../types/enums';
 import { createDefaultIndividual } from '../../stores/pedigreeStore';
 import type { LayoutDoc } from '../treeLayout';
+import layoutBugsFile from './layout-bugs.json';
 
 // ---------------------------------------------------------------------------
 // Local helpers (mirrors treeLayout.test.ts)
@@ -637,6 +638,112 @@ export function wideCousinFan(): Fixture {
 }
 
 // ---------------------------------------------------------------------------
+// Reformat fixtures (issue #137) — multi-founder documents exercised through
+// `reformatLayout`, not the single-family `computeTreeLayout`.
+// ---------------------------------------------------------------------------
+
+/**
+ * The real reported `layout bugs.json` (25 individuals, 6 generations), saved
+ * verbatim as an asset and sliced into a {@link LayoutDoc}. The canonical
+ * failing-first case: `4a1d × ddf2` sit 1415 px apart, siblings render between
+ * `c912`'s partners, and generation rows span 3.6×–10× their tight width.
+ */
+export function reportedLayoutBugs(): Fixture {
+  const raw = layoutBugsFile as unknown as {
+    document: {
+      individuals: Record<string, Individual>;
+      partnerships: Record<string, PartnershipRelationship>;
+      parentChildLinks: Record<string, ParentChildRelationship>;
+      twinGroups?: Record<string, TwinGroup>;
+    };
+  };
+  const d = raw.document;
+  return {
+    name: 'reportedLayoutBugs',
+    doc: {
+      individuals: d.individuals,
+      partnerships: d.partnerships,
+      parentChildLinks: d.parentChildLinks,
+      twinGroups: d.twinGroups ?? {},
+    },
+    // A topmost founder union (51df × be28 → 7a36); `reformatLayout` lays out the
+    // whole document regardless of the nominal root.
+    rootUnionId: 'a63558d9-ee96-4760-b040-6edf734adb73',
+  };
+}
+
+/**
+ * Minimal synthetic cross-branch marriage seeded far apart with a sibling in the
+ * gap — the reduced form of the `4a1d × ddf2` smoking gun.
+ *
+ *   Lgp1 + Lgp2 → La, Lsib   (left family, seeded far LEFT)
+ *   Rgp1 + Rgp2 → Rb, Rsib   (right family, seeded far RIGHT)
+ *   couple = La × Rb → kid    (both La and Rb are load-bearing)
+ *
+ * On the current engine `La` and `Rb` stay ~1440 px apart with `Lsib`/`Rsib`
+ * stranded in the gap; `reformatLayout` must bring the couple adjacent.
+ */
+export function farApartCrossBranchCouple(): Fixture {
+  return {
+    name: 'farApartCrossBranchCouple',
+    doc: doc({
+      individuals: {
+        Lgp1: ind('Lgp1', -60, 0), Lgp2: ind('Lgp2', 60, 0),
+        Rgp1: ind('Rgp1', 1340, 0), Rgp2: ind('Rgp2', 1460, 0),
+        La: ind('La', 0, 1), Lsib: ind('Lsib', 120, 1),
+        Rb: ind('Rb', 1400, 1), Rsib: ind('Rsib', 1280, 1),
+        kid: ind('kid', 700, 2),
+      },
+      partnerships: {
+        Lroot: union('Lroot', 'Lgp1', 'Lgp2', ['La', 'Lsib']),
+        Rroot: union('Rroot', 'Rgp1', 'Rgp2', ['Rb', 'Rsib']),
+        couple: union('couple', 'La', 'Rb', ['kid']),
+      },
+      parentChildLinks: {
+        a: link('a', 'Lroot', 'La'), b: link('b', 'Lroot', 'Lsib'),
+        c: link('c', 'Rroot', 'Rb'), d: link('d', 'Rroot', 'Rsib'),
+        e: link('e', 'couple', 'kid'),
+      },
+    }),
+    rootUnionId: 'Lroot',
+  };
+}
+
+/**
+ * Three founder families spread far across a row (≈700 px apart), two joined by a
+ * cross-branch marriage and the third left as a disconnected component. Exercises
+ * global width compaction (the "very wide pedigree" symptom): every generation
+ * row is far wider than its tight packing until `reformatLayout` squeezes it.
+ */
+export function wideMultiFounderChart(): Fixture {
+  return {
+    name: 'wideMultiFounderChart',
+    doc: doc({
+      individuals: {
+        m1: ind('m1', 0, 0), f1: ind('f1', 120, 0),
+        m2: ind('m2', 800, 0), f2: ind('f2', 920, 0),
+        m3: ind('m3', 1600, 0), f3: ind('f3', 1720, 0),
+        c1: ind('c1', 60, 1), c2: ind('c2', 860, 1), c3: ind('c3', 1660, 1),
+        g1: ind('g1', 460, 2),
+      },
+      partnerships: {
+        u1: union('u1', 'm1', 'f1', ['c1']),
+        u2: union('u2', 'm2', 'f2', ['c2']),
+        u3: union('u3', 'm3', 'f3', ['c3']),
+        couple: union('couple', 'c1', 'c2', ['g1']),
+      },
+      parentChildLinks: {
+        l1: link('l1', 'u1', 'c1'),
+        l2: link('l2', 'u2', 'c2'),
+        l3: link('l3', 'u3', 'c3'),
+        l4: link('l4', 'couple', 'g1'),
+      },
+    }),
+    rootUnionId: 'u1',
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Exported fixture array
 // ---------------------------------------------------------------------------
 
@@ -663,4 +770,16 @@ export const ALL_FIXTURES: Array<() => Fixture> = [
   disconnectedComponents,
   selfPartneredUnion,
   wideCousinFan,
+];
+
+/**
+ * Multi-founder fixtures (issue #137) exercised through `reformatLayout`. Kept
+ * separate from {@link ALL_FIXTURES} because they reproduce cross-document
+ * width/hub bugs that only the whole-document reformat engine resolves — the
+ * single-family `computeTreeLayout` leaves them wide by design.
+ */
+export const REFORMAT_FIXTURES: Array<() => Fixture> = [
+  reportedLayoutBugs,
+  farApartCrossBranchCouple,
+  wideMultiFounderChart,
 ];
