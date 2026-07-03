@@ -15,7 +15,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { captureCleanDataUrl, EXPORT_EXCLUDE_NAME } from './captureClean';
 import { SYMBOL_COLOR } from '../utils/constants';
 
-const SELECTION_STROKE_COLOR = '#6965db';
+const SELECTION_STROKE_COLOR = '#4f46c9';
 
 /** A fake shape node with visibility + stroke behaviour. */
 function makeShape(opts: { visible?: boolean; stroke?: string | null } = {}) {

@@ -8,7 +8,7 @@ import { estimateAnnotationBlock } from '../../utils/annotationPlacement';
 import { LABEL_FONT_FAMILY, LABEL_COLOR } from '../../utils/constants';
 
 /** Selection outline colour, matching the individual-symbol selection chrome. */
-const SELECTION_COLOR = '#6965db';
+const SELECTION_COLOR = '#4f46c9';
 const SELECTION_STROKE_WIDTH = 2;
 /** Padding around the text used for the selection rectangle and click target. */
 const SELECTION_PADDING = 4;
