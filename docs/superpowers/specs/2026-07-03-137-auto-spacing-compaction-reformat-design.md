@@ -51,10 +51,27 @@ Running the **real** `computeTreeLayout` against the reported `layout bugs.json`
   - Per-generation spans of 1655–1761 px across gens −3…0, i.e.
     **≈3.6×–10× `(n − 1) × minSpacing`** (gen 0, with only 3 nodes, is ~10×).
 - Two distinct sub-problems surface, both from the doc never being globally laid
-  out: cross-branch **gaps** (fixed by compaction) and a multi-union **hub**
-  mess — `c912` has both spouses on one side with a sibling wedged between (fixed
-  by re-tidying; order-preserving compaction alone cannot reorder). Hence the
-  algorithm must be **tidy-all-families + compact**, not compaction alone.
+  out: cross-branch **gaps** and a multi-union **hub** mess — `c912` has both
+  spouses on one side with a sibling wedged between.
+
+A second prototype then disproved the first-cut "tidy each family, then compact"
+plan:
+
+- **Independent per-family layout + merge thrashes.** Laying out each of the four
+  founder roots with `computeTreeLayout` and merging (last-wins) spread
+  `4a1d × ddf2` from 1415 px to **1909 px** — each family re-anchors on its own
+  root's centre, and those centres are far apart. Independent per-family layout is
+  the wrong composition.
+- **Both reported betweenness cases need reordering.** They are the `c912` hub
+  (`625b`: ae00 between 7a64/c912; `f215`: 7a64+ae00 between 2aa3/c912). The fix
+  is the row order `ae00, 7a64, c912, 2aa3` (spouses straddling the hub).
+  **Order-preserving compaction cannot reorder**, so compaction alone cannot
+  deliver the hard invariant for the actual reported cases.
+
+**Conclusion:** the fix is a coherent **layered (Sugiyama / Brandes–Köpf-style)
+layout** of the whole document that *orders* each generation row (reordering to
+straddle hubs and minimise crossings) and then *assigns compact coordinates* —
+not a post-pass on the existing per-family layout.
 
 ---
 
@@ -62,10 +79,13 @@ Running the **real** `computeTreeLayout` against the reported `layout bugs.json`
 
 **Goals (PR1):**
 
-- A pure function that produces a correct, tidy, compact layout of an entire
-  document, fixing both bugs.
+- A pure function `reformatLayout(doc)` that produces a correct, tidy, compact
+  layout of an entire multi-founder document, fixing both bugs — **allowed to
+  reorder** rows (it is an explicit user-triggered re-tidy, not an incremental
+  edit).
 - Hard guarantee: **no non-partner node sits strictly between a couple's two
-  partners** (`noNodeBetweenPartners`).
+  partners** (`noNodeBetweenPartners`) — including the reported `c912` hub cases,
+  achieved by reordering spouses to straddle the hub.
 - Best-effort guarantees: cross-branch couples brought within a small multiple
   of `PARTNER_SPACING`; per-generation chart width bounded to a small multiple of
   `n × minSpacing`.
@@ -80,7 +100,10 @@ Running the **real** `computeTreeLayout` against the reported `layout bugs.json`
   (**PR2**).
 - Auto-running layout on document load (explicitly declined — manual reformat
   only).
-- A full Brandes–Köpf / Sugiyama rewrite of coordinate assignment.
+- **Touching `computeTreeLayout`** — the incremental-edit engine stays as-is
+  (order-preserving, #131 invariant suite intact). `reformatLayout` is a *new*
+  coexisting engine reached only via the reformat trigger. Row-resolution logic
+  is the one small piece extracted and shared.
 - Any change to `svgExport.ts` — layout math is upstream of both renderers;
   svgExport has no layout of its own. (To be re-confirmed during implementation.)
 
@@ -88,27 +111,27 @@ Running the **real** `computeTreeLayout` against the reported `layout bugs.json`
 
 ## 3. Approach
 
-**Chosen: A1 — document-level "tidy every family, then compact," delivered as a
-pure function.** This is the tractable core of Brandes–Köpf horizontal
-coordinate assignment (align each node toward the median of its neighbours across
-*both* lineages, then compact) without importing the full layered algorithm. It
-reuses the existing rigid-block, clamp, and obstacle machinery and does not
-reopen the recursive frame-builder that #131 stabilised.
+**Chosen: a new layered layout engine, `reformatLayout`, that coexists with
+`computeTreeLayout`.** It follows the classic Sugiyama pipeline with a
+Brandes–Köpf-style coordinate stage: assign layers (generations), **order** each
+row to minimise crossings and straddle hubs, then assign **compact coordinates**.
+Ordering fixes the `c912` hub betweenness; the coordinate stage fixes width and
+the cross-branch gaps. `computeTreeLayout` is **untouched** and remains the
+order-preserving engine used on every incremental edit — only the reformat
+trigger reaches the new engine, which keeps the #131 invariant suite intact.
 
-**Alternatives considered and rejected:**
+**Alternatives considered and rejected (all disproven by prototype):**
 
-- **A2 — integrate into the recursive frame** (recurse into a cross-branch
-  in-law's family instead of pinning it). Fewer top-level moving parts, but it
-  changes the meaning of "rooted at a family" and touches the core the #131
-  invariant suite is pinned to → higher regression risk.
-- **A3 — full Brandes–Köpf.** Highest fidelity for dense multi-founder DAGs, but
-  a large rewrite, and pedigrees are not clean layered DAGs (partnerships, twins,
-  consanguinity loops). Not warranted; the issue asks for "the tractable core."
+- **Compaction post-pass on the existing layout** — order-preserving, so it
+  cannot reorder the `c912` hub and cannot deliver the hard invariant.
+- **Independent per-family layout + merge** — thrashes (1415 → 1909 px).
+- **Extending the recursive frame (A2)** — handles cross-branch marriages but not
+  the childless multi-union hub; the layered engine handles both uniformly.
 
-**PR split** (per user decision — small, focused PRs):
+**PR split:**
 
-- **PR1 (this spec):** the pure `reformatLayout` algorithm + `compactLayout` core
-  + new fixtures + new invariants + docs. Fully unit-tested, no UI.
+- **PR1 (this spec):** the `reformatLayout` engine + new fixtures + new invariants
+  + docs. Fully unit-tested, no UI.
 - **PR2 (follow-up):** `reformatDocument()` store action → ⌘K command + island
   control, one undo step. No auto-run on load.
 
@@ -116,19 +139,24 @@ reopen the recursive frame-builder that #131 stabilised.
 
 ## 4. PR1 detailed design
 
-All new code lives in `src/utils/treeLayout.ts` (algorithm) and
-`src/utils/__fixtures__/` (test surface). Positions are canvas-space; "moves"
-maps return only nodes whose position changed, matching `computeTreeLayout`'s
-existing contract.
+New code in a focused module `src/utils/reformatLayout.ts` (importing shared
+helpers from `treeLayout.ts`), plus the test surface in `src/utils/__fixtures__/`.
+Positions are canvas-space; the moves map returns only nodes whose position
+changed, matching `computeTreeLayout`'s contract.
 
-### 4.1 `reformatLayout` — the composed entry point
+> The exact heuristics (crossing-reduction sweep count, coordinate-alignment
+> iteration) are **finalised in TDD** against `layout-bugs.json` + the existing
+> fixtures — this is a prototype-first build. The phase decomposition below is the
+> committed architecture; per-phase numeric constants are tuned to green.
+
+### 4.1 Entry point
 
 ```ts
 /**
- * Lay out and compact an entire document. Enumerates every maximal founder
- * family, tidies each with the existing engine, merges them into one coordinate
- * space, then compacts (pull cross-branch couples together + remove global
- * slack). Returns only the nodes whose position changed.
+ * Lay out an entire multi-founder document with a layered (Sugiyama /
+ * Brandes–Köpf-style) engine: layers → ordering → coordinates → anchor. Unlike
+ * computeTreeLayout it MAY reorder rows (it is an explicit user-triggered
+ * re-tidy). Returns only the nodes whose position changed. Deterministic.
  */
 export function reformatLayout(
   doc: LayoutDoc,
@@ -136,85 +164,68 @@ export function reformatLayout(
 ): Record<string, { x: number; y: number }>;
 ```
 
-Steps:
+### 4.2 Phase 1 — layers
 
-1. **Enumerate maximal founder families.** A founder-root union is one where
-   every *present* partner is a founder (no parent link) — this includes
-   partnerless-with-children unions (a founder sibship). Determined with the
-   existing `isLoadBearingInLaw` predicate (a load-bearing partner has parents;
-   a founder does not).
-2. **Tidy each** via the existing `computeTreeLayout(doc, rootUnionId, spacing)`,
-   applying its moves cumulatively into a working positions map. This fixes
-   hub/sibling ordering that order-preserving compaction cannot.
-3. **Compact** the merged positions with `compactLayout` (§4.2).
-4. Return the diff vs. the document's stored positions (unchanged nodes omitted).
-
-Determinism: founder roots processed in id order; ties broken by id everywhere.
-
-### 4.2 `compactLayout` — the geometric core (pure, separately testable)
+Reuse the row-resolution logic **extracted** from `computeTreeLayout` into a
+shared, exported helper (the one small refactor to the existing file):
 
 ```ts
-/**
- * Remove horizontal slack from an already-tidied, merged layout: pull
- * cross-branch couples together and compact each generation, without introducing
- * overlaps or crossings. Pure: takes absolute x per node, returns new absolute x
- * per node. Idempotent and anchor-stable.
- */
-export function compactLayout(
+/** Resolve every individual's generation row (finite `generation`, else walk
+ *  parent links to the nearest known ancestor + depth; fallback otherwise). */
+export function resolveGenerationRows(
   doc: LayoutDoc,
-  positions: Record<string, number>,
-  genOf: (id: string) => number,
-  spacing?: LayoutSpacing,
-): Record<string, number>;
+  fallbackGen?: number,
+): Map<string, number>;
 ```
 
-Internally, operating on the shared `DescentBlock` partition
-(`computeRigidBlocks`):
+Bucket present individuals into rows keyed by generation. `computeTreeLayout` is
+refactored to call this helper (no behaviour change — guarded by the existing
+suite).
 
-1. **Couple pull-together.** For each cross-branch couple (both partners placed
-   and load-bearing, currently more than `PARTNER_SPACING` apart), translate the
-   movable lineage subtree toward its spouse until the partners reach
-   `PARTNER_SPACING`. **The movable unit is the spouse's whole founder-family
-   subtree** — the nodes tidied from that founder root in §4.1 step 2 — moved as
-   one; it may span several descent blocks. The shift is **clamped** (reusing the
-   `clampShift` pattern from `centerAndReproject`) so no moving member comes
-   within `minGap` of a foreign node in a shared row, and no descent line
-   crosses. Deterministic choice of which side moves (e.g. the less-constrained /
-   smaller subtree; id tie-break).
-2. **`compactGenerations`** — the leftward dual of `separateGenerations`:
+### 4.3 Phase 2 — ordering (crossing reduction + pedigree constraints)
 
-   ```ts
-   /**
-    * Pull rigid blocks left to remove slack: per generation row (top-down),
-    * sort blocks by current x and slide each left until it is within `minGap`
-    * of its left neighbour's right edge (or a fixed obstacle), never past.
-    * Whole blocks move (descent stays vertical). Monotone in the pull-left
-    * direction and idempotent (a tight row yields zero shifts). Mirror of
-    * `separateGenerations`.
-    */
-   function compactGenerations(
-     doc: LayoutDoc,
-     finalX: Record<string, number>,
-     genOf: (id: string) => number,
-     minGap: number,
-     blocks: readonly DescentBlock[],
-   ): void;
-   ```
+Produce a left-to-right order of individuals per row. Seed from current x, then
+run alternating down/up median (barycenter) sweeps that reorder to reduce
+crossings, subject to hard constraints:
 
-3. **Re-centre + re-separate.** Run `centerAndReproject` then a final
-   `separateGenerations` so no-overlap holds by construction after the pulls.
-4. **Uniform re-anchor.** Translate everything so the document's anchor (root
-   union centre / proband) returns to its pre-reformat x — no canvas jump.
+- **Partner adjacency:** the two partners of a union are adjacent; a person with
+  multiple spouses (a **hub**, including childless unions like `c912 × 2aa3`) sits
+  **between** its spouses (straddle). This is what fixes the reported betweenness.
+- **Sibling contiguity:** children of a union form one contiguous group, centred
+  under the couple.
+- **Twin contiguity:** twin-group members stay contiguous within their sibship
+  (reuse `orderSiblingsWithTwins`).
 
-`compactGenerations` and the couple-pull helper are **exported** as tested
-primitives, mirroring how `resolveRowSeparation` is exported today.
+Output: an ordered `string[]` per row. Sweep count tuned in TDD; deterministic id
+tie-breaks throughout.
 
-### 4.3 Guarantees
+### 4.4 Phase 3 — coordinates (align + compact)
+
+Given the per-row orders, assign x:
+
+- Place adjacent nodes at minimum spacing — partners at `PARTNER_SPACING`,
+  siblings at `SIBLING_SPACING`, otherwise `minGap = max(SIBLING_SPACING,
+  MIN_GENERATION_NODE_SPACING)`.
+- Align each node toward the **median x of its cross-row neighbours** (parents,
+  children, partners) — the Brandes–Köpf core — resolving conflicts by priority,
+  then compact to remove slack.
+- Iterated to convergence or a fixed cap (determinism); the cap is tuned in TDD.
+
+Guarantees `noSymbolOverlap`, `minSiblingSpacing`, `minPartnerSpacing`,
+`subtreeNonCollision`, `noNodeBetweenPartners`, and bounds width.
+
+### 4.5 Phase 4 — anchor + y
+
+Uniform translate so the anchor keeps its x (the proband if present, else the
+topmost-leftmost root), so the canvas does not jump. `y = rowY(gen)` anchored on
+the reference node's stored y and `generationSpacing`.
+
+### 4.6 Guarantees
 
 - **Hard:** `noNodeBetweenPartners`.
-- **Best-effort:** `boundedPartnerDistance`, `chartWidth` — taken as close as the
-  no-overlap and no-crossing constraints allow. The documented over-constrained
-  case stays *bounded*, not necessarily exactly `PARTNER_SPACING`.
+- **Best-effort:** `boundedPartnerDistance`, `chartWidth` — as close as the
+  no-overlap and no-crossing constraints allow; the over-constrained case stays
+  *bounded*, not necessarily exactly `PARTNER_SPACING`.
 
 ---
 
@@ -251,50 +262,55 @@ runs the single-family engine). Existing `ALL_FIXTURES` behaviour is unchanged.
 - **`chartWidth(pos, doc, spacing, maxFactor)`** — best-effort. Per generation
   row, `(max − min x) ≤ maxFactor × max(0, n − 1) × minSpacing`, where
   `minSpacing = max(siblingSpacing, MIN_GENERATION_NODE_SPACING)`. Currently
-  fails at 3.1×–6.9×. `maxFactor` tuned during TDD (target ≈≤2×).
+  fails at ≈3.6×–10×. `maxFactor` tuned during TDD (target ≈≤2×).
 
 `noNodeBetweenPartners` joins `checkAllInvariants` (a hard invariant all layouts
-should satisfy). `boundedPartnerDistance` and `chartWidth` are compaction-specific
-(only meaningful post-compaction) and run in the compaction suite, not the global
-aggregate — some existing fixtures legitimately hold wide couples pre-compaction.
+should satisfy). `boundedPartnerDistance` and `chartWidth` are reformat-specific
+(only meaningful after a full re-tidy) and run in the reformat suite, not the
+global aggregate — some existing fixtures legitimately hold wide couples in their
+pre-reformat single-family layout.
 
-### 5.3 TDD plan (failing-first)
+### 5.3 TDD plan (prototype-first, failing-first)
 
 1. Write the three invariants.
 2. Add the fixtures; assert `reportedLayoutBugs` **fails**
-   `noNodeBetweenPartners`, `boundedPartnerDistance`, and `chartWidth` on
-   *current* output (either raw stored positions or a single `computeTreeLayout`
-   pass — both reproduce the bugs).
-3. Implement `compactGenerations`, the couple-pull helper, `compactLayout`, and
-   `reformatLayout` until all three fixtures are green on all three invariants.
+   `noNodeBetweenPartners`, `boundedPartnerDistance`, and `chartWidth` on its raw
+   stored positions (they reproduce the bugs).
+3. Build `reformatLayout` phase by phase (layers → ordering → coordinates →
+   anchor), iterating against `layout-bugs.json` + the synthetic fixtures until
+   all three are green on all three invariants. Prototype-first: the ordering and
+   coordinate heuristics are tuned to green, then locked with assertions.
 4. **Regression guard:** run the full existing `ALL_FIXTURES × checkAllInvariants`
-   suite — everything stays green. Confirm `noNodeBetweenPartners` also holds for
-   every existing fixture (or classify it compaction-specific if any legitimately
-   fails).
+   suite — everything stays green (`computeTreeLayout` is untouched). Assert
+   `reformatLayout` output *also* satisfies `checkAllInvariants` +
+   `noNodeBetweenPartners` on every existing fixture.
 5. Idempotence + anchor-stability tests: `reformatLayout` applied twice equals
    once; the anchor node does not move (reuse `anchorStability`).
 
 ### 5.4 Docs
 
-Update the **Auto-spacing** section of `docs/architecture-reference.md`: add the
-compaction stage / `reformatLayout` to the pipeline description, and move the
-"over-constrained cross-branch case" and width items out of "Known limitations"
-(annotate as resolved by #137).
+Update the **Auto-spacing** section of `docs/architecture-reference.md`: document
+`reformatLayout` as the layered re-tidy engine (distinct from the per-edit
+`computeTreeLayout`), and move the "over-constrained cross-branch case" and width
+items out of "Known limitations" (annotate as resolved by #137).
 
 ---
 
 ## 6. Risks & edge cases
 
+- **Crossing-reduction not converging / oscillating.** Cap sweep iterations and
+  keep deterministic id tie-breaks so the result is stable and idempotent;
+  assert idempotence in tests.
+- **Multi-union hubs** (`c912`). The ordering phase must straddle a hub's spouses
+  (including childless unions). A dedicated hub fixture forces
+  `noNodeBetweenPartners`.
 - **Conflicting cross-branch couples.** Bringing one couple adjacent can widen
-  another. Pulls are clamped and applied deterministically; the hard invariant is
-  `noNodeBetweenPartners`, and couple distance is best-effort. Covered by the
-  multi-founder fixture.
-- **Multi-union hubs** (`c912`). Relies on the tidy-all step to order spouses
-  around the hub; compaction preserves that order. A hub fixture forces this.
+  another; the hard invariant is `noNodeBetweenPartners`, couple distance is
+  best-effort. Covered by the multi-founder fixture.
 - **Consanguinity loops / partnerless founder sibships / disconnected
-  components.** Already handled by the existing engine's cycle guards and obstacle
-  logic; `reformatLayout` composes over them. Keep the existing `consanguinity`,
-  `selfPartneredUnion`, `disconnectedComponents` fixtures green.
+  components.** Guard graph walks against cycles; keep the existing
+  `consanguinity`, `selfPartneredUnion`, `disconnectedComponents` fixtures green
+  under `reformatLayout` too.
 - **Anchor stability.** The final uniform re-anchor guarantees no canvas jump;
   asserted in tests.
 
