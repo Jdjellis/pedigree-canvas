@@ -328,10 +328,20 @@ function retidyHubFreeComponents(
     }
     if (crossBranch || [...degree.values()].some((d) => d >= 2)) continue;
 
-    const unionIds = Object.keys(partnerships).filter(
-      (uid) => partnerships[uid].partner1Id && partnerships[uid].partner2Id,
-    );
-    if (unionIds.length === 0) continue; // a lone individual or bare sibship: nothing to tidy
+    // Candidate root unions: any childbearing union (≥1 present child) with at
+    // least one present partner. A **single-parent apex** union (one partner
+    // undefined) must be eligible — it is often the family's topmost union, and
+    // rooting instead at a deeper childless couple lays the family out wrong
+    // (e.g. `computeTreeLayout` strands a married twin's spouse across a non-twin
+    // sibling). Requiring a present child skips isolated childless couples, which
+    // the linear packing already spaces correctly.
+    const isPresent = (id: string | undefined): id is string => !!id && present.has(id);
+    const rootCandidates = Object.keys(partnerships).filter((uid) => {
+      const u = partnerships[uid];
+      return (isPresent(u.partner1Id) || isPresent(u.partner2Id)) &&
+        u.childrenIds.some((id) => present.has(id));
+    });
+    if (rootCandidates.length === 0) continue; // no childbearing union: nothing to tidy
 
     const parentChildLinks: Record<string, ParentChildRelationship> = {};
     for (const [lid, l] of Object.entries(doc.parentChildLinks)) {
@@ -344,14 +354,10 @@ function retidyHubFreeComponents(
     }
     const slice: LayoutDoc = { individuals, partnerships, parentChildLinks, twinGroups: doc.twinGroups };
 
-    // Root at the topmost union (min partner generation; id tie-break).
-    const rootUnionId = [...unionIds].sort((a, b) => {
+    // Root at the topmost childbearing union (min partner generation; id tie-break).
+    const rootUnionId = [...rootCandidates].sort((a, b) => {
       const gen = (uid: string): number =>
-        Math.min(
-          ...[partnerships[uid].partner1Id, partnerships[uid].partner2Id]
-            .filter((p): p is string => !!p && present.has(p))
-            .map(genOf),
-        );
+        Math.min(...[partnerships[uid].partner1Id, partnerships[uid].partner2Id].filter(isPresent).map(genOf));
       return gen(a) - gen(b) || (a < b ? -1 : a > b ? 1 : 0);
     })[0];
 
@@ -570,53 +576,86 @@ function buildChains(
 
 /**
  * Reorder a row's chains so every twin group's members occupy a contiguous run,
- * mirroring `orderSiblingsWithTwins` for the single-family engine. Only members
- * that are single-node chains are pulled (a twin who is themselves a partner in a
- * couple chain stays with their spouse); the run is anchored at the group's
- * leftmost member and preserves the members' relative order.
+ * mirroring `orderSiblingsWithTwins` for the single-family engine. A chain is
+ * treated as belonging to a twin group when **any** of its members is in the
+ * group, so a twin who is themselves partnered — locked into a couple chain — is
+ * pulled into the run alongside a single-node co-twin rather than stranded (the
+ * `marriedTwinInterleaved` gap, issue #141). The run is emitted at the group's
+ * leftmost chain and preserves the chains' relative order.
+ *
+ * Each chain in a multi-chain run is **oriented** so its twin member sits on the
+ * side facing the rest of the group (spouses to the outside): the leftmost chain
+ * keeps its twin member last, the rightmost keeps it first. That way a married
+ * twin's spouse never lands between the two twins — which would trip both
+ * `twinContiguity` (in the sibship) and `noNodeBetweenPartners` (the couple).
  */
 function makeTwinsContiguous(
   chains: string[][],
   twinGroups: Record<string, TwinGroup>,
 ): string[][] {
   if (Object.keys(twinGroups).length === 0) return chains;
-  const singleId = (c: string[]): string | null => (c.length === 1 ? c[0] : null);
 
+  // Every id placed on this row (across all chains, not just single-node ones).
   const present = new Set<string>();
-  for (const c of chains) {
-    const s = singleId(c);
-    if (s) present.add(s);
-  }
-  // Map each present single-node twin member to its group's member set (only
-  // groups with ≥2 present single members can interleave and so matter here).
-  const groupOf = new Map<string, Set<string>>();
+  for (const c of chains) for (const id of c) present.add(id);
+
+  // Map each present twin member to its group's present-member set (only groups
+  // with ≥2 present members can interleave and so matter here).
+  const memberGroup = new Map<string, Set<string>>();
   for (const g of Object.values(twinGroups)) {
     const members = g.individualIds.filter((id) => present.has(id));
     if (members.length < 2) continue;
     const set = new Set(members);
-    for (const id of members) groupOf.set(id, set);
+    for (const id of members) memberGroup.set(id, set);
   }
-  if (groupOf.size === 0) return chains;
+  if (memberGroup.size === 0) return chains;
 
-  // Walk left to right; the first time a group's member is seen, emit the whole
-  // group's member-chains (in their current order) as a contiguous run.
+  const isTwin = (id: string): boolean => memberGroup.has(id);
+  // The twin group a chain belongs to (its first twin member's group), keyed by
+  // that group's smallest member id so the key is stable; null if none.
+  const groupKeyOf = (chain: string[]): string | null => {
+    for (const id of chain) {
+      const set = memberGroup.get(id);
+      if (set) return [...set].reduce((m, x) => (x < m ? x : m));
+    }
+    return null;
+  };
+
+  // Bucket each group's chains in row order.
+  const groupChains = new Map<string, string[][]>();
+  for (const chain of chains) {
+    const key = groupKeyOf(chain);
+    if (key === null) continue;
+    const arr = groupChains.get(key);
+    if (arr) arr.push(chain);
+    else groupChains.set(key, [chain]);
+  }
+
+  // Orient a run's endpoints so twin members face inward, spouses outward.
+  const orientRun = (run: string[][]): string[][] => {
+    if (run.length < 2) return run;
+    const out = run.map((c) => [...c]);
+    const first = out[0];
+    if (first.length > 1 && isTwin(first[0]) && !isTwin(first[first.length - 1])) first.reverse();
+    const last = out[out.length - 1];
+    if (last.length > 1 && isTwin(last[last.length - 1]) && !isTwin(last[0])) last.reverse();
+    return out;
+  };
+
+  // Walk left to right; on the first chain of a group emit the whole (oriented)
+  // run, else emit an ungrouped chain in place. Later chains of an
+  // already-emitted group are skipped (their slots collapse into the run).
   const result: string[][] = [];
   const emitted = new Set<string>();
   for (const chain of chains) {
-    const s = singleId(chain);
-    if (s && groupOf.has(s)) {
-      if (emitted.has(s)) continue;
-      const group = groupOf.get(s)!;
-      for (const c of chains) {
-        const cs = singleId(c);
-        if (cs && group.has(cs) && !emitted.has(cs)) {
-          result.push(c);
-          emitted.add(cs);
-        }
-      }
-    } else {
+    const key = groupKeyOf(chain);
+    if (key === null) {
       result.push(chain);
+      continue;
     }
+    if (emitted.has(key)) continue;
+    emitted.add(key);
+    for (const c of orientRun(groupChains.get(key)!)) result.push(c);
   }
   return result;
 }
