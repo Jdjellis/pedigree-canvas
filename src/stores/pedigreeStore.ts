@@ -23,6 +23,7 @@ import {
   DEFAULT_LAYOUT_SPACING,
   type LayoutDoc,
 } from '../utils/treeLayout';
+import { reformatLayout } from '../utils/reformatLayout';
 import { commonSibshipId } from '../utils/sibship';
 import { twinGroupsTouching, pickSurvivingTwinGroup } from '../utils/twinGrouping';
 
@@ -297,13 +298,21 @@ interface PedigreeState {
   setDocument: (doc: PedigreeDocument) => void;
   resetDocument: () => void;
   updateMetadata: (patch: Partial<PedigreeMetadata>) => void;
+  /**
+   * Re-tidy the entire document with the whole-document layered layout engine
+   * (`reformatLayout`), applying every position change in a single `set` so the
+   * reformat is one undo step. A no-op — no `set`, no undo entry — when the
+   * document is empty or the engine reports no position changes (already tidy).
+   * User-triggered only; never runs automatically on load.
+   */
+  reformatDocument: () => void;
 }
 
 type PartializedState = Pick<PedigreeState, 'document'>;
 
 export const usePedigreeStore = create<PedigreeState>()(
   temporal(
-    (set) => ({
+    (set, get) => ({
       document: createDefaultDocument(),
 
       addIndividual: (individual) =>
@@ -1320,6 +1329,30 @@ export const usePedigreeStore = create<PedigreeState>()(
             },
           },
         })),
+
+      reformatDocument: () => {
+        const { document: doc } = get();
+        if (Object.keys(doc.individuals).length === 0) return;
+        // Compute the whole-document re-tidy BEFORE touching the store so a
+        // no-change reformat never fires `set` — and so leaves no undo entry.
+        const positions = reformatLayout({
+          individuals: doc.individuals,
+          partnerships: doc.partnerships,
+          parentChildLinks: doc.parentChildLinks,
+          twinGroups: doc.twinGroups,
+        });
+        if (Object.keys(positions).length === 0) return;
+        set((state) => ({
+          document: {
+            ...state.document,
+            metadata: {
+              ...state.document.metadata,
+              updatedAt: new Date().toISOString(),
+            },
+            individuals: applyPositions(state.document.individuals, positions),
+          },
+        }));
+      },
     }),
     {
       partialize: (state): PartializedState => ({
