@@ -28,25 +28,25 @@ colors:
   condition-teal: "#2a9d8f"
 typography:
   title:
-    fontFamily: "Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif"
+    fontFamily: "system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
     fontSize: "11px"
     fontWeight: 600
     lineHeight: 1.2
     letterSpacing: "0.05em"
   body:
-    fontFamily: "Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif"
+    fontFamily: "system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
     fontSize: "14px"
     fontWeight: 400
     lineHeight: 1.45
     letterSpacing: "normal"
   label:
-    fontFamily: "Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif"
+    fontFamily: "system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
     fontSize: "12px"
     fontWeight: 500
     lineHeight: 1.3
     letterSpacing: "normal"
   mono:
-    fontFamily: "'JetBrains Mono', 'Fira Code', monospace"
+    fontFamily: "ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace"
     fontSize: "11px"
     fontWeight: 400
     lineHeight: 1
@@ -217,13 +217,17 @@ colour-blind reader loses nothing. Colour alone is never sufficient.
 
 ## 3. Typography
 
-**UI Font:** Inter, with a `system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif`
-fallback. **Inter is a *preference*, not a bundled webfont** — only Caveat is
-loaded over the network, so on most machines the UI renders in the OS system sans.
-Design for the fallback stack; do not rely on Inter-specific metrics.
+**UI Font:** The native system sans — `system-ui, -apple-system, 'Segoe UI',
+Roboto, Helvetica, Arial, sans-serif`. This is a deliberate commitment, not a
+fallback of convenience: the UI renders in whatever the OS already ships (SF
+Pro on macOS/iOS, Segoe UI on Windows, Roboto on Android/Chrome OS), so it
+never pays a webfont's load cost and always matches the platform's native
+metrics. Design for that system stack directly — there is no separate
+brand-font metric to reconcile against.
 
-**Mono Font:** `'JetBrains Mono', 'Fira Code', monospace` — also a preference;
-resolves to the OS monospace in practice. Used only for keyboard-shortcut chips.
+**Mono Font:** `ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas,
+monospace` — the system monospace, same commitment as the UI sans. Used only
+for keyboard-shortcut chips.
 
 **Annotation Font:** **Caveat** (`cursive`) — the single web-loaded font. Used for
 free-text notes drawn *on the canvas*, giving the clinician's annotations a
@@ -351,7 +355,7 @@ decorate a resting card. If it doesn't float over the user's work, it has no sha
   Island Lift shadow and nothing at rest.
 - **Do** build every interactive control with default / hover / focus / active /
   disabled states, and keep transitions short (100–150ms, state-only).
-- **Do** design for the system-sans fallback stack — Inter is not bundled.
+- **Do** design directly for the native system-sans stack — there is no bundled UI webfont.
 - **Do** honor `prefers-reduced-motion` on the palette/menu entrances (fadeIn,
   slideIn) with a crossfade or instant fallback. *(Not yet implemented — add it.)*
 

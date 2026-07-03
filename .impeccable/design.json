@@ -149,7 +149,7 @@
     "notes": {
       "breakpoints": "None. Desktop-first, full-viewport single-canvas SPA; responsiveness is structural (floating slots), not breakpoint-driven.",
       "reducedMotion": "GAP: no prefers-reduced-motion handling exists yet. fadeIn/slideIn/radial transitions should gain a reduced-motion fallback.",
-      "fonts": "Only Caveat is web-loaded. Inter and JetBrains Mono are token preferences that fall back to the OS system sans / monospace."
+      "fonts": "The UI commits to the native OS fonts: system-ui for the sans role, the system monospace stack for the mono role. Only Caveat is web-loaded, for on-canvas annotations."
     }
   },
   "components": [
@@ -175,7 +175,7 @@
       "refersTo": "button-primary",
       "description": "The one filled-indigo CTA — the export action. Used once per surface.",
       "html": "<button class=\"ds-btn-primary\">Export</button>",
-      "css": ".ds-btn-primary { display:inline-flex; align-items:center; height:32px; padding:0 12px; border:none; border-radius:6px; background:#4f46c9; color:#fff; font-family:Inter,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif; font-size:12px; font-weight:500; cursor:pointer; transition:background-color .1s; } .ds-btn-primary:hover { background:#443cb9; } .ds-btn-primary:active { background:#443cb9; opacity:.9; } .ds-btn-primary:focus-visible { outline:2px solid #4f46c9; outline-offset:2px; }"
+      "css": ".ds-btn-primary { display:inline-flex; align-items:center; height:32px; padding:0 12px; border:none; border-radius:6px; background:#4f46c9; color:#fff; font-family:var(--font-sans); font-size:12px; font-weight:500; cursor:pointer; transition:background-color .1s; } .ds-btn-primary:hover { background:#443cb9; } .ds-btn-primary:active { background:#443cb9; opacity:.9; } .ds-btn-primary:focus-visible { outline:2px solid #4f46c9; outline-offset:2px; }"
     },
     {
       "name": "Text Input",
@@ -183,7 +183,7 @@
       "refersTo": "input",
       "description": "Standard field: hairline border, focus shifts border to Clinical Indigo — no glow.",
       "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"Individual name\" />",
-      "css": ".ds-input { width:100%; padding:6px 8px; border:1px solid #e6e6ec; border-radius:6px; font-family:Inter,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif; font-size:13px; background:#fff; color:#1a1a1a; outline:none; transition:border-color .15s; } .ds-input::placeholder { color:#6b6b75; } .ds-input:focus { border-color:#4f46c9; }"
+      "css": ".ds-input { width:100%; padding:6px 8px; border:1px solid #e6e6ec; border-radius:6px; font-family:var(--font-sans); font-size:13px; background:#fff; color:#1a1a1a; outline:none; transition:border-color .15s; } .ds-input::placeholder { color:#6b6b75; } .ds-input:focus { border-color:#4f46c9; }"
     },
     {
       "name": "Floating Island",
@@ -199,7 +199,7 @@
       "refersTo": "mono",
       "description": "Monospace keyboard-shortcut hint chip, as used in the command palette.",
       "html": "<kbd class=\"ds-shortcut\">⌘K</kbd>",
-      "css": ".ds-shortcut { font-family:'JetBrains Mono','Fira Code',monospace; font-size:11px; color:#6b6b75; background:#f7f7f9; border:1px solid #e6e6ec; border-radius:4px; padding:1px 5px; white-space:nowrap; }"
+      "css": ".ds-shortcut { font-family:var(--font-mono, monospace); font-size:11px; color:#6b6b75; background:#f7f7f9; border:1px solid #e6e6ec; border-radius:4px; padding:1px 5px; white-space:nowrap; }"
     },
     {
       "name": "Radial Menu Option",
@@ -207,7 +207,7 @@
       "refersTo": "icon-button",
       "description": "Signature circular add-relative button orbiting a symbol; hover fills indigo, active scales down.",
       "html": "<button class=\"ds-radial-option\">Child</button>",
-      "css": ".ds-radial-option { display:flex; align-items:center; justify-content:center; width:32px; height:32px; padding:2px; border:1px solid #e6e6ec; border-radius:50%; background:#fff; box-shadow:0 1px 4px rgba(0,0,0,0.1); color:#1a1a1a; font-family:Inter,system-ui,sans-serif; font-size:8px; font-weight:600; line-height:1; letter-spacing:-0.2px; text-align:center; cursor:pointer; transition:background-color .15s, border-color .15s, transform .15s; } .ds-radial-option:hover { background:#4f46c9; border-color:#4f46c9; color:#fff; transform:scale(1.1); } .ds-radial-option:active { transform:scale(0.95); }"
+      "css": ".ds-radial-option { display:flex; align-items:center; justify-content:center; width:32px; height:32px; padding:2px; border:1px solid #e6e6ec; border-radius:50%; background:#fff; box-shadow:0 1px 4px rgba(0,0,0,0.1); color:#1a1a1a; font-family:var(--font-sans); font-size:8px; font-weight:600; line-height:1; letter-spacing:-0.2px; text-align:center; cursor:pointer; transition:background-color .15s, border-color .15s, transform .15s; } .ds-radial-option:hover { background:#4f46c9; border-color:#4f46c9; color:#fff; transform:scale(1.1); } .ds-radial-option:active { transform:scale(0.95); }"
     }
   ],
   "narrative": {
@@ -236,7 +236,7 @@
       "Do keep symbols dark-on-light in every theme; comfort themes re-tint warmth and luminance only.",
       "Do use the radius (6/10/14px) and shadow tokens; give floating chrome the Island Lift shadow and nothing at rest.",
       "Do build every interactive control with default / hover / focus / active / disabled states, and keep transitions short (100–150ms, state-only).",
-      "Do design for the system-sans fallback stack — Inter is not bundled.",
+      "Do design directly for the native system-sans stack — there is no bundled UI webfont.",
       "Do honor prefers-reduced-motion on the palette/menu entrances with a crossfade or instant fallback. (Not yet implemented — add it.)"
     ],
     "donts": [
