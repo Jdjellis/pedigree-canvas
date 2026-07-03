@@ -147,6 +147,18 @@ interface UIState {
    */
   storagePersistent: boolean;
 
+  /**
+   * One-shot dismissal of the "reformat to tidy" suggestion nudge. The nudge
+   * itself is derived from the document (a foreign node between a couple — see
+   * {@link shouldSuggestReformat}); this flag lets the user wave it away without
+   * reformatting. It is re-armed automatically once the layout is clean again, so
+   * a *new* tangle can resurface the prompt while repeated edits on a still-tangled
+   * chart don't nag. Session-only (not persisted).
+   */
+  reformatSuggestionDismissed: boolean;
+  /** Set the one-shot dismissal state of the reformat suggestion nudge. */
+  setReformatSuggestionDismissed: (dismissed: boolean) => void;
+
   select: (id: string) => void;
   selectMultiple: (ids: string[]) => void;
   clearSelection: () => void;
@@ -262,6 +274,10 @@ export const useUIStore = create<UIState>()((set) => ({
   editingAnnotationId: null,
   lastSavedAt: null,
   storagePersistent: safeStorage.isPersistent(),
+  reformatSuggestionDismissed: false,
+
+  setReformatSuggestionDismissed: (dismissed) =>
+    set({ reformatSuggestionDismissed: dismissed }),
 
   select: (id) =>
     set((state) => ({

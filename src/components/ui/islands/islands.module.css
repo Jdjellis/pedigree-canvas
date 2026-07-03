@@ -64,6 +64,30 @@
   opacity: 0.9;
 }
 
+/**
+ * Reformat suggestion nudge (see ReformatSuggestion.tsx) — a calm advisory row of
+ * icon + message + Reformat CTA + dismiss, shown under the Actions island when a
+ * relative is wedged between a couple (a tangle only the whole-document reformat
+ * can clear). Not modal; it can be ignored or dismissed.
+ */
+.suggestion {
+  gap: 8px;
+  padding-left: 10px;
+  max-width: 280px;
+}
+
+.suggestionIcon {
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+.suggestionText {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text);
+  white-space: nowrap;
+}
+
 /** Read-only zoom percentage display inside ZoomIsland. */
 .zoomDisplay {
   font-size: 12px;

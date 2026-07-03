@@ -150,6 +150,29 @@ plus `noNodeBetweenPartners` **in its achievable form** — no *foreign*
 keep one of its own co-spouses between it and a non-adjacent spouse, which no
 linear row can avoid (see Known limitations) — and is idempotent.
 
+### Suggesting a reformat (the discovery-gap nudge)
+
+`reformatLayout` is manual-only and free to reorder rows, so it is **never run
+automatically** — auto-applying it would blow away the user's manual arrangement
+(and auto-run on load was explicitly declined). But the order-preserving per-edit
+engine *cannot* clear a foreign node wedged between a couple (the cross-branch /
+multi-union-hub tangle), so a user could land in that state with no signal that a
+reformat would fix it.
+
+`shouldSuggestReformat(doc)` in `src/utils/reformatSuggestion.ts` closes that gap.
+It is a focused **production** predicate that mirrors the `noNodeBetweenPartners`
+invariant exactly (same `SYMBOL_SIZE / 2` tolerance, same hub co-spouse carve-out)
+against the document's *current* positions, returning a boolean. The
+`ReformatSuggestion` island (top-right, under `ActionsIsland`) subscribes to it and
+shows a calm, dismissible **"Layout looks tangled → Reformat"** nudge whenever the
+tangle is present — an opt-in prompt, never an automatic reformat. Visibility is
+derived from the document, so the nudge vanishes the instant the tangle is gone
+(reformat, undo, or manual fix); the ✕ is a one-shot dismissal, re-armed once the
+layout is tidy again (`uiStore.reformatSuggestionDismissed`). The detector is kept
+out of the test-only `__fixtures__/invariants.ts`; `reformatSuggestion.test.ts`
+cross-checks the two agree on **every** fixture so they cannot drift, and
+`e2e/reformat-suggestion.spec.ts` is the real-browser guard.
+
 ### Known limitations
 
 - **Over-constrained cross-branch case** (single-family `computeTreeLayout` only):
