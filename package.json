@@ -11,6 +11,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "test:discovery": "REFORMAT_DISCOVERY=1 vitest run src/utils/reformatLayout.discovery.test.ts",
     "e2e": "playwright test",
     "typecheck": "tsc -b"
   },
@@ -43,6 +44,7 @@
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
+    "fast-check": "^4.8.0",
     "globals": "^16.5.0",
     "jsdom": "^27.0.1",
     "typescript": "~5.9.3",
