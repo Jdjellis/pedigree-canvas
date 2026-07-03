@@ -43,14 +43,7 @@
   letter-spacing: -0.5px;
   margin: 0 0 2px;
   line-height: 1.1;
-  background: linear-gradient(
-    135deg,
-    var(--color-text) 55%,
-    var(--color-accent, #7c3aed) 100%
-  );
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--color-text);
 }
 
 .reassurance {
