@@ -14,7 +14,7 @@ import type {
   TwinGroup,
 } from '../../types/pedigree';
 import type { Fixture } from './pedigrees';
-import { farApartCrossBranchCouple, wideMultiFounderChart } from './pedigrees';
+import { farApartCrossBranchCouple, wideMultiFounderChart, threeUnionHub } from './pedigrees';
 import layoutBugsFile from './layout-bugs.json';
 
 /**
@@ -57,4 +57,5 @@ export const REFORMAT_FIXTURES: Array<() => Fixture> = [
   reportedLayoutBugs,
   farApartCrossBranchCouple,
   wideMultiFounderChart,
+  threeUnionHub,
 ];

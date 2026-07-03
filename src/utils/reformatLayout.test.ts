@@ -110,31 +110,25 @@ describe('reformatLayout is idempotent', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Multi-union hub (issue #137 review). A hub with 3+ same-row unions cannot place
-// every spouse adjacent in a linear row, so `noNodeBetweenPartners` was redefined
-// to its *achievable* form: a hub's own co-spouse may sit between the hub and a
-// non-adjacent spouse, but foreign nodes never may. reformatLayout satisfies the
-// achievable hard invariant here. What it does NOT yet do is compact the stranded
-// spouse to partner spacing — that residual coordinate-phase gap trips
-// `minPartnerSpacing` and is tracked as a follow-up (see the #137 gaps issue).
+// Multi-union hub (issue #141). A hub with 3+ same-row unions cannot place every
+// spouse adjacent at exact partner spacing on a line (a point has two neighbours),
+// so BOTH hard invariants are defined in their *achievable* form: a hub's own
+// co-spouse may sit between the hub and a non-adjacent spouse
+// (`noNodeBetweenPartners`), and a hub union may be up to (degree − 1) ×
+// partnerSpacing — the tight linear-packing bound (`minPartnerSpacing`).
+// reformatLayout meets both, so threeUnionHub now satisfies checkAllInvariants and
+// has graduated into REFORMAT_FIXTURES. This regression pin documents the form.
 // ---------------------------------------------------------------------------
-describe('reformatLayout — multi-union hub (#137)', () => {
-  it('threeUnionHub: satisfies the achievable HARD noNodeBetweenPartners (co-spouse carve-out)', () => {
+describe('reformatLayout — multi-union hub (#141)', () => {
+  it('threeUnionHub: meets the achievable hard invariants and full geometry', () => {
     const { doc } = threeUnionHub();
     const pos = reformatted(doc);
-    // The 3rd union (hub × s3) has s2 between its partners, but s2 is another of
-    // hub's own spouses and hub is a genuine hub (3 unions) — structurally
-    // unavoidable, so permitted. No *foreign* node is between any couple.
+    // hub × s3 sits at 2 × partnerSpacing (co-spouse s2 between them) — the tight
+    // minimum for a 3-union hub — which the achievable-form minPartnerSpacing
+    // permits, so the whole geometry suite is now green.
+    expect(checkAllInvariants(pos, doc).ok).toBe(true);
+    // No FOREIGN node between any couple; only a hub's own co-spouse is permitted.
     expect(noNodeBetweenPartners(pos, doc).ok).toBe(true);
-  });
-
-  it('threeUnionHub: KNOWN GAP — the stranded 3rd spouse is not compacted to partner spacing', () => {
-    const { doc } = threeUnionHub();
-    const pos = reformatted(doc);
-    // BUG (residual, tracked): the coordinate phase leaves hub × s3 wider than
-    // partnerSpacing, so the geometry suite still fails via minPartnerSpacing.
-    // Flip to `true` and fold threeUnionHub into REFORMAT_FIXTURES once fixed.
-    expect(checkAllInvariants(pos, doc).ok).toBe(false);
   });
 });
 
