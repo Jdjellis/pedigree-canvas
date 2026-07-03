@@ -23,13 +23,23 @@ function settle(doc: LayoutDoc, moves: Record<string, { x: number; y: number }>)
   };
 }
 
-// SKIPPED until the #141 engine fix. Property-based discovery found that
-// reformatLayout produces overlapping subtrees (subtreeNonCollision) even on a
-// connected single family within this "supported" space — see the
-// `subtreeCollisionRegression` fixture. Once the coordinate phase gains
-// contour-based subtree separation, remove `.skip`, run `npm run test:discovery`
-// to confirm the supported space is clean, and this becomes the standing green
-// regression gate.
+// STILL SKIPPED — narrowed but not yet green (#141 progress).
+//
+// The first engine gap is FIXED: a *plain* branching family (every union
+// blood × married-in, no hub, no cross-branch couple) is now re-tidied through
+// `computeTreeLayout`'s contour separation, so `subtreeCollisionRegression` and
+// its whole class no longer overlap. What remains red over SUPPORTED_SPACE, found
+// by `npm run test:discovery`:
+//   - cross-branch couples and multi-union hubs are still laid out by the linear
+//     packing (delegating would balloon chart width — see `wideMultiFounderChart`),
+//     which leaves their deep subtrees overlapping (`subtreeNonCollision`) and can
+//     cross descent lines (`noCrossedDescentLines`);
+//   - a hub keeps a foreign node between a stranded union's partners
+//     (`minPartnerSpacing`, `noNodeBetweenPartners`) — the rec 3.2 follow-up; and
+//   - `computeTreeLayout` itself still overlaps cousin subtrees on rare very deep
+//     asymmetric families.
+// When those are closed, remove `.skip`, confirm `npm run test:discovery` is clean,
+// and this becomes the standing green regression gate.
 describe.skip('reformatLayout property (supported space)', () => {
   it('satisfies every hard invariant and is idempotent over random valid docs', () => {
     fc.assert(

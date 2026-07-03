@@ -854,10 +854,12 @@ export function marriedTwinInterleaved(): Fixture {
  *   i15 × i17 → i23
  *   i23 × i25 → (childless)
  *
- * `reformatLayout` reorders the rows, then packs each row and does a rigid
- * per-row shift — but it has no contour/subtree-separation step (unlike
- * `computeTreeLayout`'s `separateGenerations`), so a deep subtree slides over its
- * sibling subtree. This is the canonical failing case for the #141 engine fix.
+ * Originally `reformatLayout` reordered the rows, packed each row, and did only a
+ * rigid per-row shift — with no contour/subtree-separation step — so a deep
+ * subtree slid over its sibling. Fixed in #141: the coordinate phase now re-tidies
+ * each plain branching family (every union blood × married-in, no hub, no
+ * cross-branch couple) through `computeTreeLayout`'s contour separation, so cousin
+ * subtrees stay disjoint. Now a member of `ALL_FIXTURES`.
  */
 export function subtreeCollisionRegression(): Fixture {
   return {
@@ -917,4 +919,5 @@ export const ALL_FIXTURES: Array<() => Fixture> = [
   disconnectedComponents,
   selfPartneredUnion,
   wideCousinFan,
+  subtreeCollisionRegression,
 ];
