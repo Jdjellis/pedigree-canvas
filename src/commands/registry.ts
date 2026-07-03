@@ -89,6 +89,13 @@ export function buildCommands(actions: EditorActions): Command[] {
       isAvailable: (ctx: CommandContext) => ctx.selectedIds.size >= 2,
       run: () => markSelectedAsTwinsAction(),
     },
+    {
+      id: 'edit.reformat',
+      title: 'Reformat pedigree',
+      category: 'edit',
+      keywords: ['reformat', 'tidy', 'layout', 'arrange', 'compact', 'auto', 'clean', 'organize', 'rearrange'],
+      run: () => actions.reformatPedigree(),
+    },
     // ── View ──────────────────────────────────────────────────────────────
     {
       id: 'view.zoomIn',
