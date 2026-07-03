@@ -25,19 +25,26 @@ function settle(doc: LayoutDoc, moves: Record<string, { x: number; y: number }>)
 
 // ARMED — the standing green regression gate over the supported topology space.
 //
-// SUPPORTED_SPACE excludes the three known-unhandled shapes (3+-union hubs,
-// married twins, cross-branch couples); everything else it generates — plain
-// branching families of any depth/asymmetry, twins, remarriage half-sibs,
-// disconnected components — satisfies every hard invariant and is idempotent.
+// SUPPORTED_SPACE excludes the two remaining known-unhandled shapes (3+-union
+// hubs and married twins); everything else it generates — plain branching
+// families of any depth/asymmetry, twins, remarriage half-sibs, disconnected
+// components, and cross-branch couples — satisfies every hard invariant and is
+// idempotent.
 //
 // History (#141): the subtree-overlap correctness gap was closed in two steps —
 // plain families are re-tidied through `computeTreeLayout`'s contour separation
 // (#144, `subtreeCollisionRegression`), and the `separateGenerations` sweep now
 // excludes ancestor/descendant blocks so a deep asymmetric family no longer
 // drifts a nested subtree into a shallow cousin (residual 4, `deepAsymmetricSubtree`).
-// Still tracked, and still excluded from this space until their coordinate phases
-// land: cross-branch couples (residual 1a) and multi-union hub / twin-as-hub
-// (residual 1b). Widen the `SUPPORTED_SPACE` caps as each is closed; the opt-in
+// Cross-branch couples (residual 1a) joined the space when the cross-branch
+// coordinate phase landed: a component whose only non-plain feature is a single
+// cross-branch couple keeps its aligned linear layout while that layout is
+// clean, and is otherwise split at the cross union into two plain families that
+// are re-tidied and composed at the couple (`retidyCrossBranchComponent`;
+// fixtures `consanguineousSibCouple`, `crossBranchChainCrossing`,
+// `cousinCoupleSubtreeCollision`). Still tracked and still excluded until its
+// coordinate phase lands: multi-union hub / twin-as-hub (residual 1b). Widen
+// the `SUPPORTED_SPACE` caps as each is closed; the opt-in
 // `npm run test:discovery` harness (FULL_SPACE) is where they still surface.
 describe('reformatLayout property (supported space)', () => {
   it('satisfies every hard invariant and is idempotent over random valid docs', () => {

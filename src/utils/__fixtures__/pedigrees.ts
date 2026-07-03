@@ -945,6 +945,124 @@ export function deepAsymmetricSubtree(): Fixture {
   };
 }
 
+/**
+ * The canonical consanguineous sib-couple (issue #141, residual 1a): `sibA` and
+ * `sibB` are siblings who are ALSO married to each other (childless union), and
+ * each holds a further child-bearing union with a married-in spouse. The row-1
+ * partner graph is the path `spA – sibA – sibB – spB`, so the couple must read
+ * adjacent with the spouses to the outside — the shape that made every
+ * coordinate-sorted chain re-pack drop a spouse between the couple during the
+ * residual-1a investigation (`noNodeBetweenPartners`), and that the cross-branch
+ * phase's divergence-sibship bias now lays out as
+ * `… spA, sibA, sibB, spB …` with the two sibships disjoint below.
+ */
+export function consanguineousSibCouple(): Fixture {
+  return {
+    name: 'consanguineousSibCouple',
+    doc: doc({
+      individuals: {
+        gp1: ind('gp1', 0, 0), gp2: ind('gp2', 0, 0),
+        sibA: ind('sibA', 0, 1), sibB: ind('sibB', 0, 1),
+        spA: ind('spA', 0, 1), spB: ind('spB', 0, 1),
+        kA1: ind('kA1', 0, 2), kA2: ind('kA2', 0, 2), kB1: ind('kB1', 0, 2),
+      },
+      partnerships: {
+        top: union('top', 'gp1', 'gp2', ['sibA', 'sibB']),
+        uA: union('uA', 'sibA', 'spA', ['kA1', 'kA2']),
+        uB: union('uB', 'sibB', 'spB', ['kB1']),
+        sibUnion: union('sibUnion', 'sibA', 'sibB', []),
+      },
+      parentChildLinks: {
+        l1: link('l1', 'top', 'sibA'),
+        l2: link('l2', 'top', 'sibB'),
+        l3: link('l3', 'uA', 'kA1'),
+        l4: link('l4', 'uA', 'kA2'),
+        l5: link('l5', 'uB', 'kB1'),
+      },
+    }),
+    rootUnionId: 'top',
+  };
+}
+
+/**
+ * Two founder families joined by a cross-branch couple (`i6 × i10`, both
+ * load-bearing) where each partner also holds a childless union with a
+ * married-in spouse — the row-1 partner path `i8 – i6 – i10 – i14`. Found by
+ * the discovery harness and shrunk to 9 nodes: the linear engine kept the
+ * couple adjacent but crossed the two families' descent lines
+ * (`noCrossedDescentLines`: `u2`'s child reaches under `u5`'s children).
+ * Fixed by the cross-branch coordinate phase (issue #141, residual 1a), which
+ * tidies each blood side as its own plain family and composes them at the
+ * couple.
+ */
+export function crossBranchChainCrossing(): Fixture {
+  return {
+    name: 'crossBranchChainCrossing',
+    doc: doc({
+      individuals: {
+        i0: ind('i0', 0, 0), i1: ind('i1', 0, 0),
+        i3: ind('i3', 0, 0), i4: ind('i4', 0, 0),
+        i6: ind('i6', 0, 1), i8: ind('i8', 0, 1),
+        i10: ind('i10', 0, 1), i12: ind('i12', 0, 1), i14: ind('i14', 0, 1),
+      },
+      partnerships: {
+        u2: union('u2', 'i0', 'i1', ['i6']),
+        u5: union('u5', 'i3', 'i4', ['i10', 'i12']),
+        u9: union('u9', 'i6', 'i8', []),
+        u15: union('u15', 'i10', 'i14', []),
+        u16: union('u16', 'i6', 'i10', []),
+      },
+      parentChildLinks: {
+        l7: link('l7', 'u2', 'i6'),
+        l11: link('l11', 'u5', 'i10'),
+        l13: link('l13', 'u5', 'i12'),
+      },
+    }),
+    rootUnionId: 'u2',
+  };
+}
+
+/**
+ * A deep consanguineous cross-branch case: first cousins `i13 × i19` (children
+ * of two siblings) marry — childless — while each also holds a further
+ * childless union, and the two cousin sibships are wide. Found by the discovery
+ * harness and shrunk to 15 nodes: the linear engine's rigid per-row alignment
+ * left the two cousin sibships' extents overlapping by 120 px
+ * (`subtreeNonCollision`). The cross-branch phase's divergence-sibship bias
+ * re-tidies the whole family (cross union removed) so the cousins sit adjacent
+ * at the seam with their sibships disjoint (issue #141, residual 1a).
+ */
+export function cousinCoupleSubtreeCollision(): Fixture {
+  return {
+    name: 'cousinCoupleSubtreeCollision',
+    doc: doc({
+      individuals: {
+        i0: ind('i0', 0, 0), i1: ind('i1', 0, 0),
+        i3: ind('i3', 0, 1), i5: ind('i5', 0, 1), i7: ind('i7', 0, 1),
+        i9: ind('i9', 0, 1), i11: ind('i11', 0, 1),
+        i13: ind('i13', 0, 2), i15: ind('i15', 0, 2), i17: ind('i17', 0, 2),
+        i19: ind('i19', 0, 2), i21: ind('i21', 0, 2), i23: ind('i23', 0, 2),
+        i25: ind('i25', 0, 2), i27: ind('i27', 0, 2),
+      },
+      partnerships: {
+        u2: union('u2', 'i0', 'i1', ['i3', 'i5', 'i7']),
+        u10: union('u10', 'i3', 'i9', ['i13', 'i15']),
+        u12: union('u12', 'i7', 'i11', ['i19', 'i21', 'i23']),
+        u18: union('u18', 'i13', 'i17', []),
+        u26: union('u26', 'i19', 'i25', []),
+        u28: union('u28', 'i23', 'i27', []),
+        u29: union('u29', 'i13', 'i19', []),
+      },
+      parentChildLinks: {
+        l4: link('l4', 'u2', 'i3'), l6: link('l6', 'u2', 'i5'), l8: link('l8', 'u2', 'i7'),
+        l14: link('l14', 'u10', 'i13'), l16: link('l16', 'u10', 'i15'),
+        l20: link('l20', 'u12', 'i19'), l22: link('l22', 'u12', 'i21'), l24: link('l24', 'u12', 'i23'),
+      },
+    }),
+    rootUnionId: 'u2',
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Exported fixture array
 // ---------------------------------------------------------------------------
@@ -976,4 +1094,7 @@ export const ALL_FIXTURES: Array<() => Fixture> = [
   subtreeCollisionRegression,
   deepAsymmetricSubtree,
   marriedTwinInterleaved,
+  consanguineousSibCouple,
+  crossBranchChainCrossing,
+  cousinCoupleSubtreeCollision,
 ];

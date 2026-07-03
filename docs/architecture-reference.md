@@ -143,6 +143,22 @@ reorder** rows, and fixes both #137 symptoms by construction:
 4. **Anchor + y** — keep the document centroid's x fixed and derive y from the
    generation row, so the canvas does not jump.
 
+Between steps 3 and 4 each connected family is refined per its shape (#141):
+
+- a **plain hub-free family** is re-tidied through `computeTreeLayout`'s contour
+  separation, which closes the flat row-packing's cousin-subtree overlaps;
+- a component whose only non-plain feature is a **single cross-branch couple**
+  (both partners load-bearing) keeps the aligned linear layout while that layout
+  satisfies the hard invariants — it is the tightest form — and is otherwise
+  **split at the cross union** into blood sides that are each re-tidied as a
+  plain family and composed at the couple (`retidyCrossBranchComponent`; a
+  consanguineous couple re-tidies as one family with a divergence-sibship bias
+  that makes the couple's branches adjacent). Because this corrective changes
+  the row order it hands the next pass, `reformatLayout` iterates internally to
+  the engine's fixed point so the result stays idempotent;
+- **hub and married-twin components** keep the aligned linear layout (the
+  tracked residual 1b).
+
 `reformatLayout` is **only** reached by the reformat trigger; the per-edit path
 and its invariant suite are untouched. It satisfies every positional invariant
 plus `noNodeBetweenPartners` **in its achievable form** — no *foreign*
