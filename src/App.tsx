@@ -20,6 +20,7 @@ import { MenuIsland } from './components/ui/islands/MenuIsland';
 import { ToolIsland } from './components/ui/islands/ToolIsland';
 import { ToolHint } from './components/ui/islands/ToolHint';
 import { ActionsIsland } from './components/ui/islands/ActionsIsland';
+import { ReformatSuggestion } from './components/ui/islands/ReformatSuggestion';
 import { ZoomIsland } from './components/ui/islands/ZoomIsland';
 import { HistoryIsland } from './components/ui/islands/HistoryIsland';
 import { HelpIsland } from './components/ui/islands/HelpIsland';
@@ -72,6 +73,7 @@ function App() {
 
       <div className={styles.slotTopRight}>
         <ActionsIsland />
+        <ReformatSuggestion />
       </div>
 
       <div className={styles.slotBottomLeft}>

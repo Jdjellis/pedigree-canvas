@@ -49,6 +49,11 @@
   right: 14px;
   z-index: 10;
   pointer-events: none;
+  /* Stack the Actions island and the reformat-suggestion nudge, both flush right. */
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
 }
 
 /* Bottom-left hosts ZoomIsland + HistoryIsland side by side. */
