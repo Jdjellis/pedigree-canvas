@@ -920,4 +920,5 @@ export const ALL_FIXTURES: Array<() => Fixture> = [
   selfPartneredUnion,
   wideCousinFan,
   subtreeCollisionRegression,
+  marriedTwinInterleaved,
 ];

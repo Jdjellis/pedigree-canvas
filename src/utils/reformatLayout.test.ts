@@ -139,30 +139,27 @@ describe('reformatLayout — multi-union hub (#137)', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Known gap surfaced while reviewing #137 PR1. Characterization test: it pins the
-// CURRENT (incorrect) output so the suite stays honest and green while documenting
-// the defect executably. When the engine is fixed the asserted `.ok` will flip and
-// this test will fail — the signal to rewrite it to assert correctness and fold
-// the fixture into ALL_FIXTURES.
+// Regression pins for gaps found while reviewing #137 PR1 — both now FIXED (#141)
+// and folded into ALL_FIXTURES (where the loop above asserts every positional
+// invariant, no node between partners, and twin contiguity). These tests pin each
+// fix against its own fixture so it cannot silently regress.
 // ---------------------------------------------------------------------------
-describe('reformatLayout — known gaps (review of #137 PR1)', () => {
-  it('marriedTwinInterleaved: a married twin is separated from its co-twin by a sibling (twinContiguity not met)', () => {
+describe('reformatLayout — regression pins (review of #137 PR1)', () => {
+  it('marriedTwinInterleaved: a coupled twin stays contiguous with its co-twin (twin fix)', () => {
     const { doc, twinGroups } = marriedTwinInterleaved();
     const pos = reformatted(doc);
-    // The layout is otherwise valid — geometry and between-partners both hold.
+    // makeTwinsContiguous now counts a couple chain as its twin member's slot, and
+    // retidy roots at the single-parent apex union — so the coupled twin sits beside
+    // its co-twin with the spouse to the outside: no sibling between the twins, and
+    // no node between the couple's partners.
     expect(checkAllInvariants(pos, doc).ok).toBe(true);
     expect(noNodeBetweenPartners(pos, doc).ok).toBe(true);
-    // BUG: twin contiguity should hold (`.ok === true`). `makeTwinsContiguous`
-    // only pulls single-node chains into a group's run, so the coupled twin is
-    // excluded and a non-twin sibling tie-breaks between the twins.
-    expect(twinContiguity(pos, doc, twinGroups ?? {}).ok).toBe(false);
+    expect(twinContiguity(pos, doc, twinGroups ?? {}).ok).toBe(true);
   });
 
-  // subtreeCollisionRegression was a known gap here; it is now FIXED (#141) — the
-  // coordinate phase re-tidies each plain branching family with computeTreeLayout's
-  // contour separation, so its cousin subtrees no longer overlap. It has graduated
-  // into ALL_FIXTURES, where the loop above asserts it satisfies every positional
-  // invariant. This regression test pins the fix so it cannot silently break.
+  // subtreeCollisionRegression: the coordinate phase re-tidies each plain branching
+  // family with computeTreeLayout's contour separation, so its cousin subtrees no
+  // longer overlap. Pins the #141 subtree fix so it cannot silently break.
   it('subtreeCollisionRegression: cousin subtrees no longer overlap (subtree fix)', () => {
     const { doc } = subtreeCollisionRegression();
     const pos = reformatted(doc);
