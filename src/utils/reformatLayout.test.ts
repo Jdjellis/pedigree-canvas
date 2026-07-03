@@ -139,7 +139,17 @@ describe('reformatLayout — multi-union hub (#141)', () => {
 // fix against its own fixture so it cannot silently regress.
 // ---------------------------------------------------------------------------
 describe('reformatLayout — regression pins (review of #137 PR1)', () => {
-  it('marriedTwinInterleaved: a coupled twin stays contiguous with its co-twin (twin fix)', () => {
+  // This fixture is the ONLY regression guard for the latent #144 retidy
+  // root-selection bug (retidy rooted computeTreeLayout at a two-partner union, so
+  // a single-parent-apex family was re-tidied from a deeper childless couple). The
+  // twin-contiguity assertion below fails if that root fix is reverted. A
+  // twin-INDEPENDENT regression is not achievable: without the twin constraint the
+  // invariant suite does not pin sibling order, so the wrong root still yields a
+  // valid (if worse) layout — verified against plain single-parent-apex families,
+  // which pass identically pre- and post-fix. So this fixture must stay twin-shaped
+  // AND single-parent-apex to keep guarding both the makeTwinsContiguous fix and
+  // the retidy root fix.
+  it('marriedTwinInterleaved: a coupled twin stays contiguous with its co-twin (twin + retidy-root fixes)', () => {
     const { doc, twinGroups } = marriedTwinInterleaved();
     const pos = reformatted(doc);
     // makeTwinsContiguous now counts a couple chain as its twin member's slot, and

@@ -335,6 +335,8 @@ function retidyHubFreeComponents(
     // (e.g. `computeTreeLayout` strands a married twin's spouse across a non-twin
     // sibling). Requiring a present child skips isolated childless couples, which
     // the linear packing already spaces correctly.
+    // Regression guard: the `marriedTwinInterleaved` fixture (ALL_FIXTURES) —
+    // reverting this to a two-partner-only root makes its `twinContiguity` fail.
     const isPresent = (id: string | undefined): id is string => !!id && present.has(id);
     const rootCandidates = Object.keys(partnerships).filter((uid) => {
       const u = partnerships[uid];
