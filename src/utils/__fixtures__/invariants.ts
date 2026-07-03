@@ -200,6 +200,17 @@ export function minSiblingSpacing(
  * Assert that every ordinary couple (neither partner is a load-bearing in-law)
  * is exactly `spacing.partnerSpacing` apart (tolerance 0.5 px).
  * Wide couples (where one partner is load-bearing) are exempt.
+ *
+ * ### Achievable form for hubs (issue #141)
+ *
+ * A **hub** — a node with three or more same-row unions — cannot place *every*
+ * spouse at exact `partnerSpacing`: a point has only two neighbours on a line, so
+ * its third-and-later spouses necessarily stack outward past a co-spouse. This is
+ * the same over-claim {@link noNodeBetweenPartners} corrected. A union with a hub
+ * endpoint is therefore permitted a wider gap, up to `(degree − 1) ×
+ * partnerSpacing` — the tight bound the linear packing achieves (the furthest
+ * spouse sits `degree − 1` slots from the hub). Ordinary (≤ 2-union) couples still
+ * require exact spacing, so a genuinely-fixable bad order is still flagged.
  */
 export function minPartnerSpacing(
   pos: Positions,
@@ -208,6 +219,26 @@ export function minPartnerSpacing(
 ): InvariantResult {
   const violations: Violation[] = [];
   const tol = 0.5;
+
+  // Same-row partner degree, for the hub achievable-form exemption.
+  const partnersOf = new Map<string, Set<string>>();
+  for (const u of Object.values(doc.partnerships)) {
+    const a = u.partner1Id;
+    const b = u.partner2Id;
+    if (!a || !b || a === b) continue;
+    (partnersOf.get(a) ?? partnersOf.set(a, new Set()).get(a)!).add(b);
+    (partnersOf.get(b) ?? partnersOf.set(b, new Set()).get(b)!).add(a);
+  }
+  const sameRowDegree = (id: string): number => {
+    if (!(id in pos)) return 0;
+    const y = pos[id].y;
+    let n = 0;
+    for (const q of partnersOf.get(id) ?? []) {
+      if (q in pos && Math.abs(pos[q].y - y) <= 1) n++;
+    }
+    return n;
+  };
+
   for (const [uid, u] of Object.entries(doc.partnerships)) {
     const p1 = u.partner1Id;
     const p2 = u.partner2Id;
@@ -218,6 +249,22 @@ export function minPartnerSpacing(
     // Wide-couple exemption: skip if either partner is load-bearing.
     if (isLoadBearingInLaw(doc, p1) || isLoadBearingInLaw(doc, p2)) continue;
     const gap = Math.abs(pos[p1].x - pos[p2].x);
+
+    // Hub exemption: a union with a ≥3-union endpoint may be wider than exact
+    // partnerSpacing, but only up to the (degree − 1) × partnerSpacing bound.
+    const hubDegree = Math.max(sameRowDegree(p1), sameRowDegree(p2));
+    if (hubDegree >= 3) {
+      const bound = (hubDegree - 1) * spacing.partnerSpacing;
+      if (gap > bound + tol) {
+        violations.push({
+          rule: 'minPartnerSpacing',
+          ids: [uid, p1, p2],
+          detail: `hub union gap ${gap.toFixed(1)} > bound ${bound} ((degree ${hubDegree} − 1) × partnerSpacing ${spacing.partnerSpacing})`,
+        });
+      }
+      continue;
+    }
+
     if (Math.abs(gap - spacing.partnerSpacing) > tol) {
       violations.push({
         rule: 'minPartnerSpacing',

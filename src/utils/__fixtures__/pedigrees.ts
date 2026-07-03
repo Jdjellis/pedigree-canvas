@@ -762,14 +762,15 @@ export function wideMultiFounderChart(): Fixture {
  * line with *every* couple adjacent: a point has only two neighbours in a line.
  * `orderChainMembers` walks the partner graph as a path, reaches only two of the
  * three spouses (`s1, hub, s2`), and appends the third (`s3`) — so in the packed
- * row `s2` ends up wedged strictly between `hub` and `s3`, violating the union
- * `hub × s3`. This is the reduced form of the reported `c912` hub generalised to
- * 3 spouses, and it exposes the boundary of `reformatLayout`'s HARD
- * `noNodeBetweenPartners` guarantee (issue #137): the guarantee holds for the
- * reported two-spouse hub but not for three-or-more.
+ * row `s2` sits between `hub` and `s3`, and `hub × s3` spans `2 × partnerSpacing`.
+ * This is the reduced form of the reported `c912` hub generalised to 3 spouses.
  *
- * The layout is otherwise geometrically valid (`checkAllInvariants` passes); only
- * the between-partners guarantee is broken.
+ * Both facts are structurally forced, so BOTH hard invariants take their
+ * *achievable* form (issue #141): `noNodeBetweenPartners` permits a hub's own
+ * co-spouse between its partners, and `minPartnerSpacing` permits a hub union up
+ * to `(degree − 1) × partnerSpacing` — the tight bound the linear packing hits.
+ * `reformatLayout` meets both, so `checkAllInvariants` passes and this fixture is
+ * a member of `REFORMAT_FIXTURES`.
  */
 export function threeUnionHub(): Fixture {
   return {
@@ -920,4 +921,5 @@ export const ALL_FIXTURES: Array<() => Fixture> = [
   selfPartneredUnion,
   wideCousinFan,
   subtreeCollisionRegression,
+  marriedTwinInterleaved,
 ];
