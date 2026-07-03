@@ -637,6 +637,45 @@ export function wideCousinFan(): Fixture {
   };
 }
 
+/**
+ * MZ twins (`ta`, `tc`) with a singleton sibling (`tb`) whose id AND seed x both
+ * sort *between* the twins. A layout that orders siblings purely by
+ * id/seed tie-break (with no twin awareness) interleaves `tb` between the twins,
+ * violating twin contiguity — the failing-first case for making `reformatLayout`
+ * twin-aware. The single-family `computeTreeLayout` already passes this via
+ * `orderSiblingsWithTwins`.
+ */
+export function twinsWithInterleavingSibling(): Fixture {
+  const twinGroups: Record<string, TwinGroup> = {
+    g: {
+      id: 'g',
+      twinType: TwinType.Monozygotic,
+      individualIds: ['ta', 'tc'],
+      parentPartnershipId: 'u',
+    },
+  };
+  return {
+    name: 'twinsWithInterleavingSibling',
+    doc: doc({
+      individuals: {
+        p: ind('p', 0, 0),
+        ta: ind('ta', -80, 1),
+        tb: ind('tb', 0, 1), // id + seed both sort BETWEEN the twins
+        tc: ind('tc', 80, 1),
+      },
+      partnerships: { u: union('u', 'p', undefined, ['ta', 'tb', 'tc']) },
+      parentChildLinks: {
+        l1: link('l1', 'u', 'ta'),
+        l2: link('l2', 'u', 'tb'),
+        l3: link('l3', 'u', 'tc'),
+      },
+      twinGroups,
+    }),
+    rootUnionId: 'u',
+    twinGroups,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Reformat fixtures (issue #137) — multi-founder documents exercised through
 // `reformatLayout`, not the single-family `computeTreeLayout`.
@@ -767,6 +806,7 @@ export const ALL_FIXTURES: Array<() => Fixture> = [
   undefinedGenerationChild,
   remarriageHalfSibs,
   twinsWithSingletonSibling,
+  twinsWithInterleavingSibling,
   disconnectedComponents,
   selfPartneredUnion,
   wideCousinFan,

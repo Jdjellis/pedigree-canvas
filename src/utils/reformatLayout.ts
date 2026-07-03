@@ -3,6 +3,7 @@ import {
   resolveGenerationRows,
 } from './treeLayout';
 import type { LayoutDoc, LayoutSpacing } from './treeLayout';
+import type { TwinGroup } from '../types/pedigree';
 import { GENERATION_SPACING, MIN_GENERATION_NODE_SPACING } from './constants';
 
 /**
@@ -111,6 +112,14 @@ export function reformatLayout(
     for (let gi = gens.length - 2; gi >= 0; gi--) {
       reorderRow(gens[gi], childrenOf, posIndex());
     }
+  }
+
+  // Twin contiguity: barycentre ordering keeps siblings together but leaves a
+  // non-twin free to tie-break its way between two twins. Pull each twin group's
+  // members into a contiguous run as a final ordering constraint.
+  const twinGroups = doc.twinGroups ?? {};
+  for (const g of gens) {
+    order.set(g, makeTwinsContiguous(order.get(g)!, twinGroups));
   }
 
   /** Reorder one row's chains by the barycentre of each member's neighbours. */
@@ -254,6 +263,59 @@ function buildChains(
     chains.push(orderChainMembers(comp, rowPartners, seedX));
   }
   return chains;
+}
+
+/**
+ * Reorder a row's chains so every twin group's members occupy a contiguous run,
+ * mirroring `orderSiblingsWithTwins` for the single-family engine. Only members
+ * that are single-node chains are pulled (a twin who is themselves a partner in a
+ * couple chain stays with their spouse); the run is anchored at the group's
+ * leftmost member and preserves the members' relative order.
+ */
+function makeTwinsContiguous(
+  chains: string[][],
+  twinGroups: Record<string, TwinGroup>,
+): string[][] {
+  if (Object.keys(twinGroups).length === 0) return chains;
+  const singleId = (c: string[]): string | null => (c.length === 1 ? c[0] : null);
+
+  const present = new Set<string>();
+  for (const c of chains) {
+    const s = singleId(c);
+    if (s) present.add(s);
+  }
+  // Map each present single-node twin member to its group's member set (only
+  // groups with ≥2 present single members can interleave and so matter here).
+  const groupOf = new Map<string, Set<string>>();
+  for (const g of Object.values(twinGroups)) {
+    const members = g.individualIds.filter((id) => present.has(id));
+    if (members.length < 2) continue;
+    const set = new Set(members);
+    for (const id of members) groupOf.set(id, set);
+  }
+  if (groupOf.size === 0) return chains;
+
+  // Walk left to right; the first time a group's member is seen, emit the whole
+  // group's member-chains (in their current order) as a contiguous run.
+  const result: string[][] = [];
+  const emitted = new Set<string>();
+  for (const chain of chains) {
+    const s = singleId(chain);
+    if (s && groupOf.has(s)) {
+      if (emitted.has(s)) continue;
+      const group = groupOf.get(s)!;
+      for (const c of chains) {
+        const cs = singleId(c);
+        if (cs && group.has(cs) && !emitted.has(cs)) {
+          result.push(c);
+          emitted.add(cs);
+        }
+      }
+    } else {
+      result.push(chain);
+    }
+  }
+  return result;
 }
 
 /**

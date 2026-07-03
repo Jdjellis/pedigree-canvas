@@ -12,6 +12,7 @@ import {
   noNodeBetweenPartners,
   boundedPartnerDistance,
   chartWidth,
+  twinContiguity,
 } from './__fixtures__/invariants';
 import type { Positions } from './__fixtures__/invariants';
 
@@ -66,11 +67,15 @@ describe('reformatLayout fixes every reformat fixture', () => {
 
 describe('reformatLayout produces a valid layout for every existing fixture', () => {
   for (const build of ALL_FIXTURES) {
-    const { name, doc } = build();
+    const { name, doc, twinGroups } = build();
     it(`${name}: satisfies all positional invariants and no node between partners`, () => {
       const pos = reformatted(doc);
       expect(checkAllInvariants(pos, doc).violations).toEqual([]);
       expect(noNodeBetweenPartners(pos, doc).ok).toBe(true);
+    });
+    it(`${name}: keeps twin-group members contiguous`, () => {
+      const pos = reformatted(doc);
+      expect(twinContiguity(pos, doc, twinGroups ?? {}).ok).toBe(true);
     });
   }
 });
