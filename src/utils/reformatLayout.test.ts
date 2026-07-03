@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { reformatLayout } from './reformatLayout';
 import type { LayoutDoc } from './treeLayout';
+import { ALL_FIXTURES } from './__fixtures__/pedigrees';
 import {
-  ALL_FIXTURES,
   REFORMAT_FIXTURES,
   reportedLayoutBugs,
-} from './__fixtures__/pedigrees';
+} from './__fixtures__/reformatFixtures';
 import {
   finalPositions,
   checkAllInvariants,

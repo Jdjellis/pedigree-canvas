@@ -20,7 +20,6 @@ import type {
 import { RelationshipType, TwinType } from '../../types/enums';
 import { createDefaultIndividual } from '../../stores/pedigreeStore';
 import type { LayoutDoc } from '../treeLayout';
-import layoutBugsFile from './layout-bugs.json';
 
 // ---------------------------------------------------------------------------
 // Local helpers (mirrors treeLayout.test.ts)
@@ -677,39 +676,12 @@ export function twinsWithInterleavingSibling(): Fixture {
 }
 
 // ---------------------------------------------------------------------------
-// Reformat fixtures (issue #137) — multi-founder documents exercised through
-// `reformatLayout`, not the single-family `computeTreeLayout`.
+// Synthetic reformat fixtures (issue #137) — multi-founder documents exercised
+// through `reformatLayout`. The real reported document (which imports the
+// `layout-bugs.json` asset) lives in `reformatFixtures.ts` so this shared module
+// stays free of a JSON import — the Playwright e2e loader imports this file and
+// only tolerates plain TS/ESM.
 // ---------------------------------------------------------------------------
-
-/**
- * The real reported `layout bugs.json` (25 individuals, 6 generations), saved
- * verbatim as an asset and sliced into a {@link LayoutDoc}. The canonical
- * failing-first case: `4a1d × ddf2` sit 1415 px apart, siblings render between
- * `c912`'s partners, and generation rows span 3.6×–10× their tight width.
- */
-export function reportedLayoutBugs(): Fixture {
-  const raw = layoutBugsFile as unknown as {
-    document: {
-      individuals: Record<string, Individual>;
-      partnerships: Record<string, PartnershipRelationship>;
-      parentChildLinks: Record<string, ParentChildRelationship>;
-      twinGroups?: Record<string, TwinGroup>;
-    };
-  };
-  const d = raw.document;
-  return {
-    name: 'reportedLayoutBugs',
-    doc: {
-      individuals: d.individuals,
-      partnerships: d.partnerships,
-      parentChildLinks: d.parentChildLinks,
-      twinGroups: d.twinGroups ?? {},
-    },
-    // A topmost founder union (51df × be28 → 7a36); `reformatLayout` lays out the
-    // whole document regardless of the nominal root.
-    rootUnionId: 'a63558d9-ee96-4760-b040-6edf734adb73',
-  };
-}
 
 /**
  * Minimal synthetic cross-branch marriage seeded far apart with a sibling in the
@@ -810,16 +782,4 @@ export const ALL_FIXTURES: Array<() => Fixture> = [
   disconnectedComponents,
   selfPartneredUnion,
   wideCousinFan,
-];
-
-/**
- * Multi-founder fixtures (issue #137) exercised through `reformatLayout`. Kept
- * separate from {@link ALL_FIXTURES} because they reproduce cross-document
- * width/hub bugs that only the whole-document reformat engine resolves — the
- * single-family `computeTreeLayout` leaves them wide by design.
- */
-export const REFORMAT_FIXTURES: Array<() => Fixture> = [
-  reportedLayoutBugs,
-  farApartCrossBranchCouple,
-  wideMultiFounderChart,
 ];
