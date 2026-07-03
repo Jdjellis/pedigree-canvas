@@ -1,7 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { reformatLayout } from './reformatLayout';
 import type { LayoutDoc } from './treeLayout';
-import { ALL_FIXTURES } from './__fixtures__/pedigrees';
+import {
+  ALL_FIXTURES,
+  threeUnionHub,
+  marriedTwinInterleaved,
+} from './__fixtures__/pedigrees';
 import {
   REFORMAT_FIXTURES,
   reportedLayoutBugs,
@@ -102,4 +106,41 @@ describe('reformatLayout is idempotent', () => {
       }
     });
   }
+});
+
+// ---------------------------------------------------------------------------
+// Known gaps surfaced while reviewing #137 PR1. These fixtures reproduce two
+// topologies the layered engine does NOT yet handle. They are *characterization*
+// tests: each pins the CURRENT (incorrect) output so the suite stays honest and
+// green while documenting the defect executably. When the engine is fixed, the
+// asserted `.ok` values below will flip and these tests will fail — that is the
+// signal to rewrite them to assert correctness and fold the fixtures into
+// REFORMAT_FIXTURES / ALL_FIXTURES.
+// ---------------------------------------------------------------------------
+describe('reformatLayout — known gaps (review of #137 PR1)', () => {
+  it('threeUnionHub: a hub with 3 same-row unions strands its 3rd spouse (HARD noNodeBetweenPartners not met)', () => {
+    const { doc } = threeUnionHub();
+    const pos = reformatted(doc);
+    // BUG: the hard guarantee should hold (`.ok === true`). It does not for a hub
+    // with more than two same-row unions — `orderChainMembers` walks the partner
+    // graph as a path and can keep only two spouses adjacent, so the third union
+    // (`hub × s3`) renders `s2` strictly between its partners.
+    expect(noNodeBetweenPartners(pos, doc).ok).toBe(false);
+    // Same root cause also strands the 3rd spouse beyond partnerSpacing, so even
+    // the geometry suite fails here (minPartnerSpacing) — not just the special
+    // between-partners invariant.
+    expect(checkAllInvariants(pos, doc).ok).toBe(false);
+  });
+
+  it('marriedTwinInterleaved: a married twin is separated from its co-twin by a sibling (twinContiguity not met)', () => {
+    const { doc, twinGroups } = marriedTwinInterleaved();
+    const pos = reformatted(doc);
+    // The layout is otherwise valid — geometry and between-partners both hold.
+    expect(checkAllInvariants(pos, doc).ok).toBe(true);
+    expect(noNodeBetweenPartners(pos, doc).ok).toBe(true);
+    // BUG: twin contiguity should hold (`.ok === true`). `makeTwinsContiguous`
+    // only pulls single-node chains into a group's run, so the coupled twin is
+    // excluded and a non-twin sibling tie-breaks between the twins.
+    expect(twinContiguity(pos, doc, twinGroups ?? {}).ok).toBe(false);
+  });
 });

@@ -754,6 +754,95 @@ export function wideMultiFounderChart(): Fixture {
   };
 }
 
+/**
+ * A hub individual married to THREE spouses on the same generation row, each
+ * union bearing a child (`hub × s1 → k1`, `hub × s2 → k2`, `hub × s3 → k3`).
+ *
+ * A hub with more than two same-row partnerships cannot be laid out as a single
+ * line with *every* couple adjacent: a point has only two neighbours in a line.
+ * `orderChainMembers` walks the partner graph as a path, reaches only two of the
+ * three spouses (`s1, hub, s2`), and appends the third (`s3`) — so in the packed
+ * row `s2` ends up wedged strictly between `hub` and `s3`, violating the union
+ * `hub × s3`. This is the reduced form of the reported `c912` hub generalised to
+ * 3 spouses, and it exposes the boundary of `reformatLayout`'s HARD
+ * `noNodeBetweenPartners` guarantee (issue #137): the guarantee holds for the
+ * reported two-spouse hub but not for three-or-more.
+ *
+ * The layout is otherwise geometrically valid (`checkAllInvariants` passes); only
+ * the between-partners guarantee is broken.
+ */
+export function threeUnionHub(): Fixture {
+  return {
+    name: 'threeUnionHub',
+    doc: doc({
+      individuals: {
+        s1: ind('s1', -120, 0), hub: ind('hub', 0, 0),
+        s2: ind('s2', 120, 0), s3: ind('s3', 240, 0),
+        k1: ind('k1', -60, 1), k2: ind('k2', 60, 1), k3: ind('k3', 180, 1),
+      },
+      partnerships: {
+        u1: union('u1', 's1', 'hub', ['k1']),
+        u2: union('u2', 'hub', 's2', ['k2']),
+        u3: union('u3', 'hub', 's3', ['k3']),
+      },
+      parentChildLinks: {
+        l1: link('l1', 'u1', 'k1'),
+        l2: link('l2', 'u2', 'k2'),
+        l3: link('l3', 'u3', 'k3'),
+      },
+    }),
+    rootUnionId: 'u1',
+  };
+}
+
+/**
+ * A twin who is themselves married. `a_tw1` and `c_tw2` are MZ twins (children
+ * of `p`); `c_tw2` is also partnered with married-in `d_sp`, and a plain sibling
+ * `b_sib` shares their row.
+ *
+ * `makeTwinsContiguous` only pulls *single-node* chains into a twin group's
+ * contiguous run, so the coupled twin `c_tw2` (locked into the `c_tw2 × d_sp`
+ * chain) is excluded from the group's contiguity pass. With only one of the two
+ * twins eligible, nothing prevents `b_sib` from tie-breaking between them: the
+ * barycentre order settles on `a_tw1, b_sib, c_tw2`, leaving a non-twin between
+ * the twins. Exposes the twin-contiguity gap for a married twin (issue #137).
+ * Ids are chosen so the deterministic tie-break produces the interleaving.
+ */
+export function marriedTwinInterleaved(): Fixture {
+  const twinGroups: Record<string, TwinGroup> = {
+    g: {
+      id: 'g',
+      twinType: TwinType.Monozygotic,
+      individualIds: ['a_tw1', 'c_tw2'],
+      parentPartnershipId: 'u',
+    },
+  };
+  return {
+    name: 'marriedTwinInterleaved',
+    doc: doc({
+      individuals: {
+        p: ind('p', 0, 0),
+        a_tw1: ind('a_tw1', -80, 1),
+        b_sib: ind('b_sib', 0, 1),
+        c_tw2: ind('c_tw2', 80, 1),
+        d_sp: ind('d_sp', 200, 1),
+      },
+      partnerships: {
+        u: union('u', 'p', undefined, ['a_tw1', 'b_sib', 'c_tw2']),
+        couple: union('couple', 'c_tw2', 'd_sp', []),
+      },
+      parentChildLinks: {
+        l1: link('l1', 'u', 'a_tw1'),
+        l2: link('l2', 'u', 'b_sib'),
+        l3: link('l3', 'u', 'c_tw2'),
+      },
+      twinGroups,
+    }),
+    rootUnionId: 'u',
+    twinGroups,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Exported fixture array
 // ---------------------------------------------------------------------------
