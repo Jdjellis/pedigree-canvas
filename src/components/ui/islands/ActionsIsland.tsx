@@ -1,3 +1,4 @@
+import { Wand2 } from 'lucide-react';
 import { useEditorActions } from '../../../commands/useEditorActions';
 import { useUIStore } from '../../../stores/uiStore';
 import { Island } from './Island';
@@ -6,8 +7,11 @@ import styles from './islands.module.css';
 /**
  * Top-right floating island containing primary document actions.
  *
- * Renders two controls:
+ * Renders three controls:
  * - **Export** — a primary CTA that opens the export modal via `exportDocument`.
+ * - **Reformat pedigree** — an icon button that re-tidies the whole chart via
+ *   `reformatPedigree` (one undo step). An editing action, so it is dropped in
+ *   view mode alongside the properties toggle.
  * - **Toggle properties panel** — an icon button that shows/hides the
  *   properties panel; reflects open state via `aria-pressed`.
  *
@@ -15,9 +19,10 @@ import styles from './islands.module.css';
  * react-dom tree (not inside a react-konva Stage).
  *
  * Hidden entirely in zen mode (a focus mode strips the top-right chrome). In
- * view (read-only) mode it stays but sheds the properties-panel toggle — Export
- * remains, since a read-only pedigree is exactly what you'd share/export
- * (mirroring Excalidraw keeping Share in view mode).
+ * view (read-only) mode it stays but sheds the editing-only controls (Reformat,
+ * properties-panel toggle) — Export remains, since a read-only pedigree is
+ * exactly what you'd share/export (mirroring Excalidraw keeping Share in view
+ * mode).
  *
  * @example
  * ```tsx
@@ -25,7 +30,7 @@ import styles from './islands.module.css';
  * ```
  */
 export function ActionsIsland(): React.JSX.Element | null {
-  const { exportDocument } = useEditorActions();
+  const { exportDocument, reformatPedigree } = useEditorActions();
   const propertiesPanelOpen = useUIStore((s) => s.propertiesPanelOpen);
   const zenMode = useUIStore((s) => s.zenMode);
   const editingLocked = useUIStore((s) => s.editingLocked);
@@ -47,6 +52,20 @@ export function ActionsIsland(): React.JSX.Element | null {
       >
         Export
       </button>
+
+      {/* Reformat re-lays-out the whole document, so it is an editing action and
+          is hidden in view mode next to the properties toggle. */}
+      {!editingLocked && (
+        <button
+          type="button"
+          className={styles.button}
+          onClick={reformatPedigree}
+          aria-label="Reformat pedigree"
+          title="Reformat pedigree — auto-tidy the whole chart"
+        >
+          <Wand2 size={18} aria-hidden="true" />
+        </button>
+      )}
 
       {/* The properties panel is an editing surface and is suppressed in view
           mode, so its toggle is tucked away there too. */}

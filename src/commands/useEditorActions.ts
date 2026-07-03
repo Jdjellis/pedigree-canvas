@@ -65,6 +65,11 @@ export interface EditorActions {
   connectTool: () => void;
   /** Toggle whether the pedigree is locked against editing. */
   toggleEditingLock: () => void;
+  /**
+   * Re-tidy the whole pedigree with the layered layout engine (one undo step).
+   * No-ops while editing is locked, since it mutates positions.
+   */
+  reformatPedigree: () => void;
 }
 
 /**
@@ -198,6 +203,13 @@ export function useEditorActions(): EditorActions {
     useUIStore.getState().toggleEditingLocked();
   };
 
+  const reformatPedigree = (): void => {
+    // A read-only (view-mode) pedigree must not be re-laid-out, even from ⌘K —
+    // mirrors the lock guard in deleteSelectedAction / markSelectedAsTwinsAction.
+    if (useUIStore.getState().editingLocked) return;
+    usePedigreeStore.getState().reformatDocument();
+  };
+
   // Empty deps: every callback reads store state via getState() at call time,
   // so none of them close over stale values — the object identity can be
   // stable for the lifetime of the component.
@@ -222,6 +234,7 @@ export function useEditorActions(): EditorActions {
       eraserTool,
       connectTool,
       toggleEditingLock,
+      reformatPedigree,
     }),
     []
   );

@@ -23,6 +23,7 @@ function makeNoopActions(): EditorActions {
     eraserTool: vi.fn(),
     connectTool: vi.fn(),
     toggleEditingLock: vi.fn(),
+    reformatPedigree: vi.fn(),
   };
 }
 
@@ -68,6 +69,16 @@ describe('buildCommands / getCommand', () => {
     const cmds = buildCommands(actions);
     getCommand(cmds, 'view.toggleViewMode')!.run();
     expect(actions.toggleEditingLock).toHaveBeenCalled();
+  });
+
+  test('exposes a reformat-pedigree command that delegates to the action', () => {
+    const actions = makeNoopActions();
+    const cmds = buildCommands(actions);
+    const reformat = getCommand(cmds, 'edit.reformat');
+    expect(reformat).toBeDefined();
+    expect(reformat!.category).toBe('edit');
+    reformat!.run();
+    expect(actions.reformatPedigree).toHaveBeenCalled();
   });
 
   test('getCommand returns undefined for an unknown id', () => {
