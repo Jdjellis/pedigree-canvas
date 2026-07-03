@@ -12,7 +12,7 @@ import {
   isLoadBearingInLaw,
 } from '../treeLayout';
 import type { LayoutDoc, LayoutSpacing } from '../treeLayout';
-import { SYMBOL_SIZE } from '../constants';
+import { SYMBOL_SIZE, MIN_GENERATION_NODE_SPACING } from '../constants';
 
 // ---------------------------------------------------------------------------
 // Exported types
@@ -420,6 +420,170 @@ export function subtreeNonCollision(
     }
   }
 
+  return { ok: violations.length === 0, violations };
+}
+
+/**
+ * Assert that no *foreign* individual sits strictly between the two partners of a
+ * couple on the same generation row. This is the hard invariant that the reported
+ * "a sibling/cousin renders between a couple" bug violates.
+ *
+ * For each union with both partners present, the partners define an x-interval on
+ * their shared row (matched by rounded y within 1 px). Any *other* individual on
+ * that row whose x lies strictly inside the interval — inset by `tol` on each
+ * side so a near-coincident node is not flagged — is a violation, **unless it is
+ * a structurally-unavoidable co-spouse of a hub** (see below).
+ *
+ * ### Achievable form (issue #137)
+ *
+ * The original formulation asserted that a couple's partners are *always*
+ * x-adjacent. That is geometrically impossible for a **hub** — an individual with
+ * three or more same-row unions. A point has only two neighbours in a line, so a
+ * hub can be adjacent to at most two of its spouses; every further union
+ * necessarily has one of the hub's *other* spouses between its partners. Asserting
+ * the impossible would make this oracle either falsely green (no such fixture) or
+ * permanently red once one exists.
+ *
+ * So a between-node `X` is permitted **iff** it is a co-spouse of an endpoint that
+ * is a genuine hub: `X` partners `P1` (or `P2`) in another union *and* that
+ * endpoint has ≥ 3 same-row unions. This still flags:
+ * - any **foreign** node (sibling, cousin, unrelated) between a couple — the real
+ *   reported bug; and
+ * - a co-spouse between the partners of a **≤ 2-union** node, where a clean
+ *   straddle exists and the betweenness is a fixable bad order.
+ *
+ * @param tol - Inset from each partner (default `SYMBOL_SIZE / 2`) that an
+ *   interior node must clear before it is flagged.
+ */
+export function noNodeBetweenPartners(
+  pos: Positions,
+  doc: LayoutDoc,
+  tol = SYMBOL_SIZE / 2,
+): InvariantResult {
+  const violations: Violation[] = [];
+  const rowTol = 1;
+
+  // Same-row partner graph, for the hub carve-out. `partnersOf` maps each
+  // individual to its partners across all unions; `sameRowDegree` counts how many
+  // of those partners are placed on the individual's own row — i.e. its effective
+  // union degree in the linear row it is being laid out on.
+  const partnersOf = new Map<string, Set<string>>();
+  for (const u of Object.values(doc.partnerships)) {
+    const a = u.partner1Id;
+    const b = u.partner2Id;
+    if (!a || !b || a === b) continue;
+    (partnersOf.get(a) ?? partnersOf.set(a, new Set()).get(a)!).add(b);
+    (partnersOf.get(b) ?? partnersOf.set(b, new Set()).get(b)!).add(a);
+  }
+  const sameRowDegree = (id: string, y: number): number => {
+    let n = 0;
+    for (const q of partnersOf.get(id) ?? []) {
+      if (q in pos && Math.abs(pos[q].y - y) <= rowTol) n++;
+    }
+    return n;
+  };
+  /** A hub (≥3 same-row unions) may keep one of its own spouses between it and a
+   *  non-adjacent spouse — the only structurally-unavoidable betweenness. */
+  const isUnavoidableHubSpouse = (x: string, p1: string, p2: string, y: number): boolean =>
+    (partnersOf.get(p1)?.has(x) === true && sameRowDegree(p1, y) >= 3) ||
+    (partnersOf.get(p2)?.has(x) === true && sameRowDegree(p2, y) >= 3);
+
+  for (const [uid, u] of Object.entries(doc.partnerships)) {
+    const p1 = u.partner1Id;
+    const p2 = u.partner2Id;
+    if (!p1 || !p2 || p1 === p2) continue;
+    if (!(p1 in pos) || !(p2 in pos)) continue;
+    const lo = Math.min(pos[p1].x, pos[p2].x);
+    const hi = Math.max(pos[p1].x, pos[p2].x);
+    const rowY = (pos[p1].y + pos[p2].y) / 2;
+    for (const id of Object.keys(pos)) {
+      if (id === p1 || id === p2) continue;
+      if (Math.abs(pos[id].y - rowY) > rowTol) continue;
+      if (pos[id].x > lo + tol && pos[id].x < hi - tol) {
+        if (isUnavoidableHubSpouse(id, p1, p2, rowY)) continue;
+        violations.push({
+          rule: 'noNodeBetweenPartners',
+          ids: [uid, p1, p2, id],
+          detail: `${id} at x=${pos[id].x.toFixed(1)} lies between partners ${p1}(${pos[p1].x.toFixed(1)}) and ${p2}(${pos[p2].x.toFixed(1)})`,
+        });
+      }
+    }
+  }
+  return { ok: violations.length === 0, violations };
+}
+
+/**
+ * Assert that every cross-branch couple — one where *both* partners are
+ * load-bearing in-laws (each descends from its own family) — sits no further
+ * apart than `maxFactor × partnerSpacing`. Ordinary couples (with at least one
+ * married-in founder) are governed by {@link minPartnerSpacing} and skipped here.
+ *
+ * Best-effort: an over-constrained couple boxed in by obstacles may legitimately
+ * exceed the bound, so `maxFactor` is tuned to the tightest value a compacted
+ * layout actually achieves.
+ */
+export function boundedPartnerDistance(
+  pos: Positions,
+  doc: LayoutDoc,
+  spacing: LayoutSpacing = DEFAULT_LAYOUT_SPACING,
+  maxFactor = 2,
+): InvariantResult {
+  const violations: Violation[] = [];
+  const bound = maxFactor * spacing.partnerSpacing;
+  for (const [uid, u] of Object.entries(doc.partnerships)) {
+    const p1 = u.partner1Id;
+    const p2 = u.partner2Id;
+    if (!p1 || !p2 || p1 === p2) continue;
+    if (!(p1 in pos) || !(p2 in pos)) continue;
+    // Cross-branch only: both partners are load-bearing in their own families.
+    if (!isLoadBearingInLaw(doc, p1) || !isLoadBearingInLaw(doc, p2)) continue;
+    const gap = Math.abs(pos[p1].x - pos[p2].x);
+    if (gap > bound) {
+      violations.push({
+        rule: 'boundedPartnerDistance',
+        ids: [uid, p1, p2],
+        detail: `cross-branch couple gap ${gap.toFixed(1)} > ${bound} (maxFactor ${maxFactor} × partnerSpacing ${spacing.partnerSpacing})`,
+      });
+    }
+  }
+  return { ok: violations.length === 0, violations };
+}
+
+/**
+ * Assert that no generation row spans more than `maxFactor × (n − 1) ×
+ * minSpacing`, where `n` is the count of nodes on the row and `minSpacing =
+ * max(siblingSpacing, MIN_GENERATION_NODE_SPACING)`. This bounds the overall
+ * chart width after a compacting re-tidy — the "very wide pedigree" symptom.
+ * Rows are keyed by rounded y (1 px). Best-effort: `maxFactor` is tuned to the
+ * tightest value a reformatted layout actually achieves.
+ */
+export function chartWidth(
+  pos: Positions,
+  _doc: LayoutDoc,
+  spacing: LayoutSpacing = DEFAULT_LAYOUT_SPACING,
+  maxFactor = 2,
+): InvariantResult {
+  const violations: Violation[] = [];
+  const minSpacing = Math.max(spacing.siblingSpacing, MIN_GENERATION_NODE_SPACING);
+  const byRow = new Map<number, number[]>();
+  for (const id of Object.keys(pos)) {
+    const ky = Math.round(pos[id].y);
+    const arr = byRow.get(ky);
+    if (arr) arr.push(pos[id].x);
+    else byRow.set(ky, [pos[id].x]);
+  }
+  for (const [ky, xs] of byRow) {
+    if (xs.length < 2) continue;
+    const span = Math.max(...xs) - Math.min(...xs);
+    const bound = maxFactor * (xs.length - 1) * minSpacing;
+    if (span > bound) {
+      violations.push({
+        rule: 'chartWidth',
+        ids: [`row@${ky}`],
+        detail: `row y=${ky} span ${span.toFixed(1)} > ${bound} (maxFactor ${maxFactor} × (n−1=${xs.length - 1}) × minSpacing ${minSpacing})`,
+      });
+    }
+  }
   return { ok: violations.length === 0, violations };
 }
 

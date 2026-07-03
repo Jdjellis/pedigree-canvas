@@ -3,8 +3,11 @@ import {
   finalPositions, noSymbolOverlap, minSiblingSpacing, minPartnerSpacing,
   generationRowAlignment, noCrossedDescentLines, subtreeNonCollision,
   manualOrderPreserved, twinContiguity, anchorStability,
+  noNodeBetweenPartners, boundedPartnerDistance, chartWidth,
 } from './invariants';
+import type { Positions } from './invariants';
 import type { LayoutDoc } from '../treeLayout';
+import { DEFAULT_LAYOUT_SPACING } from '../treeLayout';
 import type { Individual, PartnershipRelationship, ParentChildRelationship, TwinGroup } from '../../types/pedigree';
 import { RelationshipType, TwinType } from '../../types/enums';
 import { createDefaultIndividual } from '../../stores/pedigreeStore';
@@ -213,5 +216,176 @@ describe('anchorStability', () => {
   it('flags an anchor id that moved', () => {
     const d = doc({ individuals: { a: ind('a', 10, 0) } });
     expect(anchorStability(d, { a: { x: 99, y: 0 } }, 'a').ok).toBe(false);
+  });
+});
+
+describe('noNodeBetweenPartners', () => {
+  it('flags a non-partner sibling sitting strictly between a couple’s two partners', () => {
+    // Couple (blood, spouse); blood’s sibling `sib` is wedged between them on the row.
+    // Mirrors the reported ae00-between-7a64/c912 bug.
+    const d = doc({
+      individuals: {
+        blood: ind('blood', 0, 1), sib: ind('sib', 200, 1), spouse: ind('spouse', 400, 1),
+      },
+      partnerships: { u: union('u', 'blood', 'spouse', []) },
+    });
+    const pos = { blood: { x: 0, y: 150 }, sib: { x: 200, y: 150 }, spouse: { x: 400, y: 150 } };
+    expect(noNodeBetweenPartners(pos, d).ok).toBe(false);
+  });
+
+  it('passes when the couple’s partners are adjacent with nothing between them', () => {
+    const d = doc({
+      individuals: {
+        blood: ind('blood', 0, 1), spouse: ind('spouse', 120, 1), sib: ind('sib', 260, 1),
+      },
+      partnerships: { u: union('u', 'blood', 'spouse', []) },
+    });
+    const pos = { blood: { x: 0, y: 150 }, spouse: { x: 120, y: 150 }, sib: { x: 260, y: 150 } };
+    expect(noNodeBetweenPartners(pos, d).ok).toBe(true);
+  });
+
+  it('permits a multi-union hub sitting between its own two spouses', () => {
+    // hub married to s1 (left) and s2 (right); hub straddled. Each union’s own
+    // partners are adjacent, so neither union is violated.
+    const d = doc({
+      individuals: { s1: ind('s1', 0, 1), hub: ind('hub', 120, 1), s2: ind('s2', 240, 1) },
+      partnerships: { u1: union('u1', 's1', 'hub', []), u2: union('u2', 'hub', 's2', []) },
+    });
+    const pos = { s1: { x: 0, y: 150 }, hub: { x: 120, y: 150 }, s2: { x: 240, y: 150 } };
+    expect(noNodeBetweenPartners(pos, d).ok).toBe(true);
+  });
+
+  it('ignores a node on a different generation row', () => {
+    // `other` is between the partners in x, but on a different row — not a violation.
+    const d = doc({
+      individuals: {
+        blood: ind('blood', 0, 1), spouse: ind('spouse', 400, 1), other: ind('other', 200, 0),
+      },
+      partnerships: { u: union('u', 'blood', 'spouse', []) },
+    });
+    const pos = { blood: { x: 0, y: 150 }, spouse: { x: 400, y: 150 }, other: { x: 200, y: 0 } };
+    expect(noNodeBetweenPartners(pos, d).ok).toBe(true);
+  });
+
+  it('permits a co-spouse between a 3-union hub and its non-adjacent spouse (structurally unavoidable)', () => {
+    // hub married to s1, s2, s3 (degree 3). Laid out s1, hub, s2, s3 — the union
+    // hub × s3 unavoidably has s2 (another of hub's own spouses) between them,
+    // because a point can be adjacent to at most two neighbours in a line.
+    const d = doc({
+      individuals: {
+        s1: ind('s1', 0, 1), hub: ind('hub', 120, 1),
+        s2: ind('s2', 240, 1), s3: ind('s3', 360, 1),
+      },
+      partnerships: {
+        u1: union('u1', 's1', 'hub', []),
+        u2: union('u2', 'hub', 's2', []),
+        u3: union('u3', 'hub', 's3', []),
+      },
+    });
+    const pos = {
+      s1: { x: 0, y: 150 }, hub: { x: 120, y: 150 },
+      s2: { x: 240, y: 150 }, s3: { x: 360, y: 150 },
+    };
+    expect(noNodeBetweenPartners(pos, d).ok).toBe(true);
+  });
+
+  it('still flags a co-spouse between a 2-union hub’s partners (a fixable bad order)', () => {
+    // hub married to only s1 and s2 (degree 2). Order s1, s2, hub wedges s2
+    // between s1 and hub even though the clean straddle s1, hub, s2 exists — so
+    // the carve-out does NOT apply and this remains a violation.
+    const d = doc({
+      individuals: { s1: ind('s1', 0, 1), s2: ind('s2', 120, 1), hub: ind('hub', 240, 1) },
+      partnerships: { u1: union('u1', 's1', 'hub', []), u2: union('u2', 'hub', 's2', []) },
+    });
+    const pos = { s1: { x: 0, y: 150 }, s2: { x: 120, y: 150 }, hub: { x: 240, y: 150 } };
+    expect(noNodeBetweenPartners(pos, d).ok).toBe(false);
+  });
+
+  it('still flags a foreign sibling between a 3-union hub’s partners', () => {
+    // A hub (degree 3) does NOT license a *non-partner* between its partners:
+    // `sib` is a plain sibling, not one of hub's spouses, so it is still flagged.
+    const d = doc({
+      individuals: {
+        s1: ind('s1', 0, 1), hub: ind('hub', 120, 1), sib: ind('sib', 200, 1),
+        s2: ind('s2', 280, 1), s3: ind('s3', 400, 1),
+      },
+      partnerships: {
+        u1: union('u1', 's1', 'hub', []),
+        u2: union('u2', 'hub', 's2', []),
+        u3: union('u3', 'hub', 's3', []),
+      },
+    });
+    const pos = {
+      s1: { x: 0, y: 150 }, hub: { x: 120, y: 150 }, sib: { x: 200, y: 150 },
+      s2: { x: 280, y: 150 }, s3: { x: 400, y: 150 },
+    };
+    // sib sits between hub and s2 (and hub and s3) but is not a co-spouse.
+    expect(noNodeBetweenPartners(pos, d).ok).toBe(false);
+  });
+});
+
+/** Build a cross-branch couple: x (child of fam1) × y (child of fam2), both
+ *  load-bearing. `gap` sets the horizontal distance between the partners. */
+function crossBranchCoupleDoc(gap: number): { d: LayoutDoc; pos: Positions } {
+  const d = doc({
+    individuals: {
+      pa1: ind('pa1', -60, 0), pa2: ind('pa2', gap + 60, 0),
+      x: ind('x', 0, 1), y: ind('y', gap, 1),
+    },
+    partnerships: {
+      fam1: union('fam1', 'pa1', undefined, ['x']),
+      fam2: union('fam2', 'pa2', undefined, ['y']),
+      couple: union('couple', 'x', 'y', []),
+    },
+    parentChildLinks: { l1: link('l1', 'fam1', 'x'), l2: link('l2', 'fam2', 'y') },
+  });
+  const pos: Positions = {
+    pa1: { x: -60, y: 0 }, pa2: { x: gap + 60, y: 0 },
+    x: { x: 0, y: 150 }, y: { x: gap, y: 150 },
+  };
+  return { d, pos };
+}
+
+describe('boundedPartnerDistance', () => {
+  it('flags a cross-branch couple (both load-bearing) further than maxFactor × PARTNER_SPACING', () => {
+    const { d, pos } = crossBranchCoupleDoc(1415); // the smoking-gun distance
+    expect(boundedPartnerDistance(pos, d, DEFAULT_LAYOUT_SPACING, 2).ok).toBe(false);
+  });
+
+  it('passes a cross-branch couple within maxFactor × PARTNER_SPACING', () => {
+    const { d, pos } = crossBranchCoupleDoc(120); // exactly PARTNER_SPACING
+    expect(boundedPartnerDistance(pos, d, DEFAULT_LAYOUT_SPACING, 2).ok).toBe(true);
+  });
+
+  it('ignores an ordinary couple where neither partner is load-bearing, however far apart', () => {
+    // Two founders married, seeded 1000 apart. Not cross-branch → not this
+    // invariant’s concern (minPartnerSpacing governs ordinary couples).
+    const d = doc({
+      individuals: { a: ind('a', 0, 0), b: ind('b', 1000, 0) },
+      partnerships: { u: union('u', 'a', 'b', []) },
+    });
+    const pos = { a: { x: 0, y: 0 }, b: { x: 1000, y: 0 } };
+    expect(boundedPartnerDistance(pos, d, DEFAULT_LAYOUT_SPACING, 2).ok).toBe(true);
+  });
+});
+
+describe('chartWidth', () => {
+  it('flags a generation row whose span exceeds maxFactor × (n − 1) × minSpacing', () => {
+    // 3 nodes spanning 1600 px; bound = 2 × 2 × 80 = 320.
+    const d = doc({ individuals: { a: ind('a', 0, 0), b: ind('b', 800, 0), c: ind('c', 1600, 0) } });
+    const pos = { a: { x: 0, y: 0 }, b: { x: 800, y: 0 }, c: { x: 1600, y: 0 } };
+    expect(chartWidth(pos, d, DEFAULT_LAYOUT_SPACING, 2).ok).toBe(false);
+  });
+
+  it('passes a tightly-packed generation row', () => {
+    // 3 nodes spanning 160 px; bound = 320.
+    const d = doc({ individuals: { a: ind('a', 0, 0), b: ind('b', 80, 0), c: ind('c', 160, 0) } });
+    const pos = { a: { x: 0, y: 0 }, b: { x: 80, y: 0 }, c: { x: 160, y: 0 } };
+    expect(chartWidth(pos, d, DEFAULT_LAYOUT_SPACING, 2).ok).toBe(true);
+  });
+
+  it('passes a single-node row (bound and span both zero)', () => {
+    const d = doc({ individuals: { a: ind('a', 0, 0) } });
+    expect(chartWidth({ a: { x: 0, y: 0 } }, d, DEFAULT_LAYOUT_SPACING, 2).ok).toBe(true);
   });
 });

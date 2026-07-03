@@ -1,0 +1,620 @@
+{
+  "app": "PedigreeCanvas",
+  "formatVersion": "2.0",
+  "document": {
+    "metadata": {
+      "id": "8a123db1-3bd3-4f1e-ad8c-188091a4e659",
+      "title": "Untitled Pedigree",
+      "createdAt": "2026-07-02T23:13:37.406Z",
+      "updatedAt": "2026-07-02T23:17:33.679Z",
+      "version": "1.0.0"
+    },
+    "individuals": {
+      "4a1d304b-9d80-4d44-a629-680c2e23449f": {
+        "id": "4a1d304b-9d80-4d44-a629-680c2e23449f",
+        "genderIdentity": "unknown",
+        "vitalStatus": "alive",
+        "conditionIds": [],
+        "conditions": [],
+        "investigations": [],
+        "isProband": false,
+        "isPregnancy": false,
+        "position": {
+          "x": -460,
+          "y": 0
+        },
+        "annotations": [],
+        "generation": 0
+      },
+      "a38d18f4-998a-4d2f-b695-2996ccb43ecb": {
+        "id": "a38d18f4-998a-4d2f-b695-2996ccb43ecb",
+        "genderIdentity": "man",
+        "vitalStatus": "alive",
+        "conditionIds": [],
+        "conditions": [],
+        "investigations": [],
+        "isProband": false,
+        "isPregnancy": false,
+        "position": {
+          "x": -660,
+          "y": -150
+        },
+        "annotations": [],
+        "generation": -1
+      },
+      "c36cac8c-8e68-43de-a238-84d7a0bfa473": {
+        "id": "c36cac8c-8e68-43de-a238-84d7a0bfa473",
+        "genderIdentity": "woman",
+        "vitalStatus": "alive",
+        "conditionIds": [],
+        "conditions": [],
+        "investigations": [],
+        "isProband": false,
+        "isPregnancy": false,
+        "position": {
+          "x": -340,
+          "y": -150
+        },
+        "annotations": [],
+        "generation": -1
+      },
+      "ddf27ee5-f33f-472b-8ed5-7f700b94825a": {
+        "id": "ddf27ee5-f33f-472b-8ed5-7f700b94825a",
+        "genderIdentity": "nonBinary",
+        "vitalStatus": "alive",
+        "conditionIds": [],
+        "conditions": [],
+        "investigations": [],
+        "isProband": false,
+        "isPregnancy": false,
+        "position": {
+          "x": 955.3620593083153,
+          "y": 1.1368683772161603e-13
+        },
+        "annotations": [],
+        "generation": 0
+      },
+      "7a642700-d972-4483-85dd-7d42ff90bd1f": {
+        "id": "7a642700-d972-4483-85dd-7d42ff90bd1f",
+        "genderIdentity": "man",
+        "vitalStatus": "alive",
+        "conditionIds": [],
+        "conditions": [],
+        "investigations": [],
+        "isProband": false,
+        "isPregnancy": false,
+        "position": {
+          "x": 809.4281101139989,
+          "y": -150
+        },
+        "annotations": [],
+        "generation": -1
+      },
+      "c91217aa-2c95-4894-8ec2-f2ccc814fd37": {
+        "id": "c91217aa-2c95-4894-8ec2-f2ccc814fd37",
+        "genderIdentity": "woman",
+        "vitalStatus": "alive",
+        "conditionIds": [],
+        "conditions": [],
+        "investigations": [],
+        "isProband": false,
+        "isPregnancy": false,
+        "position": {
+          "x": 1101.2960085026318,
+          "y": -149.9999999999999
+        },
+        "annotations": [],
+        "generation": -1
+      },
+      "729be79d-7929-4b0d-ac96-da0c2a243da7": {
+        "id": "729be79d-7929-4b0d-ac96-da0c2a243da7",
+        "genderIdentity": "man",
+        "vitalStatus": "alive",
+        "conditionIds": [],
+        "conditions": [],
+        "investigations": [],
+        "isProband": false,
+        "isPregnancy": false,
+        "position": {
+          "x": -400,
+          "y": -300
+        },
+        "annotations": [],
+        "generation": -2
+      },
+      "2022552c-c912-42f2-90f4-6b40a9b19907": {
+        "id": "2022552c-c912-42f2-90f4-6b40a9b19907",
+        "genderIdentity": "woman",
+        "vitalStatus": "alive",
+        "conditionIds": [],
+        "conditions": [],
+        "investigations": [],
+        "isProband": false,
+        "isPregnancy": false,
+        "position": {
+          "x": -280,
+          "y": -300
+        },
+        "annotations": [],
+        "generation": -2
+      },
+      "161fbd50-6d05-4e65-9855-749bc9b32322": {
+        "id": "161fbd50-6d05-4e65-9855-749bc9b32322",
+        "genderIdentity": "man",
+        "vitalStatus": "alive",
+        "conditionIds": [],
+        "conditions": [],
+        "investigations": [],
+        "isProband": false,
+        "isPregnancy": false,
+        "position": {
+          "x": 849.4281101139989,
+          "y": -300
+        },
+        "annotations": [],
+        "generation": -2
+      },
+      "c0d2ada7-7cb3-4f89-8aee-82d9c77e280c": {
+        "id": "c0d2ada7-7cb3-4f89-8aee-82d9c77e280c",
+        "genderIdentity": "woman",
+        "vitalStatus": "alive",
+        "conditionIds": [],
+        "conditions": [],
+        "investigations": [],
+        "isProband": false,
+        "isPregnancy": false,
+        "position": {
+          "x": 969.4281101139989,
+          "y": -300
+        },
+        "annotations": [],
+        "generation": -2
+      },
+      "b5fb1882-a98a-4a1c-b314-649ac0793497": {
+        "id": "b5fb1882-a98a-4a1c-b314-649ac0793497",
+        "genderIdentity": "unknown",
+        "vitalStatus": "alive",
+        "conditionIds": [],
+        "conditions": [],
+        "investigations": [],
+        "isProband": false,
+        "isPregnancy": false,
+        "position": {
+          "x": 247.68102965415767,
+          "y": 150.0000000000001
+        },
+        "annotations": [],
+        "generation": 1
+      },
+      "5564c279-991a-42aa-a030-35a509a7b187": {
+        "id": "5564c279-991a-42aa-a030-35a509a7b187",
+        "genderIdentity": "man",
+        "vitalStatus": "alive",
+        "conditionIds": [],
+        "conditions": [],
+        "investigations": [],
+        "isProband": false,
+        "isPregnancy": false,
+        "position": {
+          "x": -720,
+          "y": -300
+        },
+        "annotations": [],
+        "generation": -2
+      },
+      "7a36321c-aa5f-440e-8016-efc633366869": {
+        "id": "7a36321c-aa5f-440e-8016-efc633366869",
+        "genderIdentity": "woman",
+        "vitalStatus": "alive",
+        "conditionIds": [],
+        "conditions": [],
+        "investigations": [],
+        "isProband": false,
+        "isPregnancy": false,
+        "position": {
+          "x": -600,
+          "y": -300
+        },
+        "annotations": [],
+        "generation": -2
+      },
+      "0b13320e-9409-4000-b767-8ce2ec387dc9": {
+        "id": "0b13320e-9409-4000-b767-8ce2ec387dc9",
+        "genderIdentity": "unknown",
+        "vitalStatus": "alive",
+        "conditionIds": [],
+        "conditions": [],
+        "investigations": [],
+        "isProband": false,
+        "isPregnancy": false,
+        "position": {
+          "x": -700,
+          "y": 0
+        },
+        "annotations": [],
+        "generation": 0
+      },
+      "51dfd6cb-8536-49ae-b6cf-aadd795b9a53": {
+        "id": "51dfd6cb-8536-49ae-b6cf-aadd795b9a53",
+        "genderIdentity": "man",
+        "vitalStatus": "alive",
+        "conditionIds": [],
+        "conditions": [],
+        "investigations": [],
+        "isProband": false,
+        "isPregnancy": false,
+        "position": {
+          "x": -660,
+          "y": -450
+        },
+        "annotations": [],
+        "generation": -3
+      },
+      "be28c909-42e1-4da9-b2e0-6d434ad5020d": {
+        "id": "be28c909-42e1-4da9-b2e0-6d434ad5020d",
+        "genderIdentity": "woman",
+        "vitalStatus": "alive",
+        "conditionIds": [],
+        "conditions": [],
+        "investigations": [],
+        "isProband": false,
+        "isPregnancy": false,
+        "position": {
+          "x": -540,
+          "y": -450
+        },
+        "annotations": [],
+        "generation": -3
+      },
+      "ea5cde0f-ce3b-444e-b02b-f91aa189fc9f": {
+        "id": "ea5cde0f-ce3b-444e-b02b-f91aa189fc9f",
+        "genderIdentity": "man",
+        "vitalStatus": "alive",
+        "conditionIds": [],
+        "conditions": [],
+        "investigations": [],
+        "isProband": false,
+        "isPregnancy": false,
+        "position": {
+          "x": -460,
+          "y": -450
+        },
+        "annotations": [],
+        "generation": -3
+      },
+      "29c26734-cd1d-4099-ae6d-78e790f832f2": {
+        "id": "29c26734-cd1d-4099-ae6d-78e790f832f2",
+        "genderIdentity": "woman",
+        "vitalStatus": "alive",
+        "conditionIds": [],
+        "conditions": [],
+        "investigations": [],
+        "isProband": false,
+        "isPregnancy": false,
+        "position": {
+          "x": -340,
+          "y": -450
+        },
+        "annotations": [],
+        "generation": -3
+      },
+      "ae003442-8258-4ac1-ab3b-3301748b3049": {
+        "id": "ae003442-8258-4ac1-ab3b-3301748b3049",
+        "genderIdentity": "unknown",
+        "vitalStatus": "alive",
+        "conditionIds": [],
+        "conditions": [],
+        "investigations": [],
+        "isProband": false,
+        "isPregnancy": false,
+        "position": {
+          "x": 1009.4281101139989,
+          "y": -150
+        },
+        "annotations": [],
+        "generation": -1
+      },
+      "2aa34f8f-e23f-4b98-a11f-b38c62850db5": {
+        "id": "2aa34f8f-e23f-4b98-a11f-b38c62850db5",
+        "genderIdentity": "unknown",
+        "vitalStatus": "alive",
+        "conditionIds": [],
+        "conditions": [],
+        "investigations": [],
+        "isProband": false,
+        "isPregnancy": false,
+        "position": {
+          "x": 689.4138909208081,
+          "y": -150.0000000000001
+        },
+        "annotations": [],
+        "generation": -1
+      },
+      "15e93f4a-5740-403d-be6f-d03505955cba": {
+        "id": "15e93f4a-5740-403d-be6f-d03505955cba",
+        "genderIdentity": "man",
+        "vitalStatus": "alive",
+        "conditionIds": [],
+        "conditions": [],
+        "investigations": [],
+        "isProband": false,
+        "isPregnancy": false,
+        "position": {
+          "x": 889.4281101139989,
+          "y": -450
+        },
+        "annotations": [],
+        "generation": -3
+      },
+      "ff71a5db-af84-4234-8348-a333591968cf": {
+        "id": "ff71a5db-af84-4234-8348-a333591968cf",
+        "genderIdentity": "woman",
+        "vitalStatus": "alive",
+        "conditionIds": [],
+        "conditions": [],
+        "investigations": [],
+        "isProband": false,
+        "isPregnancy": false,
+        "position": {
+          "x": 809.4281101139989,
+          "y": -450
+        },
+        "annotations": [],
+        "generation": -3
+      },
+      "1c9c55b1-687e-4cf4-97e7-c6c2b5a62c76": {
+        "id": "1c9c55b1-687e-4cf4-97e7-c6c2b5a62c76",
+        "genderIdentity": "unknown",
+        "vitalStatus": "alive",
+        "conditionIds": [],
+        "conditions": [],
+        "investigations": [],
+        "isProband": false,
+        "isPregnancy": false,
+        "position": {
+          "x": 1089.4281101139989,
+          "y": -450
+        },
+        "annotations": [],
+        "generation": -3
+      },
+      "9fb23de3-8e78-4c90-b7b4-d7ed784a1a19": {
+        "id": "9fb23de3-8e78-4c90-b7b4-d7ed784a1a19",
+        "genderIdentity": "man",
+        "vitalStatus": "alive",
+        "conditionIds": [],
+        "conditions": [],
+        "investigations": [],
+        "isProband": false,
+        "isPregnancy": false,
+        "position": {
+          "x": 749.4281101139989,
+          "y": -600
+        },
+        "annotations": [],
+        "generation": -4
+      },
+      "9536848d-c215-4c5a-9bf3-dd8fe44413f8": {
+        "id": "9536848d-c215-4c5a-9bf3-dd8fe44413f8",
+        "genderIdentity": "woman",
+        "vitalStatus": "alive",
+        "conditionIds": [],
+        "conditions": [],
+        "investigations": [],
+        "isProband": false,
+        "isPregnancy": false,
+        "position": {
+          "x": 869.4281101139989,
+          "y": -600
+        },
+        "annotations": [],
+        "generation": -4
+      }
+    },
+    "partnerships": {
+      "5c542721-ad6d-49b2-9de1-f9472affc56d": {
+        "id": "5c542721-ad6d-49b2-9de1-f9472affc56d",
+        "type": "partnership",
+        "partner1Id": "a38d18f4-998a-4d2f-b695-2996ccb43ecb",
+        "partner2Id": "c36cac8c-8e68-43de-a238-84d7a0bfa473",
+        "childrenIds": [
+          "4a1d304b-9d80-4d44-a629-680c2e23449f",
+          "0b13320e-9409-4000-b767-8ce2ec387dc9"
+        ]
+      },
+      "4797cfe0-4ea1-4ce3-a1e5-cfc6dd1515bd": {
+        "id": "4797cfe0-4ea1-4ce3-a1e5-cfc6dd1515bd",
+        "type": "partnership",
+        "partner1Id": "4a1d304b-9d80-4d44-a629-680c2e23449f",
+        "partner2Id": "ddf27ee5-f33f-472b-8ed5-7f700b94825a",
+        "childrenIds": [
+          "b5fb1882-a98a-4a1c-b314-649ac0793497"
+        ]
+      },
+      "625b3f67-cbc7-4e1d-8b81-0102b7c7e364": {
+        "id": "625b3f67-cbc7-4e1d-8b81-0102b7c7e364",
+        "type": "partnership",
+        "partner1Id": "7a642700-d972-4483-85dd-7d42ff90bd1f",
+        "partner2Id": "c91217aa-2c95-4894-8ec2-f2ccc814fd37",
+        "childrenIds": [
+          "ddf27ee5-f33f-472b-8ed5-7f700b94825a"
+        ]
+      },
+      "6c1ec9db-5e8d-41f7-b01f-4a97fb9ee17e": {
+        "id": "6c1ec9db-5e8d-41f7-b01f-4a97fb9ee17e",
+        "type": "partnership",
+        "partner1Id": "729be79d-7929-4b0d-ac96-da0c2a243da7",
+        "partner2Id": "2022552c-c912-42f2-90f4-6b40a9b19907",
+        "childrenIds": [
+          "c36cac8c-8e68-43de-a238-84d7a0bfa473"
+        ]
+      },
+      "2ec069e8-eac3-40f7-b9ab-bbcd193eb445": {
+        "id": "2ec069e8-eac3-40f7-b9ab-bbcd193eb445",
+        "type": "partnership",
+        "partner1Id": "161fbd50-6d05-4e65-9855-749bc9b32322",
+        "partner2Id": "c0d2ada7-7cb3-4f89-8aee-82d9c77e280c",
+        "childrenIds": [
+          "7a642700-d972-4483-85dd-7d42ff90bd1f",
+          "ae003442-8258-4ac1-ab3b-3301748b3049"
+        ]
+      },
+      "24bf4c85-21bc-4a3a-bdd2-c0fa3b1447c7": {
+        "id": "24bf4c85-21bc-4a3a-bdd2-c0fa3b1447c7",
+        "type": "partnership",
+        "partner1Id": "5564c279-991a-42aa-a030-35a509a7b187",
+        "partner2Id": "7a36321c-aa5f-440e-8016-efc633366869",
+        "childrenIds": [
+          "a38d18f4-998a-4d2f-b695-2996ccb43ecb"
+        ]
+      },
+      "a63558d9-ee96-4760-b040-6edf734adb73": {
+        "id": "a63558d9-ee96-4760-b040-6edf734adb73",
+        "type": "partnership",
+        "partner1Id": "51dfd6cb-8536-49ae-b6cf-aadd795b9a53",
+        "partner2Id": "be28c909-42e1-4da9-b2e0-6d434ad5020d",
+        "childrenIds": [
+          "7a36321c-aa5f-440e-8016-efc633366869"
+        ]
+      },
+      "8286b5fe-35b9-49e0-97bc-e389f8246d15": {
+        "id": "8286b5fe-35b9-49e0-97bc-e389f8246d15",
+        "type": "partnership",
+        "partner1Id": "ea5cde0f-ce3b-444e-b02b-f91aa189fc9f",
+        "partner2Id": "29c26734-cd1d-4099-ae6d-78e790f832f2",
+        "childrenIds": [
+          "729be79d-7929-4b0d-ac96-da0c2a243da7"
+        ]
+      },
+      "f215129a-f981-4447-aa99-93fc350e7321": {
+        "id": "f215129a-f981-4447-aa99-93fc350e7321",
+        "type": "partnership",
+        "partner1Id": "c91217aa-2c95-4894-8ec2-f2ccc814fd37",
+        "partner2Id": "2aa34f8f-e23f-4b98-a11f-b38c62850db5",
+        "childrenIds": []
+      },
+      "d77fd941-bca0-41b2-b283-a262ddc129c4": {
+        "id": "d77fd941-bca0-41b2-b283-a262ddc129c4",
+        "type": "partnership",
+        "partner1Id": "15e93f4a-5740-403d-be6f-d03505955cba",
+        "partner2Id": "ff71a5db-af84-4234-8348-a333591968cf",
+        "childrenIds": [
+          "161fbd50-6d05-4e65-9855-749bc9b32322"
+        ]
+      },
+      "75a34984-7045-43cf-8338-a6c1e5465e7f": {
+        "id": "75a34984-7045-43cf-8338-a6c1e5465e7f",
+        "type": "partnership",
+        "childrenIds": [
+          "15e93f4a-5740-403d-be6f-d03505955cba",
+          "1c9c55b1-687e-4cf4-97e7-c6c2b5a62c76"
+        ]
+      },
+      "f8e57b8b-4793-4032-89db-cd33ed909307": {
+        "id": "f8e57b8b-4793-4032-89db-cd33ed909307",
+        "type": "partnership",
+        "partner1Id": "9fb23de3-8e78-4c90-b7b4-d7ed784a1a19",
+        "partner2Id": "9536848d-c215-4c5a-9bf3-dd8fe44413f8",
+        "childrenIds": [
+          "ff71a5db-af84-4234-8348-a333591968cf"
+        ]
+      }
+    },
+    "parentChildLinks": {
+      "1943d138-1456-4765-b16a-d1171da448b1": {
+        "id": "1943d138-1456-4765-b16a-d1171da448b1",
+        "type": "parentChild",
+        "parentPartnershipId": "5c542721-ad6d-49b2-9de1-f9472affc56d",
+        "childId": "4a1d304b-9d80-4d44-a629-680c2e23449f"
+      },
+      "2ec092b9-91da-4207-8e4f-e77d8e2265a8": {
+        "id": "2ec092b9-91da-4207-8e4f-e77d8e2265a8",
+        "type": "parentChild",
+        "parentPartnershipId": "625b3f67-cbc7-4e1d-8b81-0102b7c7e364",
+        "childId": "ddf27ee5-f33f-472b-8ed5-7f700b94825a"
+      },
+      "7bb09eda-7de6-4cba-8ba8-96fb4c490b89": {
+        "id": "7bb09eda-7de6-4cba-8ba8-96fb4c490b89",
+        "type": "parentChild",
+        "parentPartnershipId": "6c1ec9db-5e8d-41f7-b01f-4a97fb9ee17e",
+        "childId": "c36cac8c-8e68-43de-a238-84d7a0bfa473"
+      },
+      "34569f68-59f0-4911-a909-92ab1a86fc2a": {
+        "id": "34569f68-59f0-4911-a909-92ab1a86fc2a",
+        "type": "parentChild",
+        "parentPartnershipId": "2ec069e8-eac3-40f7-b9ab-bbcd193eb445",
+        "childId": "7a642700-d972-4483-85dd-7d42ff90bd1f"
+      },
+      "31d35edb-8124-4b9f-ae2f-85d2049eec76": {
+        "id": "31d35edb-8124-4b9f-ae2f-85d2049eec76",
+        "type": "parentChild",
+        "parentPartnershipId": "4797cfe0-4ea1-4ce3-a1e5-cfc6dd1515bd",
+        "childId": "b5fb1882-a98a-4a1c-b314-649ac0793497"
+      },
+      "d487c5e8-dffb-4e73-af4b-a4131084d7ed": {
+        "id": "d487c5e8-dffb-4e73-af4b-a4131084d7ed",
+        "type": "parentChild",
+        "parentPartnershipId": "24bf4c85-21bc-4a3a-bdd2-c0fa3b1447c7",
+        "childId": "a38d18f4-998a-4d2f-b695-2996ccb43ecb"
+      },
+      "a0bd1c84-9b78-4d15-86b0-71a6797bd916": {
+        "id": "a0bd1c84-9b78-4d15-86b0-71a6797bd916",
+        "type": "parentChild",
+        "parentPartnershipId": "5c542721-ad6d-49b2-9de1-f9472affc56d",
+        "childId": "0b13320e-9409-4000-b767-8ce2ec387dc9"
+      },
+      "31141eea-df6f-4f33-99a7-b66dd15b3ecc": {
+        "id": "31141eea-df6f-4f33-99a7-b66dd15b3ecc",
+        "type": "parentChild",
+        "parentPartnershipId": "a63558d9-ee96-4760-b040-6edf734adb73",
+        "childId": "7a36321c-aa5f-440e-8016-efc633366869"
+      },
+      "5ae0c4e5-f42c-462e-b11b-50caaa2d917e": {
+        "id": "5ae0c4e5-f42c-462e-b11b-50caaa2d917e",
+        "type": "parentChild",
+        "parentPartnershipId": "8286b5fe-35b9-49e0-97bc-e389f8246d15",
+        "childId": "729be79d-7929-4b0d-ac96-da0c2a243da7"
+      },
+      "dcda8cc5-0443-4bc9-8e1c-007a199802e7": {
+        "id": "dcda8cc5-0443-4bc9-8e1c-007a199802e7",
+        "type": "parentChild",
+        "parentPartnershipId": "2ec069e8-eac3-40f7-b9ab-bbcd193eb445",
+        "childId": "ae003442-8258-4ac1-ab3b-3301748b3049"
+      },
+      "a510d23a-82a2-4450-b686-c6cfd4ca4b33": {
+        "id": "a510d23a-82a2-4450-b686-c6cfd4ca4b33",
+        "type": "parentChild",
+        "parentPartnershipId": "d77fd941-bca0-41b2-b283-a262ddc129c4",
+        "childId": "161fbd50-6d05-4e65-9855-749bc9b32322"
+      },
+      "14da6641-1e1d-4788-aa75-ea0354d77f97": {
+        "id": "14da6641-1e1d-4788-aa75-ea0354d77f97",
+        "type": "parentChild",
+        "parentPartnershipId": "75a34984-7045-43cf-8338-a6c1e5465e7f",
+        "childId": "15e93f4a-5740-403d-be6f-d03505955cba"
+      },
+      "de6e4407-59ce-43b5-9ee5-f5b0be95db7e": {
+        "id": "de6e4407-59ce-43b5-9ee5-f5b0be95db7e",
+        "type": "parentChild",
+        "parentPartnershipId": "75a34984-7045-43cf-8338-a6c1e5465e7f",
+        "childId": "1c9c55b1-687e-4cf4-97e7-c6c2b5a62c76"
+      },
+      "0d10e801-a786-48be-a6a8-3499c648d938": {
+        "id": "0d10e801-a786-48be-a6a8-3499c648d938",
+        "type": "parentChild",
+        "parentPartnershipId": "f8e57b8b-4793-4032-89db-cd33ed909307",
+        "childId": "ff71a5db-af84-4234-8348-a333591968cf"
+      }
+    },
+    "twinGroups": {},
+    "textAnnotations": {},
+    "generationOrder": [],
+    "legendConfig": {
+      "entries": [],
+      "position": {
+        "x": 50,
+        "y": 50
+      }
+    }
+  }
+}

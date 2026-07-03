@@ -636,6 +636,213 @@ export function wideCousinFan(): Fixture {
   };
 }
 
+/**
+ * MZ twins (`ta`, `tc`) with a singleton sibling (`tb`) whose id AND seed x both
+ * sort *between* the twins. A layout that orders siblings purely by
+ * id/seed tie-break (with no twin awareness) interleaves `tb` between the twins,
+ * violating twin contiguity — the failing-first case for making `reformatLayout`
+ * twin-aware. The single-family `computeTreeLayout` already passes this via
+ * `orderSiblingsWithTwins`.
+ */
+export function twinsWithInterleavingSibling(): Fixture {
+  const twinGroups: Record<string, TwinGroup> = {
+    g: {
+      id: 'g',
+      twinType: TwinType.Monozygotic,
+      individualIds: ['ta', 'tc'],
+      parentPartnershipId: 'u',
+    },
+  };
+  return {
+    name: 'twinsWithInterleavingSibling',
+    doc: doc({
+      individuals: {
+        p: ind('p', 0, 0),
+        ta: ind('ta', -80, 1),
+        tb: ind('tb', 0, 1), // id + seed both sort BETWEEN the twins
+        tc: ind('tc', 80, 1),
+      },
+      partnerships: { u: union('u', 'p', undefined, ['ta', 'tb', 'tc']) },
+      parentChildLinks: {
+        l1: link('l1', 'u', 'ta'),
+        l2: link('l2', 'u', 'tb'),
+        l3: link('l3', 'u', 'tc'),
+      },
+      twinGroups,
+    }),
+    rootUnionId: 'u',
+    twinGroups,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Synthetic reformat fixtures (issue #137) — multi-founder documents exercised
+// through `reformatLayout`. The real reported document (which imports the
+// `layout-bugs.json` asset) lives in `reformatFixtures.ts` so this shared module
+// stays free of a JSON import — the Playwright e2e loader imports this file and
+// only tolerates plain TS/ESM.
+// ---------------------------------------------------------------------------
+
+/**
+ * Minimal synthetic cross-branch marriage seeded far apart with a sibling in the
+ * gap — the reduced form of the `4a1d × ddf2` smoking gun.
+ *
+ *   Lgp1 + Lgp2 → La, Lsib   (left family, seeded far LEFT)
+ *   Rgp1 + Rgp2 → Rb, Rsib   (right family, seeded far RIGHT)
+ *   couple = La × Rb → kid    (both La and Rb are load-bearing)
+ *
+ * On the current engine `La` and `Rb` stay ~1440 px apart with `Lsib`/`Rsib`
+ * stranded in the gap; `reformatLayout` must bring the couple adjacent.
+ */
+export function farApartCrossBranchCouple(): Fixture {
+  return {
+    name: 'farApartCrossBranchCouple',
+    doc: doc({
+      individuals: {
+        Lgp1: ind('Lgp1', -60, 0), Lgp2: ind('Lgp2', 60, 0),
+        Rgp1: ind('Rgp1', 1340, 0), Rgp2: ind('Rgp2', 1460, 0),
+        La: ind('La', 0, 1), Lsib: ind('Lsib', 120, 1),
+        Rb: ind('Rb', 1400, 1), Rsib: ind('Rsib', 1280, 1),
+        kid: ind('kid', 700, 2),
+      },
+      partnerships: {
+        Lroot: union('Lroot', 'Lgp1', 'Lgp2', ['La', 'Lsib']),
+        Rroot: union('Rroot', 'Rgp1', 'Rgp2', ['Rb', 'Rsib']),
+        couple: union('couple', 'La', 'Rb', ['kid']),
+      },
+      parentChildLinks: {
+        a: link('a', 'Lroot', 'La'), b: link('b', 'Lroot', 'Lsib'),
+        c: link('c', 'Rroot', 'Rb'), d: link('d', 'Rroot', 'Rsib'),
+        e: link('e', 'couple', 'kid'),
+      },
+    }),
+    rootUnionId: 'Lroot',
+  };
+}
+
+/**
+ * Three founder families spread far across a row (≈700 px apart), two joined by a
+ * cross-branch marriage and the third left as a disconnected component. Exercises
+ * global width compaction (the "very wide pedigree" symptom): every generation
+ * row is far wider than its tight packing until `reformatLayout` squeezes it.
+ */
+export function wideMultiFounderChart(): Fixture {
+  return {
+    name: 'wideMultiFounderChart',
+    doc: doc({
+      individuals: {
+        m1: ind('m1', 0, 0), f1: ind('f1', 120, 0),
+        m2: ind('m2', 800, 0), f2: ind('f2', 920, 0),
+        m3: ind('m3', 1600, 0), f3: ind('f3', 1720, 0),
+        c1: ind('c1', 60, 1), c2: ind('c2', 860, 1), c3: ind('c3', 1660, 1),
+        g1: ind('g1', 460, 2),
+      },
+      partnerships: {
+        u1: union('u1', 'm1', 'f1', ['c1']),
+        u2: union('u2', 'm2', 'f2', ['c2']),
+        u3: union('u3', 'm3', 'f3', ['c3']),
+        couple: union('couple', 'c1', 'c2', ['g1']),
+      },
+      parentChildLinks: {
+        l1: link('l1', 'u1', 'c1'),
+        l2: link('l2', 'u2', 'c2'),
+        l3: link('l3', 'u3', 'c3'),
+        l4: link('l4', 'couple', 'g1'),
+      },
+    }),
+    rootUnionId: 'u1',
+  };
+}
+
+/**
+ * A hub individual married to THREE spouses on the same generation row, each
+ * union bearing a child (`hub × s1 → k1`, `hub × s2 → k2`, `hub × s3 → k3`).
+ *
+ * A hub with more than two same-row partnerships cannot be laid out as a single
+ * line with *every* couple adjacent: a point has only two neighbours in a line.
+ * `orderChainMembers` walks the partner graph as a path, reaches only two of the
+ * three spouses (`s1, hub, s2`), and appends the third (`s3`) — so in the packed
+ * row `s2` ends up wedged strictly between `hub` and `s3`, violating the union
+ * `hub × s3`. This is the reduced form of the reported `c912` hub generalised to
+ * 3 spouses, and it exposes the boundary of `reformatLayout`'s HARD
+ * `noNodeBetweenPartners` guarantee (issue #137): the guarantee holds for the
+ * reported two-spouse hub but not for three-or-more.
+ *
+ * The layout is otherwise geometrically valid (`checkAllInvariants` passes); only
+ * the between-partners guarantee is broken.
+ */
+export function threeUnionHub(): Fixture {
+  return {
+    name: 'threeUnionHub',
+    doc: doc({
+      individuals: {
+        s1: ind('s1', -120, 0), hub: ind('hub', 0, 0),
+        s2: ind('s2', 120, 0), s3: ind('s3', 240, 0),
+        k1: ind('k1', -60, 1), k2: ind('k2', 60, 1), k3: ind('k3', 180, 1),
+      },
+      partnerships: {
+        u1: union('u1', 's1', 'hub', ['k1']),
+        u2: union('u2', 'hub', 's2', ['k2']),
+        u3: union('u3', 'hub', 's3', ['k3']),
+      },
+      parentChildLinks: {
+        l1: link('l1', 'u1', 'k1'),
+        l2: link('l2', 'u2', 'k2'),
+        l3: link('l3', 'u3', 'k3'),
+      },
+    }),
+    rootUnionId: 'u1',
+  };
+}
+
+/**
+ * A twin who is themselves married. `a_tw1` and `c_tw2` are MZ twins (children
+ * of `p`); `c_tw2` is also partnered with married-in `d_sp`, and a plain sibling
+ * `b_sib` shares their row.
+ *
+ * `makeTwinsContiguous` only pulls *single-node* chains into a twin group's
+ * contiguous run, so the coupled twin `c_tw2` (locked into the `c_tw2 × d_sp`
+ * chain) is excluded from the group's contiguity pass. With only one of the two
+ * twins eligible, nothing prevents `b_sib` from tie-breaking between them: the
+ * barycentre order settles on `a_tw1, b_sib, c_tw2`, leaving a non-twin between
+ * the twins. Exposes the twin-contiguity gap for a married twin (issue #137).
+ * Ids are chosen so the deterministic tie-break produces the interleaving.
+ */
+export function marriedTwinInterleaved(): Fixture {
+  const twinGroups: Record<string, TwinGroup> = {
+    g: {
+      id: 'g',
+      twinType: TwinType.Monozygotic,
+      individualIds: ['a_tw1', 'c_tw2'],
+      parentPartnershipId: 'u',
+    },
+  };
+  return {
+    name: 'marriedTwinInterleaved',
+    doc: doc({
+      individuals: {
+        p: ind('p', 0, 0),
+        a_tw1: ind('a_tw1', -80, 1),
+        b_sib: ind('b_sib', 0, 1),
+        c_tw2: ind('c_tw2', 80, 1),
+        d_sp: ind('d_sp', 200, 1),
+      },
+      partnerships: {
+        u: union('u', 'p', undefined, ['a_tw1', 'b_sib', 'c_tw2']),
+        couple: union('couple', 'c_tw2', 'd_sp', []),
+      },
+      parentChildLinks: {
+        l1: link('l1', 'u', 'a_tw1'),
+        l2: link('l2', 'u', 'b_sib'),
+        l3: link('l3', 'u', 'c_tw2'),
+      },
+      twinGroups,
+    }),
+    rootUnionId: 'u',
+    twinGroups,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Exported fixture array
 // ---------------------------------------------------------------------------
@@ -660,6 +867,7 @@ export const ALL_FIXTURES: Array<() => Fixture> = [
   undefinedGenerationChild,
   remarriageHalfSibs,
   twinsWithSingletonSibling,
+  twinsWithInterleavingSibling,
   disconnectedComponents,
   selfPartneredUnion,
   wideCousinFan,
