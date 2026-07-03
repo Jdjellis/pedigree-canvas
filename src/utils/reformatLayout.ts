@@ -1,9 +1,15 @@
 import {
   DEFAULT_LAYOUT_SPACING,
   resolveGenerationRows,
+  computeTreeLayout,
 } from './treeLayout';
 import type { LayoutDoc, LayoutSpacing } from './treeLayout';
-import type { TwinGroup } from '../types/pedigree';
+import type {
+  Individual,
+  ParentChildRelationship,
+  PartnershipRelationship,
+  TwinGroup,
+} from '../types/pedigree';
 import { GENERATION_SPACING, MIN_GENERATION_NODE_SPACING } from './constants';
 
 /**
@@ -122,6 +128,24 @@ export function reformatLayout(
     order.set(g, makeTwinsContiguous(order.get(g)!, twinGroups));
   }
 
+  // Component contiguity: keep every connected family's chains together in each
+  // row, so a disconnected component is never packed *between* another family's
+  // nodes (which would open a gap the coordinate phase can't reclaim and would
+  // break idempotence — the extracted component re-seeds a different order next
+  // pass). A cross-branch marriage joins two founders into one component, so this
+  // never splits an intentionally-interleaved couple.
+  //
+  // A single *global* left-to-right component order (each component's mean row-
+  // normalised position, before contiguity is imposed) drives both this reorder
+  // and the coordinate-phase banding. Ordering per row independently would let a
+  // family that only dips left in a deeper row disagree with the band order and
+  // flip the row on the next pass — the classic idempotence break.
+  const componentOf = connectedComponents(doc, ids);
+  const compRank = componentOrder(ids, componentOf, posIndex());
+  for (const g of gens) {
+    order.set(g, makeComponentsContiguous(order.get(g)!, componentOf, compRank));
+  }
+
   /** Reorder one row's chains by the barycentre of each member's neighbours. */
   function reorderRow(
     g: number,
@@ -186,6 +210,31 @@ export function reformatLayout(
     alignPass(childrenOf, false);
   }
 
+  // --- Phase 3b: subtree separation (issue #141) ---------------------------
+  // The rigid per-row alignment above slides each row as one unit; it can never
+  // *widen* a row to make room for a deep subtree below, so a reordered branchy
+  // family can slide two cousin subtrees over one another — and
+  // `subtreeNonCollision` flags any two non-ancestor sibships whose child-x
+  // extents overlap, regardless of row. Two passes close the gap:
+  //
+  //   1. Re-tidy each hub-free connected family with the order-preserving,
+  //      contour-based `computeTreeLayout` — the same engine used on every
+  //      incremental edit, which already separates cousin subtrees and centres
+  //      sibships. It is seeded with the aligned x above, so it keeps the order
+  //      the phase-2 sweeps chose; it is skipped for a family containing a
+  //      multi-union hub, because its remarriage-frame widens a hub's spouses past
+  //      partner spacing, whereas the linear packing here keeps them adjacent
+  //      (the reported cross-branch bug). Hub families keep the aligned layout;
+  //      the residual hub geometry is the tracked follow-up.
+  //   2. Give each connected family its own disjoint x-band — a rigid whole-family
+  //      translation, so no internal couple, nesting, or spacing is disturbed
+  //      while two independent families (however many rows apart) never overlap.
+  const finalX: Record<string, number> = {};
+  for (const id of ids) finalX[id] = x.get(id)!;
+  retidyHubFreeComponents(doc, finalX, componentOf, genOf, parentsOf, spacing);
+  separateComponents(finalX, betweenGap, ids, componentOf, compRank);
+  for (const id of ids) x.set(id, finalX[id]);
+
   // --- Phase 4: anchor + y -------------------------------------------------
   // x: keep the document centroid fixed so the canvas does not jump.
   const meanSeed = meanBy(ids, seedX);
@@ -213,6 +262,260 @@ export function reformatLayout(
 /** Mean of `f` over `xs`. */
 function meanBy<T>(xs: readonly T[], f: (x: T) => number): number {
   return xs.reduce((s, x) => s + f(x), 0) / xs.length;
+}
+
+/**
+ * Re-tidy each hub-free connected family in place with `computeTreeLayout`, the
+ * order-preserving contour engine used on every incremental edit (issue #141).
+ * The rigid per-row alignment cannot widen a row to fit a deep subtree, so it
+ * leaves cousin subtrees overlapping; `computeTreeLayout` resolves exactly this
+ * with its descent-block separation and sibship centring. Each family is laid out
+ * on its own doc slice, seeded with the current (aligned) x so the phase-2 sibling
+ * order is preserved, and only the resulting x is written back — y is assigned by
+ * the caller's generation anchor.
+ *
+ * A family is **skipped** (kept in its linear form) when `computeTreeLayout` would
+ * lay it out *wider* than the compacting packing here, which is the whole reason
+ * this whole-document engine exists:
+ *   - a **multi-union hub** (a node with ≥2 same-slice unions) — its remarriage
+ *     frame spaces the hub's second-and-later spouses by sibling spacing, wider
+ *     than the adjacent partner spacing the linear packing gives (the reported
+ *     cross-branch bug); and
+ *   - a **cross-branch couple** (both partners have present parents) — its frame
+ *     spreads the two grandparent families apart, whereas the packing pulls them
+ *     together, so delegating would balloon the chart width.
+ * These families keep the aligned layout; a hub's stranded union and a deep
+ * cross-branch subtree overlap are the tracked follow-ups (#141 rec 3.1–3.2). A
+ * plain branching family (every union is blood × married-in) is re-tidied, which
+ * is exactly where the linear packing left cousin subtrees overlapping.
+ *
+ * Mutates `finalX` in place. Deterministic and order-preserving, so a document
+ * that is already tidy is left unchanged (idempotent).
+ */
+function retidyHubFreeComponents(
+  doc: LayoutDoc,
+  finalX: Record<string, number>,
+  componentOf: Map<string, string>,
+  genOf: (id: string) => number,
+  parentsOf: Map<string, string[]>,
+  spacing: LayoutSpacing,
+): void {
+  const hasParents = (id: string): boolean => (parentsOf.get(id)?.length ?? 0) > 0;
+  const members = new Map<string, string[]>();
+  for (const [id, root] of componentOf) {
+    const arr = members.get(root);
+    if (arr) arr.push(id);
+    else members.set(root, [id]);
+  }
+
+  for (const group of members.values()) {
+    const present = new Set(group);
+    // Slice this family's unions and parent-child links.
+    const partnerships: Record<string, PartnershipRelationship> = {};
+    for (const [uid, u] of Object.entries(doc.partnerships)) {
+      if ((u.partner1Id && present.has(u.partner1Id)) || (u.partner2Id && present.has(u.partner2Id))) {
+        partnerships[uid] = u;
+      }
+    }
+    // Keep the linear layout for a family `computeTreeLayout` would widen: one
+    // with a multi-union hub, or a cross-branch couple (both partners blood).
+    const degree = new Map<string, number>();
+    let crossBranch = false;
+    for (const u of Object.values(partnerships)) {
+      for (const p of [u.partner1Id, u.partner2Id]) if (p && present.has(p)) degree.set(p, (degree.get(p) ?? 0) + 1);
+      if (u.partner1Id && u.partner2Id && present.has(u.partner1Id) && present.has(u.partner2Id) &&
+        hasParents(u.partner1Id) && hasParents(u.partner2Id)) crossBranch = true;
+    }
+    if (crossBranch || [...degree.values()].some((d) => d >= 2)) continue;
+
+    const unionIds = Object.keys(partnerships).filter(
+      (uid) => partnerships[uid].partner1Id && partnerships[uid].partner2Id,
+    );
+    if (unionIds.length === 0) continue; // a lone individual or bare sibship: nothing to tidy
+
+    const parentChildLinks: Record<string, ParentChildRelationship> = {};
+    for (const [lid, l] of Object.entries(doc.parentChildLinks)) {
+      if (present.has(l.childId) && partnerships[l.parentPartnershipId]) parentChildLinks[lid] = l;
+    }
+    const individuals: Record<string, Individual> = {};
+    for (const id of group) {
+      // Seed x with the aligned x so computeTreeLayout preserves the phase-2 order.
+      individuals[id] = { ...doc.individuals[id], position: { x: finalX[id], y: genOf(id) * spacing.generationSpacing } };
+    }
+    const slice: LayoutDoc = { individuals, partnerships, parentChildLinks, twinGroups: doc.twinGroups };
+
+    // Root at the topmost union (min partner generation; id tie-break).
+    const rootUnionId = [...unionIds].sort((a, b) => {
+      const gen = (uid: string): number =>
+        Math.min(
+          ...[partnerships[uid].partner1Id, partnerships[uid].partner2Id]
+            .filter((p): p is string => !!p && present.has(p))
+            .map(genOf),
+        );
+      return gen(a) - gen(b) || (a < b ? -1 : a > b ? 1 : 0);
+    })[0];
+
+    const moves = computeTreeLayout(slice, rootUnionId, spacing);
+    for (const id of group) if (moves[id]) finalX[id] = moves[id].x;
+  }
+}
+
+/**
+ * Partition the present individuals into connected family components — union-find
+ * over partnership and parent-child edges — returning each id's component root
+ * (the smallest id in its component). A cross-branch marriage joins two founder
+ * families into one component; a childless isolated couple or an orphan sibship
+ * is its own component.
+ */
+function connectedComponents(
+  doc: LayoutDoc,
+  ids: readonly string[],
+): Map<string, string> {
+  const parent = new Map<string, string>();
+  for (const id of ids) parent.set(id, id);
+  const find = (a: string): string => {
+    let r = a;
+    while (parent.get(r) !== r) r = parent.get(r)!;
+    for (let cur = a; cur !== r; ) {
+      const next = parent.get(cur)!;
+      parent.set(cur, r);
+      cur = next;
+    }
+    return r;
+  };
+  const present = (id: string | undefined): id is string => !!id && parent.has(id);
+  const unite = (a: string, b: string): void => {
+    const ra = find(a);
+    const rb = find(b);
+    if (ra !== rb) parent.set(ra < rb ? rb : ra, ra < rb ? ra : rb);
+  };
+  for (const u of Object.values(doc.partnerships)) {
+    if (present(u.partner1Id) && present(u.partner2Id)) unite(u.partner1Id, u.partner2Id);
+  }
+  for (const l of Object.values(doc.parentChildLinks)) {
+    const u = doc.partnerships[l.parentPartnershipId];
+    if (!u || !present(l.childId)) continue;
+    for (const p of [u.partner1Id, u.partner2Id]) if (present(p)) unite(p, l.childId);
+  }
+  const root = new Map<string, string>();
+  for (const id of ids) root.set(id, find(id));
+  return root;
+}
+
+/**
+ * A single global left-to-right ordering of the connected components, keyed by
+ * each component's mean normalised horizontal position (`posIndex`, in [0, 1]).
+ * Returned as a component-root → rank map. Used by BOTH the row-contiguity pass
+ * and the coordinate-phase banding so they never disagree on which family sits
+ * left of which — the agreement that makes the layout a fixed point.
+ */
+function componentOrder(
+  ids: readonly string[],
+  componentOf: Map<string, string>,
+  posIndex: Map<string, number>,
+): Map<string, number> {
+  const acc = new Map<string, { sum: number; n: number }>();
+  for (const id of ids) {
+    const r = componentOf.get(id) ?? id;
+    const e = acc.get(r) ?? { sum: 0, n: 0 };
+    e.sum += posIndex.get(id) ?? 0;
+    e.n += 1;
+    acc.set(r, e);
+  }
+  const rank = new Map<string, number>();
+  [...acc.entries()]
+    .map(([root, { sum, n }]) => ({ root, mean: sum / n }))
+    .sort((a, b) => a.mean - b.mean || (a.root < b.root ? -1 : a.root > b.root ? 1 : 0))
+    .forEach((e, i) => rank.set(e.root, i));
+  return rank;
+}
+
+/**
+ * Reorder a row's chains so every connected component's chains form a contiguous
+ * run, mirroring {@link makeTwinsContiguous} at the family level, with the
+ * families laid out in the global {@link componentOrder}. Each component's chains
+ * keep their relative order, so twin and couple runs already fixed inside a
+ * family are preserved. Keeps a disconnected component from interleaving another
+ * family's row (see {@link separateComponents}).
+ */
+function makeComponentsContiguous(
+  chains: string[][],
+  componentOf: Map<string, string>,
+  compRank: Map<string, number>,
+): string[][] {
+  const compOf = (chain: string[]): string => componentOf.get(chain[0]) ?? chain[0];
+  const groups = new Map<string, string[][]>();
+  for (const chain of chains) {
+    const comp = compOf(chain);
+    const g = groups.get(comp);
+    if (g) g.push(chain);
+    else groups.set(comp, [chain]);
+  }
+  return [...groups.keys()]
+    .sort((a, b) => (compRank.get(a) ?? 0) - (compRank.get(b) ?? 0) || (a < b ? -1 : a > b ? 1 : 0))
+    .flatMap((comp) => groups.get(comp)!);
+}
+
+/**
+ * Give each connected family component its own disjoint horizontal band (issue
+ * #141). `subtreeNonCollision` flags *any* two non-ancestor sibships whose
+ * child-x extents overlap — including sibships in two unrelated families, however
+ * many rows apart. The per-row sweep only clears blocks that share a row, so a
+ * family whose deep (or in-law-stretched) descendants reach under a shallower
+ * neighbour still trips it. Fixing it is simple and safe at the family level:
+ * pack the components left-to-right into non-overlapping x-intervals separated by
+ * `minGap`.
+ *
+ * Each component moves as a single rigid unit, so no couple spacing, sibling
+ * order, nesting, or descent line inside it is disturbed. Because the ordering
+ * phase already keeps each component's nodes contiguous per row, a component's
+ * `[minX, maxX]` has no foreign node inside it, so the bands pack tightly with no
+ * reclaimable gap. Components are swept in the global {@link componentOrder}
+ * (`compRank`) — the SAME order the row-contiguity pass used — and only ever
+ * pushed right, so the two never disagree, and the pass is deterministic and
+ * idempotent (a document already in disjoint bands is left untouched).
+ */
+function separateComponents(
+  finalX: Record<string, number>,
+  minGap: number,
+  ids: readonly string[],
+  componentOf: Map<string, string>,
+  compRank: Map<string, number>,
+): void {
+  interface Comp {
+    members: string[];
+    minX: number;
+    maxX: number;
+    root: string;
+  }
+  const byRoot = new Map<string, Comp>();
+  for (const id of ids) {
+    const r = componentOf.get(id) ?? id;
+    const c = byRoot.get(r);
+    if (c) {
+      c.members.push(id);
+      c.minX = Math.min(c.minX, finalX[id]);
+      c.maxX = Math.max(c.maxX, finalX[id]);
+    } else {
+      byRoot.set(r, { members: [id], minX: finalX[id], maxX: finalX[id], root: r });
+    }
+  }
+
+  const comps = [...byRoot.values()].sort(
+    (a, b) =>
+      (compRank.get(a.root) ?? 0) - (compRank.get(b.root) ?? 0) ||
+      (a.root < b.root ? -1 : a.root > b.root ? 1 : 0),
+  );
+  let runningMax = -Infinity;
+  for (const c of comps) {
+    if (runningMax !== -Infinity && c.minX < runningMax + minGap) {
+      const shift = runningMax + minGap - c.minX;
+      for (const m of c.members) finalX[m] += shift;
+      c.minX += shift;
+      c.maxX += shift;
+    }
+    runningMax = c.maxX;
+  }
 }
 
 /**

@@ -158,16 +158,15 @@ describe('reformatLayout — known gaps (review of #137 PR1)', () => {
     expect(twinContiguity(pos, doc, twinGroups ?? {}).ok).toBe(false);
   });
 
-  it('subtreeCollisionRegression: reorders a connected family into overlapping subtrees (subtreeNonCollision not met)', () => {
-    // Found by the property-based discovery harness (arbitraryPedigree.ts). An
-    // ordinary connected single family — no hub, no twins, no disconnection.
+  // subtreeCollisionRegression was a known gap here; it is now FIXED (#141) — the
+  // coordinate phase re-tidies each plain branching family with computeTreeLayout's
+  // contour separation, so its cousin subtrees no longer overlap. It has graduated
+  // into ALL_FIXTURES, where the loop above asserts it satisfies every positional
+  // invariant. This regression test pins the fix so it cannot silently break.
+  it('subtreeCollisionRegression: cousin subtrees no longer overlap (subtree fix)', () => {
     const { doc } = subtreeCollisionRegression();
     const pos = reformatted(doc);
-    // BUG: the coordinate phase has no contour/subtree-separation step, so a deep
-    // subtree slides over its sibling. `checkAllInvariants` should hold once the
-    // engine gains subtree separation (#141) — flip this to `true` then.
-    expect(checkAllInvariants(pos, doc).ok).toBe(false);
-    const rules = checkAllInvariants(pos, doc).violations.map((v) => v.rule);
-    expect(rules).toContain('subtreeNonCollision');
+    expect(checkAllInvariants(pos, doc).ok).toBe(true);
+    expect(noNodeBetweenPartners(pos, doc).ok).toBe(true);
   });
 });
