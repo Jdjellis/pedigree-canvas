@@ -1,0 +1,119 @@
+/*
+ * Shared condition-field pickers (colour swatches, quarter grid, pattern
+ * thumbnails). Used by the Legend editor and the properties-panel add-condition
+ * form so the two share one direct-manipulation vocabulary. All colour comes
+ * from tokens; the accent (Clinical Indigo) marks the selected option only.
+ */
+
+/* ── Colour swatches ─────────────────────────────────────────── */
+.swatchRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.swatch {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  cursor: pointer;
+  transition: outline-color 0.1s;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.swatch:focus-visible,
+.swatchActive {
+  outline-color: var(--color-primary);
+}
+
+/* ── Quarter 2×2 grid ────────────────────────────────────────── */
+.quarterField {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.quarterGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 3px;
+  width: 56px;
+  height: 56px;
+  flex-shrink: 0;
+}
+
+.quarterCell {
+  border-radius: 3px;
+  background: var(--color-border);
+  border: none;
+  cursor: pointer;
+  transition: background 0.1s;
+  padding: 0;
+}
+
+.quarterCell:hover:not(.quarterCellActive) {
+  background: color-mix(in srgb, var(--color-text-secondary) 40%, transparent);
+}
+
+.quarterCell:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+.quarterCellActive {
+  background: var(--color-primary);
+}
+
+.quarterLabel {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+}
+
+/* ── Pattern thumbnails ──────────────────────────────────────── */
+.patternRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.patternSwatch {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 2px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  outline: 2px solid transparent;
+  outline-offset: 1px;
+  cursor: pointer;
+  transition: outline-color 0.1s, border-color 0.1s;
+}
+
+.patternSwatch:hover:not(.patternActive) {
+  border-color: var(--color-text-secondary);
+}
+
+.patternSwatch:focus-visible {
+  outline-color: var(--color-primary);
+}
+
+.patternActive {
+  outline-color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.patternCanvas {
+  display: block;
+  width: 24px;
+  height: 24px;
+  border-radius: 2px;
+}

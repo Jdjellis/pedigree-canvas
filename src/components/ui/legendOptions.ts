@@ -28,6 +28,18 @@ export const QUARTER_OPTIONS: { value: QuarterPosition; label: string }[] = [
 ];
 
 /**
+ * Symbol quarters in 2×2 CSS-grid render order (left-to-right, top-to-bottom):
+ * TL → TR → BL → BR. Distinct from {@link QUARTER_OPTIONS}' display order, which
+ * leads with the default `topRight`.
+ */
+export const QUARTER_GRID_ORDER: QuarterPosition[] = [
+  'topLeft',
+  'topRight',
+  'bottomLeft',
+  'bottomRight',
+];
+
+/**
  * Fill-pattern choices for a condition's quarter shading.
  */
 export const PATTERN_OPTIONS: { value: FillPatternType; label: string }[] = [

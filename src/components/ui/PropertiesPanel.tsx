@@ -12,6 +12,7 @@ import { SegmentedControl } from './SegmentedControl';
 import { ConnectionProperties } from './ConnectionProperties';
 import { MultiSelectProperties } from './MultiSelectProperties';
 import { TwinZygosityFields } from './TwinZygosityFields';
+import { ConditionColorPicker, ConditionQuarterGrid, ConditionPatternPicker } from './ConditionControls';
 import { generateId } from '../../utils/idGenerator';
 import { collectInvestigations } from '../../utils/investigations';
 import {
@@ -47,14 +48,6 @@ const QUARTER_LABELS: Record<QuarterPosition, string> = {
   bottomLeft: 'Bottom-Left',
   bottomRight: 'Bottom-Right',
 };
-
-// Render order matches the 2×2 CSS grid: TL → TR → BL → BR (left-to-right, top-to-bottom)
-const QUARTER_GRID_ORDER: QuarterPosition[] = [
-  'topLeft',
-  'topRight',
-  'bottomLeft',
-  'bottomRight',
-];
 
 const VITAL_STATUS_OPTIONS: { value: VitalStatus; label: string }[] = [
   { value: VitalStatus.Alive, label: 'Alive' },
@@ -408,58 +401,19 @@ export function PropertiesPanel() {
             />
             <div className={styles.field}>
               <label className={styles.label}>Color</label>
-              <div className={styles.swatchRow}>
-                {COLOR_OPTIONS.map((c) => (
-                  <button
-                    key={c.value}
-                    type="button"
-                    className={`${styles.swatch} ${conditionColor === c.value ? styles.swatchActive : ''}`}
-                    style={{ backgroundColor: c.value }}
-                    aria-label={c.label}
-                    aria-pressed={conditionColor === c.value}
-                    onClick={() => setConditionColor(c.value)}
-                  />
-                ))}
-              </div>
+              <ConditionColorPicker value={conditionColor} onChange={setConditionColor} />
             </div>
             <div className={styles.field}>
               <label className={styles.label}>Quarter</label>
-              <div className={styles.quarterField}>
-                <div className={styles.quarterGrid} role="group" aria-label="Symbol quarter">
-                  {QUARTER_GRID_ORDER.map((q) => {
-                    const option = QUARTER_OPTIONS.find((o) => o.value === q)!;
-                    return (
-                      <button
-                        key={q}
-                        type="button"
-                        className={`${styles.quarterCell} ${conditionQuarter === q ? styles.quarterCellActive : ''}`}
-                        aria-label={option.label}
-                        aria-pressed={conditionQuarter === q}
-                        onClick={() => setConditionQuarter(q)}
-                      />
-                    );
-                  })}
-                </div>
-                <span className={styles.quarterLabel}>
-                  {QUARTER_OPTIONS.find((o) => o.value === conditionQuarter)?.label}
-                </span>
-              </div>
+              <ConditionQuarterGrid value={conditionQuarter} onChange={setConditionQuarter} />
             </div>
             <div className={styles.field}>
               <label className={styles.label}>Pattern</label>
-              <select
-                className={styles.select}
+              <ConditionPatternPicker
                 value={conditionPattern}
-                onChange={(e) =>
-                  setConditionPattern(e.target.value as FillPatternType)
-                }
-              >
-                {PATTERN_OPTIONS.map((p) => (
-                  <option key={p.value} value={p.value}>
-                    {p.label}
-                  </option>
-                ))}
-              </select>
+                color={conditionColor}
+                onChange={setConditionPattern}
+              />
             </div>
             <div className={styles.noteFormActions}>
               <button
