@@ -103,32 +103,42 @@
   text-align: center;
 }
 
+/*
+ * Feedback callouts derive their surface, border, and text from the documented
+ * semantic tokens (--color-warning / --color-success / --color-danger) rather
+ * than hardcoded hexes, matching the color-mix idiom used across the panels.
+ * They mix toward fixed white/black (not the themed surface) on purpose: a
+ * warning must read as a warning in light, warm, and dim comfort themes, and
+ * this keeps the darkened text at >=5:1 in every one (Design Principle 2 —
+ * semantic colour is invariant). Text is mixed ~68% toward black because the
+ * raw hues fail the 4.5:1 body-text floor on a pale ground.
+ */
 .warning {
   margin: 14px 0 0;
   padding: 10px 12px;
-  background: #fffbe6;
-  border: 1px solid #f5e6a3;
+  background: color-mix(in srgb, var(--color-warning) 10%, white);
+  border: 1px solid color-mix(in srgb, var(--color-warning) 32%, white);
   border-radius: var(--radius-md);
   font-size: 12px;
-  color: #8a6d0b;
+  color: color-mix(in srgb, var(--color-warning) 68%, black);
 }
 
 .status {
   margin: 12px 0 0;
   padding: 8px 12px;
-  background: #e6f9ed;
-  border: 1px solid #a3e4b8;
+  background: color-mix(in srgb, var(--color-success) 10%, white);
+  border: 1px solid color-mix(in srgb, var(--color-success) 32%, white);
   border-radius: var(--radius-md);
   font-size: 13px;
-  color: #1a7a3a;
+  color: color-mix(in srgb, var(--color-success) 68%, black);
 }
 
 .error {
   margin: 12px 0 0;
   padding: 8px 12px;
-  background: #fce8e8;
-  border: 1px solid #e4a3a3;
+  background: color-mix(in srgb, var(--color-danger) 10%, white);
+  border: 1px solid color-mix(in srgb, var(--color-danger) 32%, white);
   border-radius: var(--radius-md);
   font-size: 13px;
-  color: #c53030;
+  color: color-mix(in srgb, var(--color-danger) 68%, black);
 }
