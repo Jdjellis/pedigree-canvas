@@ -19,17 +19,20 @@ full explanation and the fix):
 - **Feature flags** live in `src/config/featureFlags.ts` (build-time defaults,
   mutable for per-test overrides) — reset any flag you flip in a test's
   `afterEach`.
-- **Auto-spacing** (`computeTreeLayout`) is documented in the "Auto-spacing"
-  section of `docs/architecture-reference.md`; `src/utils/__fixtures__/pedigrees.ts`
-  + `invariants.ts` are the canonical layout test surface — add a fixture and
-  check invariants when changing layout.
+- **Auto-spacing** — start with the guided overview in
+  [`docs/auto-layout.md`](docs/auto-layout.md) (mental model, the two engines,
+  invariants, test surface, open residual), which links into the "Auto-spacing"
+  section of `docs/architecture-reference.md` for the execution-order pipeline.
+  `src/utils/__fixtures__/pedigrees.ts` + `invariants.ts` are the canonical layout
+  test surface — add a fixture and check invariants when changing layout.
   - When changing `reformatLayout` **or** any layout invariant, also run
     `npm run test:discovery` (the env-gated property-based full-space harness in
     `src/utils/reformatLayout.discovery.test.ts`) and triage findings before
-    merge. After an engine fix, re-run it and, once clean, remove `.skip` from
-    `reformatLayout.property.test.ts` to re-arm the standing green gate (and widen
-    the `SUPPORTED_SPACE` caps in `arbitraryPedigree.ts` as topologies become
-    handled). See issue #141.
+    merge. The standing green gate `reformatLayout.property.test.ts` runs over
+    `SUPPORTED_SPACE`; after an engine fix, re-run discovery and widen the
+    `SUPPORTED_SPACE` caps in `arbitraryPedigree.ts` as topologies become handled.
+    The remaining open topology (residual 1b: multi-union hub / twin-as-hub) is
+    tracked in the issues labelled `layout`.
 
 ## Clinical Standards Reference
 

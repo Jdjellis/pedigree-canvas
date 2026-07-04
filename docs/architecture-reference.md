@@ -56,6 +56,11 @@ Current flags: `altHint` (the radial menu's ⌥ discovery badge — off) and
 
 ## Auto-spacing
 
+> **New to layout?** Start with the guided, layered overview in
+> [`auto-layout.md`](auto-layout.md) — mental model, the two engines, the
+> invariants, the test surface, and the open residual — then return here for the
+> execution-order pipeline detail below.
+
 `computeTreeLayout(doc, rootUnionId, spacing?)` in `src/utils/treeLayout.ts` is
 a **pure function** that takes a `LayoutDoc` slice and returns only the nodes
 whose position changed (clean input → empty map). Because react-konva can't
