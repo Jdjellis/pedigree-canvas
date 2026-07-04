@@ -668,8 +668,8 @@ export const CanvasContainer = forwardRef<CanvasContainerHandle>(
               {marquee && (
                 <Rect
                   {...marqueeRect(marquee.start, marquee.current)}
-                  fill="rgba(105, 101, 219, 0.12)"
-                  stroke="#6965db"
+                  fill="rgba(79, 70, 201, 0.12)"
+                  stroke="#4f46c9"
                   strokeWidth={1}
                 />
               )}

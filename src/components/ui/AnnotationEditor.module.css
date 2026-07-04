@@ -6,7 +6,7 @@
   /* While editing, the box is transparent — only a dashed outline + the blinking
      caret signal that it is active, so the text reads exactly as it will once
      committed (no opaque white card hovering over the canvas). */
-  border: 1px dashed var(--color-accent, #6965db);
+  border: 1px dashed var(--color-primary);
   border-radius: 3px;
   background: transparent;
   text-align: center;

@@ -41,3 +41,14 @@ coverage
 # SDD subagent scratch (reports accidentally written to repo root)
 /sdd/
 /docs/sdd/
+
+# impeccable: the design-system deliverables (PRODUCT.md, DESIGN.md,
+# .impeccable/design.json, .impeccable/backlog.md) are tracked; ignore the
+# local tooling / run state below.
+.impeccable/config.local.json
+.impeccable/critique/
+.impeccable/live/
+
+# Stray dev screenshots at repo root
+/01-first-load.png
+/verify-65-descent-selected.png

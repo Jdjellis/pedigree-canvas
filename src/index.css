@@ -12,19 +12,21 @@
   --color-border: #e6e6ec;
   --color-text: #1a1a1a;
   --color-text-secondary: #6b6b75;
-  /* Excalidraw-aligned violet accent. */
-  --color-primary: #6965db;
-  --color-primary-hover: #5b57c9;
-  --color-primary-soft: rgba(105, 101, 219, 0.1);
-  --color-primary-soft-strong: rgba(105, 101, 219, 0.16);
-  --color-primary-border: rgba(105, 101, 219, 0.28);
+  /* Clinical Indigo — the chosen primary accent (selection, primary action,
+     active state). Deliberately deeper than the inherited Excalidraw violet. */
+  --color-primary: #4f46c9;
+  --color-primary-hover: #443cb9;
+  --color-primary-soft: rgba(79, 70, 201, 0.1);
+  --color-primary-soft-strong: rgba(79, 70, 201, 0.16);
+  --color-primary-border: rgba(79, 70, 201, 0.28);
   --color-danger: #dc2626;
   --color-warning: #d97706;
   --color-success: #16a34a;
 
-  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto,
+  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial,
     sans-serif;
-  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  --font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas,
+    'Liberation Mono', monospace;
 
   --radius-sm: 6px;
   --radius-md: 10px;
@@ -56,9 +58,9 @@
   --color-border: #ede5c8;
   --color-text: #3a3326;
   --color-text-secondary: #756a50;
-  --color-primary-soft: rgba(105, 101, 219, 0.12);
-  --color-primary-soft-strong: rgba(105, 101, 219, 0.18);
-  --color-primary-border: rgba(105, 101, 219, 0.32);
+  --color-primary-soft: rgba(79, 70, 201, 0.12);
+  --color-primary-soft-strong: rgba(79, 70, 201, 0.18);
+  --color-primary-border: rgba(79, 70, 201, 0.32);
 
   --shadow-sm: 0 1px 2px rgba(60, 45, 20, 0.08);
   --shadow-md: 0 4px 12px -2px rgba(60, 45, 20, 0.12),

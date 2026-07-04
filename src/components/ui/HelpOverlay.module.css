@@ -108,7 +108,7 @@
 
 .linkButton {
   font-size: 13px;
-  color: var(--color-primary, #2563eb);
+  color: var(--color-primary);
   background: transparent;
   border: none;
   padding: 0;
@@ -129,7 +129,7 @@
 
 .feedbackLink {
   font-size: 13px;
-  color: var(--color-primary, #2563eb);
+  color: var(--color-primary);
 }
 
 .footer {

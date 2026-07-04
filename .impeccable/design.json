@@ -1,0 +1,253 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-07-03T00:00:00.000Z",
+  "title": "Design System: Pedigree Canvas",
+  "extensions": {
+    "colorMeta": {
+      "clinical-indigo": {
+        "role": "primary",
+        "displayName": "Clinical Indigo",
+        "canonical": "oklch(0.484 0.191 279)",
+        "tonalRamp": [
+          "oklch(0.15 0.12 279)",
+          "oklch(0.24 0.16 279)",
+          "oklch(0.33 0.185 279)",
+          "oklch(0.42 0.19 279)",
+          "oklch(0.484 0.191 279)",
+          "oklch(0.60 0.15 279)",
+          "oklch(0.76 0.09 279)",
+          "oklch(0.95 0.04 279)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "oklch(0.20 0 0)",
+        "tonalRamp": [
+          "oklch(0.15 0 0)",
+          "oklch(0.25 0 0)",
+          "oklch(0.35 0 0)",
+          "oklch(0.45 0 0)",
+          "oklch(0.58 0 0)",
+          "oklch(0.72 0 0)",
+          "oklch(0.86 0 0)",
+          "oklch(0.96 0 0)"
+        ]
+      },
+      "ink-secondary": {
+        "role": "neutral",
+        "displayName": "Ink Secondary",
+        "canonical": "oklch(0.52 0.01 285)",
+        "tonalRamp": [
+          "oklch(0.20 0.01 285)",
+          "oklch(0.30 0.01 285)",
+          "oklch(0.40 0.01 285)",
+          "oklch(0.52 0.01 285)",
+          "oklch(0.64 0.01 285)",
+          "oklch(0.76 0.008 285)",
+          "oklch(0.87 0.006 285)",
+          "oklch(0.96 0.004 285)"
+        ]
+      },
+      "bg": {
+        "role": "neutral",
+        "displayName": "Workspace",
+        "canonical": "oklch(0.972 0.002 286)",
+        "tonalRamp": [
+          "oklch(0.20 0.002 286)",
+          "oklch(0.32 0.002 286)",
+          "oklch(0.45 0.002 286)",
+          "oklch(0.58 0.002 286)",
+          "oklch(0.72 0.002 286)",
+          "oklch(0.85 0.002 286)",
+          "oklch(0.93 0.002 286)",
+          "oklch(0.972 0.002 286)"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Surface",
+        "canonical": "oklch(1 0 0)"
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Hairline Border",
+        "canonical": "oklch(0.92 0.004 286)"
+      },
+      "condition-red": {
+        "role": "tertiary",
+        "displayName": "Signal Red",
+        "canonical": "oklch(0.617 0.207 21)",
+        "tonalRamp": [
+          "oklch(0.25 0.10 21)",
+          "oklch(0.35 0.14 21)",
+          "oklch(0.45 0.18 21)",
+          "oklch(0.55 0.20 21)",
+          "oklch(0.617 0.207 21)",
+          "oklch(0.72 0.16 21)",
+          "oklch(0.84 0.09 21)",
+          "oklch(0.94 0.04 21)"
+        ]
+      },
+      "condition-blue": {
+        "role": "tertiary",
+        "displayName": "Steel Blue",
+        "canonical": "oklch(0.545 0.079 243)",
+        "tonalRamp": [
+          "oklch(0.22 0.05 243)",
+          "oklch(0.32 0.06 243)",
+          "oklch(0.42 0.07 243)",
+          "oklch(0.545 0.079 243)",
+          "oklch(0.64 0.07 243)",
+          "oklch(0.76 0.05 243)",
+          "oklch(0.86 0.03 243)",
+          "oklch(0.95 0.015 243)"
+        ]
+      },
+      "condition-teal": {
+        "role": "tertiary",
+        "displayName": "Sea Teal",
+        "canonical": "oklch(0.62 0.093 180)",
+        "tonalRamp": [
+          "oklch(0.24 0.05 180)",
+          "oklch(0.34 0.07 180)",
+          "oklch(0.44 0.08 180)",
+          "oklch(0.53 0.09 180)",
+          "oklch(0.62 0.093 180)",
+          "oklch(0.74 0.07 180)",
+          "oklch(0.85 0.04 180)",
+          "oklch(0.95 0.02 180)"
+        ]
+      },
+      "danger": {
+        "role": "semantic",
+        "displayName": "Danger Red",
+        "canonical": "oklch(0.58 0.216 27)"
+      }
+    },
+    "typographyMeta": {
+      "title": { "displayName": "Section Title", "purpose": "11px uppercase, 0.05em tracking. In-panel section headers only — the one legitimate tracked-uppercase." },
+      "body": { "displayName": "Body", "purpose": "13–15px system sans. Panel content, command rows, inputs." },
+      "label": { "displayName": "Label", "purpose": "12px medium. Field labels, tool captions, text buttons." },
+      "mono": { "displayName": "Mono / Shortcut", "purpose": "11px monospace. Keyboard-shortcut chips only." },
+      "annotation": { "displayName": "Annotation (Caveat)", "purpose": "The one loaded webfont. Hand-written free-text notes on the canvas, never in chrome." }
+    },
+    "shadows": [
+      { "name": "island-lift", "value": "0 4px 16px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.06)", "purpose": "Canonical floating-chrome shadow — islands and the properties panel. Soft ambient + tight contact." },
+      { "name": "shadow-sm", "value": "0 1px 2px rgba(15,15,25,0.06)", "purpose": "Token: lightest lift." },
+      { "name": "shadow-md", "value": "0 4px 12px -2px rgba(15,15,25,0.1), 0 2px 4px -2px rgba(15,15,25,0.06)", "purpose": "Token: default lift. Islands should migrate onto this from their hardcoded shadow." },
+      { "name": "shadow-lg", "value": "0 12px 28px -6px rgba(15,15,25,0.16), 0 4px 10px -4px rgba(15,15,25,0.08)", "purpose": "Token: lifts the command palette modal." },
+      { "name": "segment-lift", "value": "0 1px 2px rgba(0,0,0,0.12)", "purpose": "The raised active thumb of a segmented control." }
+    ],
+    "motion": [
+      { "name": "ease-out-expo", "value": "cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "Panel/modal entrances (command-palette slideIn). The one non-default easing." },
+      { "name": "dur-state", "value": "100ms", "purpose": "Button background / state changes." },
+      { "name": "dur-fade", "value": "120ms", "purpose": "Backdrop and small fades." },
+      { "name": "dur-enter", "value": "140ms", "purpose": "Panel/menu entrance." },
+      { "name": "dur-border", "value": "150ms", "purpose": "Input focus border shift; radial option transitions." }
+    ],
+    "notes": {
+      "breakpoints": "None. Desktop-first, full-viewport single-canvas SPA; responsiveness is structural (floating slots), not breakpoint-driven.",
+      "reducedMotion": "GAP: no prefers-reduced-motion handling exists yet. fadeIn/slideIn/radial transitions should gain a reduced-motion fallback.",
+      "fonts": "The UI commits to the native OS fonts: system-ui for the sans role, the system monospace stack for the mono role. Only Caveat is web-loaded, for on-canvas annotations."
+    }
+  },
+  "components": [
+    {
+      "name": "Icon Button (island)",
+      "kind": "button",
+      "refersTo": "icon-button",
+      "description": "The square 32×32 icon control used across every floating island; takes an indigo-soft active state.",
+      "html": "<button class=\"ds-icon-btn\" aria-label=\"Undo\"><svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3 7v6h6\"/><path d=\"M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13\"/></svg></button>",
+      "css": ".ds-icon-btn { display:flex; align-items:center; justify-content:center; width:32px; height:32px; border:none; border-radius:6px; background:transparent; color:#1a1a1a; cursor:pointer; transition:background-color .1s; } .ds-icon-btn:hover { background:rgba(0,0,0,0.06); } .ds-icon-btn:active { background:rgba(0,0,0,0.1); } .ds-icon-btn:focus-visible { outline:2px solid #4f46c9; outline-offset:2px; } .ds-icon-btn[aria-pressed=\"true\"] { background:rgba(79,70,201,0.1); color:#4f46c9; }"
+    },
+    {
+      "name": "Tool Button",
+      "kind": "button",
+      "refersTo": "tool-button",
+      "description": "Taller vertical tool control: icon stacked over a monospace shortcut badge.",
+      "html": "<button class=\"ds-tool-btn\" aria-label=\"Select tool\"><span class=\"ds-tool-icon\"><svg viewBox=\"0 0 24 24\" width=\"18\" height=\"18\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m3 3 7.07 16.97 2.51-7.39 7.39-2.51L3 3z\"/></svg></span><span class=\"ds-tool-badge\">V</span></button>",
+      "css": ".ds-tool-btn { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; width:40px; height:48px; border:none; border-radius:6px; background:transparent; color:#1a1a1a; cursor:pointer; transition:background-color .1s; } .ds-tool-btn:hover { background:rgba(0,0,0,0.06); } .ds-tool-btn:active { background:rgba(0,0,0,0.1); } .ds-tool-btn:focus-visible { outline:2px solid #4f46c9; outline-offset:2px; } .ds-tool-icon { display:flex; align-items:center; justify-content:center; height:20px; } .ds-tool-badge { font-size:11px; line-height:12px; color:#6b6b75; }"
+    },
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one filled-indigo CTA — the export action. Used once per surface.",
+      "html": "<button class=\"ds-btn-primary\">Export</button>",
+      "css": ".ds-btn-primary { display:inline-flex; align-items:center; height:32px; padding:0 12px; border:none; border-radius:6px; background:#4f46c9; color:#fff; font-family:var(--font-sans); font-size:12px; font-weight:500; cursor:pointer; transition:background-color .1s; } .ds-btn-primary:hover { background:#443cb9; } .ds-btn-primary:active { background:#443cb9; opacity:.9; } .ds-btn-primary:focus-visible { outline:2px solid #4f46c9; outline-offset:2px; }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Standard field: hairline border, focus shifts border to Clinical Indigo — no glow.",
+      "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"Individual name\" />",
+      "css": ".ds-input { width:100%; padding:6px 8px; border:1px solid #e6e6ec; border-radius:6px; font-family:var(--font-sans); font-size:13px; background:#fff; color:#1a1a1a; outline:none; transition:border-color .15s; } .ds-input::placeholder { color:#6b6b75; } .ds-input:focus { border-color:#4f46c9; }"
+    },
+    {
+      "name": "Floating Island",
+      "kind": "card",
+      "refersTo": "island",
+      "description": "The signature container: surface + hairline border + soft lift, floating over the canvas.",
+      "html": "<div class=\"ds-island\"><button class=\"ds-island-btn\" aria-label=\"Zoom out\">−</button><span class=\"ds-island-readout\">100%</span><button class=\"ds-island-btn\" aria-label=\"Zoom in\">+</button></div>",
+      "css": ".ds-island { display:inline-flex; align-items:center; gap:4px; padding:6px; background:#fff; border:1px solid #e6e6ec; border-radius:10px; box-shadow:0 4px 16px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.06); } .ds-island-btn { display:flex; align-items:center; justify-content:center; width:32px; height:32px; border:none; border-radius:6px; background:transparent; color:#1a1a1a; font-size:16px; cursor:pointer; transition:background-color .1s; } .ds-island-btn:hover { background:rgba(0,0,0,0.06); } .ds-island-readout { font-size:12px; color:#6b6b75; min-width:48px; text-align:center; user-select:none; }"
+    },
+    {
+      "name": "Shortcut Chip",
+      "kind": "chip",
+      "refersTo": "mono",
+      "description": "Monospace keyboard-shortcut hint chip, as used in the command palette.",
+      "html": "<kbd class=\"ds-shortcut\">⌘K</kbd>",
+      "css": ".ds-shortcut { font-family:var(--font-mono, monospace); font-size:11px; color:#6b6b75; background:#f7f7f9; border:1px solid #e6e6ec; border-radius:4px; padding:1px 5px; white-space:nowrap; }"
+    },
+    {
+      "name": "Radial Menu Option",
+      "kind": "custom",
+      "refersTo": "icon-button",
+      "description": "Signature circular add-relative button orbiting a symbol; hover fills indigo, active scales down.",
+      "html": "<button class=\"ds-radial-option\">Child</button>",
+      "css": ".ds-radial-option { display:flex; align-items:center; justify-content:center; width:32px; height:32px; padding:2px; border:1px solid #e6e6ec; border-radius:50%; background:#fff; box-shadow:0 1px 4px rgba(0,0,0,0.1); color:#1a1a1a; font-family:var(--font-sans); font-size:8px; font-weight:600; line-height:1; letter-spacing:-0.2px; text-align:center; cursor:pointer; transition:background-color .15s, border-color .15s, transform .15s; } .ds-radial-option:hover { background:#4f46c9; border-color:#4f46c9; color:#fff; transform:scale(1.1); } .ds-radial-option:active { transform:scale(0.95); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Clinical Drafting Table",
+    "overview": "Pedigree Canvas is a calm, well-lit surface where a clinician draws a family pedigree. The drawing IS the document; everything else is a tool laid at the edge of the table, within reach but never in the way. The canvas fills the entire viewport, and the chrome — a set of small floating islands — hovers over it rather than framing it. The personality is a quiet professional instrument: precise, calm, approachable. It descends visibly from Excalidraw but sheds the whiteboard's casualness where clinical seriousness is required. Warmth is carried by generous spacing, plain-clinical copy, and the option of a warmer canvas tint — never by decoration. Confidence is carried by restraint: familiar controls, tight radii, subtle state changes, and an accent used so sparingly that when it appears you know exactly what it means.",
+    "keyCharacteristics": [
+      "Canvas-first: full-bleed drawing surface; chrome floats, never reflows the canvas.",
+      "On-demand UI: controls appear where and when needed (radial menu on a symbol, panel on selection).",
+      "One accent, used rarely: Clinical Indigo marks selection, primary action, and active state — nothing decorative.",
+      "Standards-locked canvas: symbols stay dark-on-light in every theme; fill is semantic (filled = affected).",
+      "Redundant encoding: colour is never the only channel — condition fills also carry a pattern.",
+      "Comfort, not modes: Light / Warm / Dim re-tint the surface; there is no dark mode."
+    ],
+    "rules": [
+      { "name": "The One Accent Rule", "body": "Clinical Indigo appears on ≤10% of any screen and always means 'this is active / selected / the primary action.' If indigo is decorating something inert, it is wrong.", "section": "colors" },
+      { "name": "The Semantic Fill Rule", "body": "On the canvas, fill is meaning, not style. A filled symbol is affected; an open symbol is unaffected. Never invert to a dark theme. This is why there is no dark mode — only comfort themes that keep symbols dark-on-light.", "section": "colors" },
+      { "name": "The Redundant-Colour Rule", "body": "Any colour that encodes clinical meaning must be paired with a second channel — a fill pattern (diagonalLines, dots, crosshatch, stripes) or a label — so a colour-blind reader loses nothing.", "section": "colors" },
+      { "name": "The Size-and-Weight Rule", "body": "Hierarchy comes from size and weight within one sans, never a second UI typeface. The only additional family is Caveat, and only for on-canvas annotations.", "section": "typography" },
+      { "name": "The Fixed-Scale Rule", "body": "Product UI uses a fixed px scale, never clamp()/fluid type. A control that shrinks in a docked panel reads as broken, not responsive.", "section": "typography" },
+      { "name": "The Lift-Means-Floating Rule", "body": "A shadow is permission to overlap the canvas — nothing else. Flat surfaces stay flat; shadows never encode importance or decorate a resting card.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do keep the canvas full-bleed and let chrome float over it. The pedigree is the hero.",
+      "Do reserve Clinical Indigo (#4f46c9) for selection, the primary action, active state, and focus — the One Accent Rule.",
+      "Do pair every meaning-bearing colour with a second channel — a fill pattern or a label — so condition shading survives colour-blindness.",
+      "Do keep symbols dark-on-light in every theme; comfort themes re-tint warmth and luminance only.",
+      "Do use the radius (6/10/14px) and shadow tokens; give floating chrome the Island Lift shadow and nothing at rest.",
+      "Do build every interactive control with default / hover / focus / active / disabled states, and keep transitions short (100–150ms, state-only).",
+      "Do design directly for the native system-sans stack — there is no bundled UI webfont.",
+      "Do honor prefers-reduced-motion on the palette/menu entrances with a crossfade or instant fallback. (Not yet implemented — add it.)"
+    ],
+    "donts": [
+      "Don't build dated enterprise medical software: no dense gray toolbars, tiny fonts, or modal soup. Exhaust inline/progressive UI before a modal.",
+      "Don't go sterile or cold — warmth lives in spacing and plain-clinical copy.",
+      "Don't ship the generic SaaS dashboard: no card grids, no gradient hero-metrics, no purple-gradient buttons, no tracked-uppercase eyebrow above every section.",
+      "Don't go playful or gamified: no mascots, emoji, bounce/elastic easing, or candy palettes.",
+      "Don't introduce a dark mode or invert the canvas — it breaks the Semantic Fill Rule.",
+      "Don't add a second UI typeface or use clamp()/fluid type. Caveat is for on-canvas annotations only.",
+      "Don't use border-left/border-right > 1px as a coloured accent stripe, or background-clip:text gradient text.",
+      "Don't push muted text lighter than Ink Secondary (#6b6b75) for 'elegance' — it fails contrast on the near-white surfaces."
+    ]
+  }
+}

@@ -47,8 +47,8 @@
 }
 
 .option:hover {
-  background: #eef2ff;
-  border-color: #a5b4fc;
+  background: var(--color-primary-soft);
+  border-color: var(--color-primary-border);
 }
 
 .optionLabel {
