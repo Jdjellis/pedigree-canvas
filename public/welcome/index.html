@@ -166,6 +166,7 @@
         font-weight: 600;
         letter-spacing: -0.01em;
         font-size: 15px;
+        white-space: nowrap;
       }
       .brand__mark {
         width: 28px;
@@ -744,14 +745,20 @@
       }
       .footer__links {
         display: flex;
-        gap: 8px 22px;
+        gap: 2px 8px;
         flex-wrap: wrap;
         font-size: 14px;
         font-weight: 500;
+        margin: -10px;
       }
       .footer__links a {
         color: var(--ink-2);
         transition: color 0.12s ease;
+        /* ~44px hit area without changing the visual text size */
+        display: inline-flex;
+        align-items: center;
+        min-height: 44px;
+        padding: 0 10px;
       }
       .footer__links a:hover {
         color: var(--primary);
@@ -855,7 +862,7 @@
           <a class="nav__link nav__link--ghost" href="#standards">Standards</a>
           <a class="nav__link nav__link--ghost" href="#features">Features</a>
           <a
-            class="nav__link"
+            class="nav__link nav__link--ghost"
             href="https://github.com/Jdjellis/pedigree-canvas"
             target="_blank"
             rel="noopener"
@@ -877,8 +884,7 @@
     </header>
 
     <!-- ===================== HERO ===================== -->
-    <a id="top"></a>
-    <section class="hero">
+    <section class="hero" id="top">
       <div class="wrap hero__grid">
         <div class="hero__copy">
           <span class="eyebrow"
@@ -904,7 +910,7 @@
               Open the canvas
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
             </a>
-            <a class="btn btn--ghost" href="#standards">See the nomenclature</a>
+            <a class="btn btn--ghost" href="#standards">See an example</a>
           </div>
           <div class="hero__trust">
             <span
@@ -1021,10 +1027,10 @@
           <span class="kicker">why not just draw it?</span>
           <h2>The tools you already have don't speak pedigree.</h2>
           <p>
-            By hand, a family history is slow and drifts out of standard. General
-            diagram tools don't know a consanguineous union from a partnership, or
-            a monozygotic fork from a sibship line. Pedigree Canvas does, so the
-            chart you produce is defensible against the source record.
+            By hand, a family history drifts out of standard. General diagram
+            tools don't know a consanguineous union from a partnership, or a
+            monozygotic fork from a sibship line. Pedigree Canvas does, so your
+            chart is defensible against the source record.
           </p>
         </div>
 
@@ -1082,10 +1088,10 @@
           <span class="kicker">the notation, built in</span>
           <h2>Standards aren't a setting. They're the point.</h2>
           <p>
-            The 2022 NSGC revision governs every decision: shape encodes gender
-            identity, fill encodes affected status, and colour is never the only
-            channel — condition shading always carries a pattern or label so a
-            colour-blind reader loses nothing.
+            <strong>Colour is never the only channel.</strong> Condition shading
+            always carries a pattern or a label, so a colour-blind reader loses
+            nothing. Shape encodes gender identity and fill encodes affected
+            status, all to the 2022 NSGC revision.
           </p>
           <p class="cite">
             Modelled on Bennett RL et al., <em>J Genet Couns</em> (1995 · 2008 ·
@@ -1262,7 +1268,7 @@
           <h2>The pedigree is a clinical document. Export it like one.</h2>
           <p>
             Push the chart straight into a patient record, a referral, a teaching
-            slide, or downstream software. Exports are pure ink on paper — no UI
+            slide, or downstream software. Exports are pure ink on paper: no UI
             chrome, no drop shadows.
           </p>
         </div>
