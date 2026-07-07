@@ -242,7 +242,11 @@ the fix needs either the *achievable-form* relaxation (for the aesthetic half) o
 a representation change such as **hub-node duplication** (for the correctness
 half). Node duplication is a new rendering concept — it would touch
 `CanvasContainer`, `svgExport.ts`, and every invariant — so it is deferred
-against its blast radius.
+against its blast radius. The reference tool **kinship2** solves exactly these
+shapes this way (draw the person twice, join the copies with a dashed arc); see
+[`discussions/auto-spacing-vs-kinship2.md`](discussions/auto-spacing-vs-kinship2.md)
+for the full comparison and [issue #149](https://github.com/Jdjellis/pedigree-canvas/issues/149)
+for the duplication design proposal.
 
 **How often does it bite?** A census of 8,000 random `FULL_SPACE` documents
 (`reformatLayout` + all invariants) after the cross-branch fix (#148):
