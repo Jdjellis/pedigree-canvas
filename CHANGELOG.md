@@ -24,12 +24,26 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   when the vital status is Stillborn (issue #106).
 - MIT `LICENSE`.
 - SEO, Open Graph, and Twitter card metadata plus JSON-LD `SoftwareApplication`
-  structured data in `index.html`.
-- App favicon (`public/favicon.svg`) and social card (`public/og-image.svg`),
-  replacing the default Vite icon.
+  structured data.
+- App favicon (`public/favicon.svg`) and a rasterised 1200×630 social card
+  (`public/og-image.png`), replacing the default Vite icon (issue #78).
 - Clinical-use disclaimer in the README and in the in-app privacy popover.
+- Public marketing landing page served at the site root (`/`): a self-contained
+  static page with a hand-drawn hero pedigree, the Bennett/NSGC symbol legend,
+  feature cards, and an above-the-fold local-first privacy line. It carries the
+  `SoftwareApplication` structured data and is the SEO-primary surface.
+- Discoverability for crawlers: `public/sitemap.xml` (listing `/` and `/app/`),
+  `public/robots.txt` with a `Sitemap:` line, and an updated `llms.txt` that
+  distinguishes the overview page from the editor.
+- An “About Pedigree Canvas” link in the in-app Help & About overlay, opening the
+  landing page at `/`.
 
 ### Changed
+- The canvas editor now lives at `/app/` instead of the site root, freeing `/`
+  for the marketing landing page. The editor page has its own title and
+  self-canonicals to `/app/` (no duplicate structured data), and the build is now
+  a two-page Vite build. Autosaved pedigrees are unaffected — browser storage is
+  scoped to the origin, not the path.
 - The “no children by choice” partnership marker now also carries an optional
   free-text cause/description (e.g. “vasectomy”), matching the infertility
   marker’s cause field and rendered below the bar.
