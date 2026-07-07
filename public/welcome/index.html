@@ -198,6 +198,11 @@
         .nav__link--ghost {
           display: none;
         }
+        /* The sticky-nav CTA is the always-visible primary action — hold it to a
+           full 44px touch target on mobile (WCAG 2.5.5). */
+        .nav__actions .btn--sm {
+          min-height: 44px;
+        }
       }
 
       /* ---------- Buttons ---------- */
@@ -316,12 +321,30 @@
         gap: 12px;
         margin-top: 32px;
       }
+      /* The trust anchor, promoted above the fold — one calm, slightly louder
+         line for the clinician deciding whether to type a real family history. */
+      .hero__privacy {
+        display: flex;
+        align-items: flex-start;
+        gap: 9px;
+        margin-top: 22px;
+        font-size: 15px;
+        line-height: 1.45;
+        font-weight: 500;
+        color: var(--ink);
+        max-width: 42ch;
+      }
+      .hero__privacy svg {
+        flex: none;
+        margin-top: 1px;
+        color: var(--primary);
+      }
       .hero__trust {
         display: flex;
         flex-wrap: wrap;
         align-items: center;
         gap: 8px 18px;
-        margin-top: 26px;
+        margin-top: 20px;
         font-size: 13.5px;
         color: var(--ink-2);
       }
@@ -515,13 +538,18 @@
       /* ---------- Features ---------- */
       .features {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+        grid-template-columns: repeat(2, 1fr);
         gap: 1px;
         margin-top: 48px;
         background: var(--border);
         border: 1px solid var(--border);
         border-radius: var(--radius-lg);
         overflow: hidden;
+      }
+      @media (max-width: 640px) {
+        .features {
+          grid-template-columns: 1fr;
+        }
       }
       .feature {
         background: var(--surface);
@@ -534,15 +562,25 @@
       .feature:hover {
         background: var(--paper);
       }
-      .feature__icon {
-        width: 46px;
-        height: 46px;
+      /* A mini pedigree-canvas panel per feature — echoes the hero card's
+         dotted stage so each card shows the product, not a generic icon. */
+      .feature__viz {
+        height: 104px;
         border-radius: var(--radius-md);
+        border: 1px solid var(--border);
+        background-color: var(--paper);
+        background-image: radial-gradient(#e9e9ef 1px, transparent 1px);
+        background-size: 16px 16px;
+        background-position: -8px -8px;
         display: grid;
         place-items: center;
-        background: var(--bg);
-        border: 1px solid var(--border);
-        color: var(--ink);
+        margin-bottom: 2px;
+      }
+      .feature__viz svg {
+        display: block;
+        height: 60px;
+        width: auto;
+        max-width: 90%;
       }
       .feature h3 {
         font-size: 1.06rem;
@@ -910,13 +948,14 @@
               Open the canvas
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
             </a>
-            <a class="btn btn--ghost" href="#standards">See an example</a>
+            <a class="btn btn--ghost" href="#standards">See the notation</a>
           </div>
+          <p class="hero__privacy">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="M9 12l2 2 4-4"/></svg>
+            No account, no upload. Your work autosaves to this browser and never
+            leaves it.
+          </p>
           <div class="hero__trust">
-            <span
-              ><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></svg>
-              Nothing leaves your machine</span
-            >
             <span
               ><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
               Bennett / NSGC 2022</span
@@ -1048,7 +1087,7 @@
               </li>
               <li>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9a9aa4" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
-                Nothing exports to <code style="font-family:var(--font-mono);font-size:12px">.ped</code> for downstream analysis.
+                <span>No <code style="font-family:var(--font-mono);font-size:12px">.ped</code> export for downstream tools.</span>
               </li>
               <li>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9a9aa4" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
@@ -1069,7 +1108,7 @@
               </li>
               <li>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4f46c9" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
-                One click to PDF, PNG, SVG, JSON or <code style="font-family:var(--font-mono);font-size:12px">.ped</code>.
+                <span>One click to PDF, PNG, SVG, JSON or <code style="font-family:var(--font-mono);font-size:12px">.ped</code>.</span>
               </li>
               <li>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4f46c9" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
@@ -1191,68 +1230,94 @@
 
         <div class="features reveal">
           <article class="feature">
-            <span class="feature__icon">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="8" height="8"/><circle cx="17" cy="7" r="4"/><path d="M7 11v4M17 11v4M7 15h10"/></svg>
-            </span>
+            <div class="feature__viz">
+              <svg viewBox="0 0 264 60" aria-hidden="true">
+                <rect x="20" y="14" width="32" height="32" fill="#1a1a1a" stroke="#1a1a1a" stroke-width="2.2"/>
+                <circle cx="104" cy="30" r="16" fill="#ffffff" stroke="#1a1a1a" stroke-width="2.2"/>
+                <rect x="163" y="17" width="26" height="26" transform="rotate(45 176 30)" fill="#ffffff" stroke="#1a1a1a" stroke-width="2.2"/>
+                <path d="M244 16 L228 44 L260 44 Z" fill="#ffffff" stroke="#1a1a1a" stroke-width="2.2" stroke-linejoin="round"/>
+              </svg>
+            </div>
             <h3>Standardised symbols</h3>
             <p>
               Square, circle, diamond and triangle by gender identity (NSGC 2022),
-              with SAAB annotations, deceased slash and proband arrow.
+              with sex-assigned-at-birth annotations, the deceased slash, and the
+              proband arrow.
             </p>
           </article>
 
           <article class="feature">
-            <span class="feature__icon">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="6" cy="6" r="3"/><circle cx="18" cy="6" r="3"/><path d="M9 6h6M12 6v6m-5 5a5 5 0 0 1 10 0"/></svg>
-            </span>
+            <div class="feature__viz">
+              <svg viewBox="0 0 180 104" aria-hidden="true">
+                <g stroke="#1a1a1a" stroke-width="2.2" fill="none">
+                  <line x1="48" y1="24" x2="84" y2="24"/>
+                  <line x1="66" y1="24" x2="66" y2="50"/>
+                  <line x1="42" y1="50" x2="90" y2="50"/>
+                  <line x1="42" y1="50" x2="42" y2="64"/>
+                  <line x1="90" y1="50" x2="78" y2="74"/>
+                  <line x1="90" y1="50" x2="102" y2="74"/>
+                  <line x1="81" y1="66" x2="99" y2="66"/>
+                </g>
+                <rect x="24" y="12" width="24" height="24" fill="#ffffff" stroke="#1a1a1a" stroke-width="2.2"/>
+                <circle cx="96" cy="24" r="12" fill="#ffffff" stroke="#1a1a1a" stroke-width="2.2"/>
+                <circle cx="42" cy="76" r="11" fill="#ffffff" stroke="#1a1a1a" stroke-width="2.2"/>
+                <rect x="67" y="74" width="22" height="22" fill="#1a1a1a" stroke="#1a1a1a" stroke-width="2.2"/>
+                <rect x="91" y="74" width="22" height="22" fill="#ffffff" stroke="#1a1a1a" stroke-width="2.2"/>
+              </svg>
+            </div>
             <h3>Real relationships</h3>
             <p>
               Partnerships, consanguinity, separation, MZ/DZ twins, adoption and
-              sibship lines — modelled as entities, not just strokes.
+              sibship lines, modelled as first-class entities rather than strokes
+              you draw.
             </p>
           </article>
 
           <article class="feature">
-            <span class="feature__icon">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="1.5"/><path d="M12 3v18M3 12h18"/></svg>
-            </span>
-            <h3>Conditions &amp; legend</h3>
+            <div class="feature__viz">
+              <svg viewBox="0 0 200 66" aria-hidden="true">
+                <defs>
+                  <pattern id="featDiag" patternUnits="userSpaceOnUse" width="5" height="5" patternTransform="rotate(45)">
+                    <line x1="0" y1="0" x2="0" y2="5" stroke="#457b9d" stroke-width="2.4"/>
+                  </pattern>
+                </defs>
+                <rect x="16" y="13" width="40" height="40" fill="#ffffff" stroke="#1a1a1a" stroke-width="2.2"/>
+                <path d="M36 13 H56 V33 H36 Z" fill="#e63946"/>
+                <path d="M16 33 H36 V53 H16 Z" fill="url(#featDiag)"/>
+                <rect x="16" y="13" width="40" height="40" fill="none" stroke="#1a1a1a" stroke-width="2.2"/>
+                <line x1="36" y1="13" x2="36" y2="53" stroke="#1a1a1a" stroke-width="1"/>
+                <line x1="16" y1="33" x2="56" y2="33" stroke="#1a1a1a" stroke-width="1"/>
+                <rect x="84" y="19" width="100" height="27" rx="6" fill="#ffffff" stroke="#e6e6ec" stroke-width="1.5"/>
+                <text x="96" y="37" font-family="ui-monospace, Menlo, monospace" font-size="14" fill="#1a1a1a">BRCA1</text>
+                <text x="150" y="37" font-family="ui-monospace, Menlo, monospace" font-size="15" font-weight="700" fill="#16a34a">+</text>
+              </svg>
+            </div>
+            <h3>Conditions, shading &amp; results</h3>
             <p>
-              Quarter-shade up to four conditions with a configurable key. Colour
-              always pairs with a pattern, so it stays colour-blind-safe.
+              Quarter-shade up to four conditions with a configurable,
+              colour-blind-safe key: colour always pairs with a pattern. Record
+              genetic test results (positive, negative, VUS or pending) against
+              each individual.
             </p>
           </article>
 
           <article class="feature">
-            <span class="feature__icon">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 3h6l1 4H8l1-4Z"/><path d="M6 7h12l-1 12a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L6 7Z"/><path d="M10 12h4"/></svg>
-            </span>
-            <h3>Test-result annotations</h3>
+            <div class="feature__viz">
+              <svg viewBox="0 0 220 84" aria-hidden="true">
+                <rect x="16" y="14" width="188" height="34" rx="8" fill="#ffffff" stroke="#e6e6ec" stroke-width="1.5"/>
+                <line x1="34" y1="24" x2="34" y2="38" stroke="#4f46c9" stroke-width="2" stroke-linecap="round"/>
+                <text x="44" y="36" font-family="system-ui, sans-serif" font-size="13" fill="#6b6b75">Add individual</text>
+                <rect x="162" y="22" width="32" height="18" rx="4" fill="#4f46c91a" stroke="#4f46c947" stroke-width="1"/>
+                <text x="169" y="35" font-family="system-ui, sans-serif" font-size="11" font-weight="700" fill="#4f46c9">⌘K</text>
+                <rect x="16" y="56" width="188" height="16" rx="4" fill="#4f46c91a"/>
+              </svg>
+            </div>
+            <h3>Fast under pressure</h3>
             <p>
-              Record genetic investigations (positive, negative, VUS or pending)
-              alongside the individual, keyed to the source record.
-            </p>
-          </article>
-
-          <article class="feature">
-            <span class="feature__icon">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v18M5 8l7-5 7 5M5 8v8l7 5 7-5V8"/></svg>
-            </span>
-            <h3>Auto-layout</h3>
-            <p>
-              Generations stay aligned and lines stay uncrossed as the family
-              grows. Reformat the whole document with one command.
-            </p>
-          </article>
-
-          <article class="feature">
-            <span class="feature__icon">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M6 9h.01M10 9h.01M14 9h.01M6 13h12"/></svg>
-            </span>
-            <h3>Keyboard-first &amp; forgiving</h3>
-            <p>
-              A command palette, shortcuts, undo/redo and autosave, because
-              you're thinking about the family, not the tool.
+              Auto-layout keeps generations aligned and lines uncrossed as the
+              family grows. A command palette, keyboard shortcuts, undo/redo and
+              autosave keep you moving, because you're thinking about the family,
+              not the tool.
             </p>
             <span class="feature__note">⌘K to do anything</span>
           </article>
