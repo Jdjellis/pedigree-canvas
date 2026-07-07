@@ -52,7 +52,7 @@ async function seedTangled(page: import('@playwright/test').Page): Promise<void>
     },
     [AUTOSAVE_KEY, ONBOARDED_KEY, tangledDocJson()] as const,
   );
-  await page.goto('/');
+  await page.goto('/app/');
   await page.waitForLoadState('networkidle');
 }
 

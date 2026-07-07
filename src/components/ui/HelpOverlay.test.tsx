@@ -33,10 +33,10 @@ test('feedback link points to the clintech mailto', () => {
   );
 });
 
-test('"about" link points to the /welcome/ landing page in a new tab', () => {
+test('"about" link points to the landing page at the root in a new tab', () => {
   render(<HelpOverlay />);
   const link = screen.getByRole('link', { name: /about pedigree canvas/i });
-  expect(link).toHaveAttribute('href', '/welcome/');
+  expect(link).toHaveAttribute('href', '/');
   expect(link).toHaveAttribute('target', '_blank');
   expect(link).toHaveAttribute('rel', expect.stringContaining('noopener'));
 });

@@ -116,7 +116,7 @@ export function HelpOverlay(): React.JSX.Element {
               <h3 className={styles.sectionLabel}>About</h3>
               <a
                 className={styles.feedbackLink}
-                href="/welcome/"
+                href="/"
                 target="_blank"
                 rel="noopener"
               >
