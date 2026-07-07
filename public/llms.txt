@@ -9,6 +9,7 @@ It is a documentation and educational tool. It is **not a medical device** and i
 ## Key links
 
 - [Pedigree Canvas app](https://www.pedigree.clintech.com.au): open the editor
+- [Overview and features](https://www.pedigree.clintech.com.au/welcome/): plain-language landing page covering what the tool does, the standardised symbols, and the export formats
 - [GitHub repository](https://github.com/Jdjellis/pedigree-canvas): source, issues, and roadmap
 - [README](https://github.com/Jdjellis/pedigree-canvas/blob/main/README.md): features, tech stack, and usage
 - [Changelog](https://github.com/Jdjellis/pedigree-canvas/blob/main/CHANGELOG.md): release notes
