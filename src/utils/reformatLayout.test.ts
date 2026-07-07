@@ -9,6 +9,8 @@ import {
   consanguineousSibCouple,
   crossBranchChainCrossing,
   cousinCoupleSubtreeCollision,
+  hubThreeUnionCrossing,
+  twinAsHubSibUnion,
 } from './__fixtures__/pedigrees';
 import {
   REFORMAT_FIXTURES,
@@ -18,6 +20,7 @@ import {
   finalPositions,
   checkAllInvariants,
   noNodeBetweenPartners,
+  noCrossedDescentLines,
   boundedPartnerDistance,
   chartWidth,
   twinContiguity,
@@ -218,4 +221,47 @@ describe('reformatLayout — cross-branch coordinate phase (#141 residual 1a)', 
       }
     });
   }
+});
+
+// ---------------------------------------------------------------------------
+// OPEN residual 1b (issues #149 / #150) — failing-first fixtures. The layered
+// engine models each generation as a 1-D total order (a node has ≤2 neighbours),
+// so a 3+-union hub or a twin that is also a hub cannot seat all of its required
+// adjacencies. Both fixtures were shrunk from the discovery harness (FULL_SPACE,
+// seed 1) and are deliberately absent from ALL_FIXTURES / REFORMAT_FIXTURES
+// because they do NOT yet pass.
+//
+// Each shape gets two tests:
+//   1. a characterization pin (green) asserting the SPECIFIC invariant currently
+//      violated — a precise, reproducible record of the bug;
+//   2. an `it.fails` oracle asserting the desired end state. It passes today
+//      because its body throws; once the engine is fixed it will pass for real,
+//      flipping the `it.fails` red and forcing the fixer to drop the marker and
+//      graduate the fixture. See docs/auto-layout.md §5 and CLAUDE.md (widen the
+//      SUPPORTED_SPACE caps and re-arm the property gate on close).
+// ---------------------------------------------------------------------------
+describe('reformatLayout — residual 1b (open, #149 / #150)', () => {
+  it('hubThreeUnionCrossing: a 3-union hub currently crosses descent lines (#149)', () => {
+    const { doc } = hubThreeUnionCrossing();
+    const pos = reformatted(doc);
+    expect(noCrossedDescentLines(pos, doc).ok).toBe(false);
+  });
+
+  it.fails('hubThreeUnionCrossing: SHOULD satisfy all positional invariants once fixed (#149)', () => {
+    const { doc } = hubThreeUnionCrossing();
+    const pos = reformatted(doc);
+    expect(checkAllInvariants(pos, doc).violations).toEqual([]);
+  });
+
+  it('twinAsHubSibUnion: a twin married to its sibling currently breaks twin contiguity (#150)', () => {
+    const { doc, twinGroups } = twinAsHubSibUnion();
+    const pos = reformatted(doc);
+    expect(twinContiguity(pos, doc, twinGroups ?? {}).ok).toBe(false);
+  });
+
+  it.fails('twinAsHubSibUnion: SHOULD keep twin-group members contiguous once fixed (#150)', () => {
+    const { doc, twinGroups } = twinAsHubSibUnion();
+    const pos = reformatted(doc);
+    expect(twinContiguity(pos, doc, twinGroups ?? {}).ok).toBe(true);
+  });
 });
