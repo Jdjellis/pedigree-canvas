@@ -6,6 +6,18 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+- Consanguinity is now independent of relationship status (issue #153). The
+  relationship properties panel splits the old three-way Partnership /
+  Separated / Consanguineous toggle into a **Status** control (Partnership ·
+  Separated) plus a separate **Consanguineous** checkbox, so a union can be
+  both separated *and* consanguineous — drawn as a double relationship line
+  with the separation slash. Stored as `PartnershipRelationship.consanguineous`
+  (boolean) alongside `type`; the canvas and SVG export render the combined
+  symbol. Documents saved under the old `type: 'consanguinity'` enum migrate
+  automatically on load to `{ type: 'partnership', consanguineous: true }`,
+  preserving any degree-of-relationship annotation.
+
 ### Added
 - Individual-level childlessness: a person can be marked infertile or childless
   (no partner drawn) from their properties panel, drawn as a stub below the

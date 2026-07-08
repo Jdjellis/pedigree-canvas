@@ -144,7 +144,7 @@ describe('SVG export — consanguinity degree', () => {
     const doc = makeFamily();
     doc.partnerships.u1 = {
       ...doc.partnerships.u1,
-      type: RelationshipType.Consanguinity,
+      consanguineous: true,
       consanguinityDegree: '1st cousins',
     };
 
@@ -157,7 +157,7 @@ describe('SVG export — consanguinity degree', () => {
     const doc = makeFamily();
     doc.partnerships.u1 = {
       ...doc.partnerships.u1,
-      type: RelationshipType.Consanguinity,
+      consanguineous: true,
     };
 
     const svg = buildPedigreeSvg(doc, 'Consanguinity');
@@ -165,6 +165,49 @@ describe('SVG export — consanguinity degree', () => {
     // The double line is still present (two partnership lines at the union y),
     // but there is no degree text.
     expect(svg).not.toContain('1st cousins');
+  });
+});
+
+describe('SVG export — separation × consanguinity (issue #153)', () => {
+  // dad (0,0) × mum (120,0) → union midpoint (60,0). The consanguinity gap is 4,
+  // so the two base lines sit at y=±2; the separation hashes span y=-6..6 at
+  // x=56 and x=62. Asserting on those distinguishes the combined symbol.
+  it('draws the double line AND the separation hash for a separated consanguineous union', () => {
+    const doc = makeFamily();
+    doc.partnerships.u1 = {
+      ...doc.partnerships.u1,
+      type: RelationshipType.Separation,
+      consanguineous: true,
+    };
+
+    const svg = buildPedigreeSvg(doc, 'Separated consanguineous');
+
+    // Double relationship line (consanguinity): the two offset segments, matched
+    // as whole `<line>` elements at the union's own coordinates so an unrelated
+    // element that happens to share a y-value can't satisfy the assertion.
+    expect(svg).toContain('<line x1="0" y1="2" x2="120" y2="2"');
+    expect(svg).toContain('<line x1="0" y1="-2" x2="120" y2="-2"');
+    // Separation hashes at the midpoint.
+    expect(svg).toContain('<line x1="56" y1="-6" x2="64" y2="6"');
+    expect(svg).toContain('<line x1="62" y1="-6" x2="70" y2="6"');
+  });
+
+  it('draws a single line + hash for a separated (non-consanguineous) union', () => {
+    const doc = makeFamily();
+    doc.partnerships.u1 = {
+      ...doc.partnerships.u1,
+      type: RelationshipType.Separation,
+    };
+
+    const svg = buildPedigreeSvg(doc, 'Separated');
+
+    // A single base line spanning the two partners, so neither offset segment of
+    // the consanguinity double line is emitted.
+    expect(svg).toContain('<line x1="0" y1="0" x2="120" y2="0"');
+    expect(svg).not.toContain('<line x1="0" y1="2" x2="120" y2="2"');
+    expect(svg).not.toContain('<line x1="0" y1="-2" x2="120" y2="-2"');
+    // Separation hashes are still present.
+    expect(svg).toContain('<line x1="56" y1="-6" x2="64" y2="6"');
   });
 });
 

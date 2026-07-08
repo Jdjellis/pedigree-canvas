@@ -50,6 +50,21 @@ export function partnershipMidpoint(p1: Point, p2: Point): Point {
   return { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
 }
 
+/**
+ * The two short parallel slashes marking a separated/divorced union, centred on
+ * the relationship-line midpoint `mid`, per NSGC/Bennett. Shared by the Konva
+ * renderer and the SVG exporter so the two cannot drift — and so the marks can
+ * be composed onto a consanguineous (double) line for a separated *and*
+ * consanguineous union (issue #153).
+ */
+export function separationHashMarks(mid: Point): [number, number, number, number][] {
+  const hashSize = 6;
+  return [
+    [mid.x - 4, mid.y - hashSize, mid.x + 4, mid.y + hashSize],
+    [mid.x + 2, mid.y - hashSize, mid.x + 10, mid.y + hashSize],
+  ];
+}
+
 /** Spacing knobs for {@link childlessMarks}. */
 export interface ChildlessMarkOptions {
   /** Length of the vertical stub dropping from the relationship line. */

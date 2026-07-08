@@ -1,4 +1,10 @@
-import type { PedigreeDocument, Individual, Investigation, ParentChildRelationship } from '../types/pedigree';
+import type {
+  PedigreeDocument,
+  Individual,
+  Investigation,
+  ParentChildRelationship,
+  PartnershipRelationship,
+} from '../types/pedigree';
 import { RelationshipType } from '../types/enums';
 import { generateId } from '../utils/idGenerator';
 
@@ -46,6 +52,29 @@ export function migrateAdoption(doc: PedigreeDocument): PedigreeDocument {
     delete (partnership as { isAdoptive?: boolean }).isAdoptive;
   }
 
+  return doc;
+}
+
+/**
+ * SUNSET (pre-launch shim — delete before launch, see #66): upgrade legacy
+ * partnerships saved under the old mutually-exclusive status enum, where
+ * consanguinity was a `type` value rather than an orthogonal flag (issue #153).
+ *
+ * Mutates `doc` in place and returns it. Idempotent.
+ *
+ * - Legacy `partnership.type === 'consanguinity'` ⇒ `{ type: 'partnership',
+ *   consanguineous: true }`, preserving any `consanguinityDegree`. A separated
+ *   consanguineous union was unrepresentable in the old model, so there is
+ *   nothing to carry over there.
+ */
+export function migrateConsanguinity(doc: PedigreeDocument): PedigreeDocument {
+  for (const partnership of Object.values(doc.partnerships ?? {})) {
+    const p = partnership as PartnershipRelationship;
+    if ((p.type as RelationshipType) === RelationshipType.Consanguinity) {
+      p.type = RelationshipType.Partnership;
+      p.consanguineous = true;
+    }
+  }
   return doc;
 }
 
@@ -219,7 +248,7 @@ export function deserializeDocument(json: string): PedigreeDocument {
     }
   }
 
-  return migrateAdoption(result);
+  return migrateConsanguinity(migrateAdoption(result));
 }
 
 // ---------------------------------------------------------------------------

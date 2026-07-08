@@ -23,6 +23,7 @@ import {
   childlessMarks,
   consanguinityLines,
   partnershipMidpoint,
+  separationHashMarks,
 } from '../../utils/partnershipGeometry';
 import { ConnectionHalo } from './ConnectionHalo';
 import { connectionEmphasis } from './connectionHighlight';
@@ -144,70 +145,52 @@ export function PartnershipLine({
   const markStroke = isSelected ? SELECTION_COLOR : LINE_COLOR;
   const childless = childlessMarkElements(partnership, mid, markStroke);
 
-  if (partnership.type === RelationshipType.Consanguinity) {
-    const degree = partnership.consanguinityDegree?.trim();
-    const { a, b } = consanguinityLines(p1.position, p2.position, CONSANGUINITY_GAP);
-    const labelBoxWidth = 200;
-    return (
-      <>
-        <ConnectionHalo points={a} emphasis={emphasis} />
-        <ConnectionHalo points={b} emphasis={emphasis} />
-        <Line points={a} {...lineProps} />
-        <Line points={b} {...lineProps} />
-        {degree && (
-          <Text
-            text={degree}
-            x={mid.x - labelBoxWidth / 2}
-            y={mid.y - CONSANGUINITY_GAP / 2 - RELATIONSHIP_LABEL_OFFSET - LABEL_FONT_SIZE}
-            width={labelBoxWidth}
-            align="center"
-            fontSize={LABEL_FONT_SIZE}
-            fontFamily={LABEL_FONT_FAMILY}
-            fill={LABEL_COLOR}
-            listening={false}
-          />
-        )}
-        {childless}
-      </>
-    );
-  }
+  // Base relationship line(s): a double line when consanguineous, a single line
+  // otherwise. Consanguinity and separation are independent (issue #153), so the
+  // separation hash and the degree label are layered on top of whichever base
+  // this union has, letting a separated consanguineous union draw both.
+  const segments: [number, number, number, number][] = partnership.consanguineous
+    ? (() => {
+        const { a, b } = consanguinityLines(p1.position, p2.position, CONSANGUINITY_GAP);
+        return [a, b];
+      })()
+    : [[p1.position.x, p1.position.y, p2.position.x, p2.position.y]];
 
-  if (partnership.type === RelationshipType.Separation) {
-    const hashSize = 6;
-    return (
-      <>
-        <ConnectionHalo
-          points={[p1.position.x, p1.position.y, p2.position.x, p2.position.y]}
-          emphasis={emphasis}
-        />
-        <Line
-          points={[p1.position.x, p1.position.y, p2.position.x, p2.position.y]}
-          {...lineProps}
-        />
-        <Line
-          points={[mid.x - 4, mid.y - hashSize, mid.x + 4, mid.y + hashSize]}
-          {...lineProps}
-        />
-        <Line
-          points={[mid.x + 2, mid.y - hashSize, mid.x + 10, mid.y + hashSize]}
-          {...lineProps}
-        />
-        {childless}
-      </>
-    );
-  }
+  const baseLines = segments.map((points, i) => (
+    <ConnectionHalo key={`halo-${i}`} points={points} emphasis={emphasis} />
+  ));
+  const strokeLines = segments.map((points, i) => (
+    <Line key={`line-${i}`} points={points} {...lineProps} />
+  ));
 
-  // Standard partnership - solid line
+  const separation =
+    partnership.type === RelationshipType.Separation
+      ? separationHashMarks(mid).map((points, i) => (
+          <Line key={`sep-${i}`} points={points} {...lineProps} />
+        ))
+      : null;
+
+  const degree = partnership.consanguineous ? partnership.consanguinityDegree?.trim() : undefined;
+  const labelBoxWidth = 200;
+
   return (
     <>
-      <ConnectionHalo
-        points={[p1.position.x, p1.position.y, p2.position.x, p2.position.y]}
-        emphasis={emphasis}
-      />
-      <Line
-        points={[p1.position.x, p1.position.y, p2.position.x, p2.position.y]}
-        {...lineProps}
-      />
+      {baseLines}
+      {strokeLines}
+      {separation}
+      {degree && (
+        <Text
+          text={degree}
+          x={mid.x - labelBoxWidth / 2}
+          y={mid.y - CONSANGUINITY_GAP / 2 - RELATIONSHIP_LABEL_OFFSET - LABEL_FONT_SIZE}
+          width={labelBoxWidth}
+          align="center"
+          fontSize={LABEL_FONT_SIZE}
+          fontFamily={LABEL_FONT_FAMILY}
+          fill={LABEL_COLOR}
+          listening={false}
+        />
+      )}
       {childless}
     </>
   );
