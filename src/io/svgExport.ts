@@ -32,6 +32,7 @@ import {
   DECEASED_SLASH_OVERSHOOT,
   TWIN_UNKNOWN_FONT_SIZE,
   RELATIONSHIP_LABEL_OFFSET,
+  ADOPTION_BRACKET_GAP,
 } from '../utils/constants';
 import { adoptionBracketPolylines } from '../components/canvas/symbols/adoptionBracketGeometry';
 import { getPresentPartners } from '../utils/graphTraversal';
@@ -75,10 +76,21 @@ const PATTERN_STROKE_WIDTH = 1.5;
 /** Vertical spacing between successive label lines (see `SymbolLabel`). */
 const LABEL_LINE_HEIGHT = LABEL_FONT_SIZE + 4;
 /**
- * Horizontal gap between the symbol's right edge and the start of the
- * bottom-right individual number (see `SymbolLabel`).
+ * Horizontal gap between the symbol's right edge (or the adoption bracket's
+ * right arm, when the individual is adopted) and the start of the bottom-right
+ * individual number (see `SymbolLabel`).
  */
 const NUMBER_CORNER_GAP = 3;
+
+/**
+ * X of the bottom-right individual number's left edge. Mirrors
+ * `numberCornerX` in `SymbolLabel`: shifted past the adoption bracket when the
+ * individual is adopted so the bracket arm cannot occlude the digits.
+ */
+function numberCornerX(adopted: boolean): number {
+  const base = adopted ? ADOPTION_BRACKET_GAP : SYMBOL_SIZE / 2;
+  return base + NUMBER_CORNER_GAP;
+}
 /** Padding added around the content bounding box for the export viewBox. */
 const VIEWBOX_PADDING = 40;
 
@@ -460,7 +472,7 @@ function renderIndividual(
   // places its Text top at y = half - FONT/2; the SVG baseline sits FONT below
   // the top, so the baseline lands at y = half + FONT/2.
   if (individualNumber != null) {
-    const numberX = half + NUMBER_CORNER_GAP;
+    const numberX = numberCornerX(individual.adopted ?? false);
     const numberBaselineY = half + LABEL_FONT_SIZE / 2;
     parts.push(
       `<text x="${num(numberX)}" y="${num(

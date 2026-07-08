@@ -6,7 +6,11 @@ import {
 } from '../stores/pedigreeStore';
 import { RelationshipType, TwinType } from '../types/enums';
 import type { PedigreeDocument } from '../types/pedigree';
-import { DASH_PATTERN } from '../utils/constants';
+import {
+  DASH_PATTERN,
+  SYMBOL_SIZE,
+  ADOPTION_BRACKET_GAP,
+} from '../utils/constants';
 
 /**
  * A couple (mother + father) with two children, used to exercise adoption,
@@ -86,6 +90,44 @@ describe('SVG export — adoption notation', () => {
   it('does not draw brackets when nobody is adopted', () => {
     const svg = buildPedigreeSvg(makeFamily(), 'No adoption');
     expect(svg).not.toContain('<polyline');
+  });
+
+  /**
+   * Regression for #152: the bottom-right person number must clear the adoption
+   * bracket's right vertical stroke, otherwise the bracket arm clips the digit.
+   * A lone individual is used so exactly one number text is emitted.
+   */
+  it('shifts the person number past the bracket for an adopted individual', () => {
+    const numberX = (doc: PedigreeDocument): number => {
+      const svg = buildPedigreeSvg(doc, 'Number position');
+      // The only number text in a one-person pedigree is the "1" at the corner.
+      const match = svg.match(/<text x="([\d.]+)"[^>]*>1<\/text>/);
+      expect(match).not.toBeNull();
+      return Number(match![1]);
+    };
+
+    const solo = createDefaultDocument();
+    solo.individuals.p = createDefaultIndividual({
+      id: 'p',
+      generation: 0,
+      position: { x: 0, y: 0 },
+    });
+
+    const baseX = numberX(solo);
+    // Sanity: an un-adopted number sits just outside the symbol box.
+    expect(baseX).toBeLessThan(ADOPTION_BRACKET_GAP);
+
+    const adopted: PedigreeDocument = {
+      ...solo,
+      individuals: { p: { ...solo.individuals.p, adopted: true } },
+    };
+    const adoptedX = numberX(adopted);
+    // The number is pushed past the bracket's right vertical stroke so the arm
+    // cannot occlude it.
+    expect(adoptedX).toBeGreaterThanOrEqual(ADOPTION_BRACKET_GAP);
+    expect(adoptedX).toBeGreaterThan(baseX);
+    // And it still sits just outside the symbol's own bounding box.
+    expect(baseX).toBeGreaterThan(SYMBOL_SIZE / 2);
   });
 });
 
