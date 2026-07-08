@@ -14,7 +14,6 @@ type PartnershipStatus = PartnershipRelationship['type'];
 const STATUS_OPTIONS: { value: PartnershipStatus; label: string }[] = [
   { value: RelationshipType.Partnership, label: 'Partnership' },
   { value: RelationshipType.Separation, label: 'Separated' },
-  { value: RelationshipType.Consanguinity, label: 'Consanguineous' },
 ];
 
 const DESCENT_OPTIONS: { value: 'biological' | 'adoptive'; label: string }[] = [
@@ -91,7 +90,25 @@ export function ConnectionProperties() {
               ariaLabel="Relationship status"
             />
           </div>
-          {p.type === RelationshipType.Consanguinity && (
+          <div className={styles.field}>
+            <label className={styles.checkbox}>
+              <input
+                type="checkbox"
+                checked={p.consanguineous ?? false}
+                onChange={(e) =>
+                  updatePartnership(p.id, {
+                    consanguineous: e.target.checked || undefined,
+                  })
+                }
+              />
+              Consanguineous
+            </label>
+            <p className={styles.hint}>
+              Draws a double relationship line for partners who are biologically
+              related. Independent of the status above.
+            </p>
+          </div>
+          {p.consanguineous && (
             <div className={styles.field}>
               <label className={styles.label}>Degree of relationship</label>
               <input

@@ -144,7 +144,7 @@ describe('SVG export — consanguinity degree', () => {
     const doc = makeFamily();
     doc.partnerships.u1 = {
       ...doc.partnerships.u1,
-      type: RelationshipType.Consanguinity,
+      consanguineous: true,
       consanguinityDegree: '1st cousins',
     };
 
@@ -157,7 +157,7 @@ describe('SVG export — consanguinity degree', () => {
     const doc = makeFamily();
     doc.partnerships.u1 = {
       ...doc.partnerships.u1,
-      type: RelationshipType.Consanguinity,
+      consanguineous: true,
     };
 
     const svg = buildPedigreeSvg(doc, 'Consanguinity');
@@ -165,6 +165,45 @@ describe('SVG export — consanguinity degree', () => {
     // The double line is still present (two partnership lines at the union y),
     // but there is no degree text.
     expect(svg).not.toContain('1st cousins');
+  });
+});
+
+describe('SVG export — separation × consanguinity (issue #153)', () => {
+  // dad (0,0) × mum (120,0) → union midpoint (60,0). The consanguinity gap is 4,
+  // so the two base lines sit at y=±2; the separation hashes span y=-6..6 at
+  // x=56 and x=62. Asserting on those distinguishes the combined symbol.
+  it('draws the double line AND the separation hash for a separated consanguineous union', () => {
+    const doc = makeFamily();
+    doc.partnerships.u1 = {
+      ...doc.partnerships.u1,
+      type: RelationshipType.Separation,
+      consanguineous: true,
+    };
+
+    const svg = buildPedigreeSvg(doc, 'Separated consanguineous');
+
+    // Double relationship line (consanguinity): the two offset segments.
+    expect(svg).toContain('y1="2"');
+    expect(svg).toContain('y1="-2"');
+    // Separation hashes at the midpoint.
+    expect(svg).toContain('<line x1="56" y1="-6" x2="64" y2="6"');
+    expect(svg).toContain('<line x1="62" y1="-6" x2="70" y2="6"');
+  });
+
+  it('draws a single line + hash for a separated (non-consanguineous) union', () => {
+    const doc = makeFamily();
+    doc.partnerships.u1 = {
+      ...doc.partnerships.u1,
+      type: RelationshipType.Separation,
+    };
+
+    const svg = buildPedigreeSvg(doc, 'Separated');
+
+    // Single base line at the union y, so no offset segments.
+    expect(svg).not.toContain('y1="2"');
+    expect(svg).not.toContain('y1="-2"');
+    // Separation hashes are still present.
+    expect(svg).toContain('<line x1="56" y1="-6" x2="64" y2="6"');
   });
 });
 

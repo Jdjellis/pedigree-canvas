@@ -5,7 +5,6 @@ import { useViewportStore } from '../../stores/viewportStore';
 import { usePedigreeStore } from '../../stores/pedigreeStore';
 import { findPartnerships } from '../../utils/graphTraversal';
 import { individualDisplayLabel } from '../../utils/individualLabel';
-import { RelationshipType } from '../../types/enums';
 import { addChildToUnion } from './addChild';
 import { addTwinChildrenToUnion } from './addTwinChildren';
 import type { PartnershipRelationship } from '../../types/pedigree';
@@ -24,7 +23,7 @@ function describeUnion(
   const who = otherId ? individualDisplayLabel(individuals, otherId) : 'no partner yet';
   const label = `With ${who}`;
 
-  if (union.type === RelationshipType.Consanguinity) {
+  if (union.consanguineous) {
     return { label, hint: 'Consanguineous union' };
   }
   const n = union.childrenIds.length;

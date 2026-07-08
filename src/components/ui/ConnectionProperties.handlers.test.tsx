@@ -82,8 +82,28 @@ describe('ConnectionProperties partnership edit handlers', () => {
     );
   });
 
+  it('toggles the consanguineous flag via the checkbox', () => {
+    selectPartnership(makePartnership());
+    render(<PropertiesPanel />);
+
+    fireEvent.click(screen.getByRole('checkbox', { name: /consanguineous/i }));
+    expect(
+      usePedigreeStore.getState().document.partnerships['union1'].consanguineous,
+    ).toBe(true);
+  });
+
+  it('keeps the separation status when toggling consanguinity (issue #153)', () => {
+    selectPartnership(makePartnership({ type: RelationshipType.Separation }));
+    render(<PropertiesPanel />);
+
+    fireEvent.click(screen.getByRole('checkbox', { name: /consanguineous/i }));
+    const p = usePedigreeStore.getState().document.partnerships['union1'];
+    expect(p.type).toBe(RelationshipType.Separation);
+    expect(p.consanguineous).toBe(true);
+  });
+
   it('edits the consanguinity degree', () => {
-    selectPartnership(makePartnership({ type: RelationshipType.Consanguinity }));
+    selectPartnership(makePartnership({ consanguineous: true }));
     render(<PropertiesPanel />);
 
     fireEvent.change(screen.getByPlaceholderText('e.g. 1st cousins'), {
