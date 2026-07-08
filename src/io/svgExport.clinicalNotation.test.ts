@@ -182,9 +182,11 @@ describe('SVG export — separation × consanguinity (issue #153)', () => {
 
     const svg = buildPedigreeSvg(doc, 'Separated consanguineous');
 
-    // Double relationship line (consanguinity): the two offset segments.
-    expect(svg).toContain('y1="2"');
-    expect(svg).toContain('y1="-2"');
+    // Double relationship line (consanguinity): the two offset segments, matched
+    // as whole `<line>` elements at the union's own coordinates so an unrelated
+    // element that happens to share a y-value can't satisfy the assertion.
+    expect(svg).toContain('<line x1="0" y1="2" x2="120" y2="2"');
+    expect(svg).toContain('<line x1="0" y1="-2" x2="120" y2="-2"');
     // Separation hashes at the midpoint.
     expect(svg).toContain('<line x1="56" y1="-6" x2="64" y2="6"');
     expect(svg).toContain('<line x1="62" y1="-6" x2="70" y2="6"');
@@ -199,9 +201,11 @@ describe('SVG export — separation × consanguinity (issue #153)', () => {
 
     const svg = buildPedigreeSvg(doc, 'Separated');
 
-    // Single base line at the union y, so no offset segments.
-    expect(svg).not.toContain('y1="2"');
-    expect(svg).not.toContain('y1="-2"');
+    // A single base line spanning the two partners, so neither offset segment of
+    // the consanguinity double line is emitted.
+    expect(svg).toContain('<line x1="0" y1="0" x2="120" y2="0"');
+    expect(svg).not.toContain('<line x1="0" y1="2" x2="120" y2="2"');
+    expect(svg).not.toContain('<line x1="0" y1="-2" x2="120" y2="-2"');
     // Separation hashes are still present.
     expect(svg).toContain('<line x1="56" y1="-6" x2="64" y2="6"');
   });
