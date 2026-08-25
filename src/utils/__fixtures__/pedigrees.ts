@@ -845,6 +845,53 @@ export function marriedTwinInterleaved(): Fixture {
 }
 
 /**
+ * OPEN residual 1b — **multi-union hub** (issue #149). `i6` (child of `u2`) holds
+ * **three same-row unions** — `u9` (i6×i8), `u16` (i6×i12), `u18` (i6×i17) — so it
+ * is a genuine 3-union hub; `i12` (child of `u5`) is load-bearing and married into
+ * the hub via the cross union `u16`.
+ *
+ *   i0 × i1 → i6            i3 × i4 → i10, i12
+ *   i6 × i8   (u9)          i12 × i14 (u15)
+ *   i6 × i12  (u16, cross)  i6 × i17  (u18)
+ *
+ * A point on a 1-D row can hold ≤2 neighbours, so the three unions cannot all sit
+ * adjacent; `retidyHubFreeComponents` keeps the family on the linear path (a hub is
+ * present), and the hub's non-adjacent union crosses a co-union's descent line —
+ * **`noCrossedDescentLines` fails** (a correctness invariant that, unlike the
+ * aesthetic ones, cannot be relaxed to an achievable form). Deliberately NOT in
+ * `ALL_FIXTURES`/`REFORMAT_FIXTURES` (it does not yet pass). Shrunk from the
+ * discovery harness (`FULL_SPACE`, `maxUnionDegree: 3`, seed 1); ids kept verbatim
+ * so the engine's id-based tie-breaks reproduce the failure. Companion to the
+ * passing aesthetic pin `threeUnionHub`. See `docs/auto-layout.md` §5.
+ */
+export function hubThreeUnionCrossing(): Fixture {
+  return {
+    name: 'hubThreeUnionCrossing',
+    doc: doc({
+      individuals: {
+        i0: ind('i0', 0, 0), i1: ind('i1', 0, 0), i3: ind('i3', 0, 0), i4: ind('i4', 0, 0),
+        i6: ind('i6', 0, 1), i8: ind('i8', 0, 1), i10: ind('i10', 0, 1),
+        i12: ind('i12', 0, 1), i14: ind('i14', 0, 1), i17: ind('i17', 0, 1),
+      },
+      partnerships: {
+        u2: union('u2', 'i0', 'i1', ['i6']),
+        u5: union('u5', 'i3', 'i4', ['i10', 'i12']),
+        u9: union('u9', 'i6', 'i8', []),
+        u15: union('u15', 'i12', 'i14', []),
+        u16: union('u16', 'i6', 'i12', []),
+        u18: union('u18', 'i6', 'i17', []),
+      },
+      parentChildLinks: {
+        l7: link('l7', 'u2', 'i6'),
+        l11: link('l11', 'u5', 'i10'),
+        l13: link('l13', 'u5', 'i12'),
+      },
+    }),
+    rootUnionId: 'u2',
+  };
+}
+
+/**
  * Residual 1b — **twin-as-hub / consanguineous sib-union** (issue #150).
  * Sibship `u2 → {i3, i5, i7}`; `{i3, i5}` are MZ twins. The twin `i3` is itself a
  * hub — partnered in `u11` (i3×i10) **and** `u14` (i3×i7) — and `u14` marries `i3`

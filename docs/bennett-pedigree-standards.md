@@ -239,3 +239,41 @@ App: `LegendConfig` with `LegendEntry[]` (id, quarter, fillColor, fillPattern, n
 ### Gaps / Not yet modelled
 - **Carrier notation**: No dedicated `isCarrier` or `carrierStatus` field; must be approximated with a condition quarter fill + legend entry.
 - **Individual diagnosis uncertainty**: No structured `diagnosisUncertain` flag; convention is to use a notes field.
+- **Repeated individuals**: The app draws every person once and has no duplicate-symbol concept. This is *also* the standard's position — see §15.
+
+---
+
+## 15. Representing an individual more than once — NOT a standardized convention
+
+Some pedigree software (notably the R package **kinship2**) resolves hard
+topologies — a common ancestor married into multiple branches, a consanguinity
+loop, a person connecting distant parts of the tree — by **drawing that
+individual more than once** and joining the copies with a **dashed arc**. This is
+a *layout convenience of that software*, **not** a Bennett/NSGC-sanctioned
+notation.
+
+Verified July 2026 against all three primary sources and an NSGC-aligned teaching
+resource — **none** define a convention for showing a person twice:
+
+- Bennett 1995 (original), 2008 (update), 2022 (revision) — silent on repeated
+  individuals. The local 2022 PDF and the fetched 2008 full text contain no such
+  rule; the 2008 paper reaffirms 1995 with "only a few minor stylistic changes."
+- Iowa/Carver "How to Draw a Pedigree" (NSGC-aligned) — no mention; consanguinity
+  is only ever the double-line *relationship* notation, never a duplicate person.
+
+**Two consequences for any future duplication feature (e.g. layout residual 1b —
+the 3+-union hub / married-twin case, [#149](https://github.com/Jdjellis/pedigree-canvas/issues/149) / [#150](https://github.com/Jdjellis/pedigree-canvas/issues/150)):**
+
+1. **It would be non-standard notation** — introduce it deliberately, with an
+   explicit on-canvas label/legend key so a reader isn't left guessing that two
+   symbols are one person.
+2. **Do NOT reuse a dashed line as the "same person" connector.** In this standard
+   a **dashed line of descent already means an adoptive / nonbiological
+   relationship** (§9). A dashed duplicate-link would collide with that meaning. A
+   distinct connector style (and annotation) is required.
+
+The standard's *silence* is not a prohibition — repeating an individual is common
+practice in complex genealogy/consanguinity drawings — but it means the app can't
+point to a figure and copy it; the notation must be designed. See
+[`discussions/auto-spacing-vs-kinship2.md`](discussions/auto-spacing-vs-kinship2.md)
+§13 for how this feeds the residual-1b decision.

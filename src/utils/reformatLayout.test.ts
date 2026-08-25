@@ -5,11 +5,12 @@ import {
   ALL_FIXTURES,
   threeUnionHub,
   marriedTwinInterleaved,
-  twinAsHubSibUnion,
   subtreeCollisionRegression,
   consanguineousSibCouple,
   crossBranchChainCrossing,
   cousinCoupleSubtreeCollision,
+  hubThreeUnionCrossing,
+  twinAsHubSibUnion,
 } from './__fixtures__/pedigrees';
 import {
   REFORMAT_FIXTURES,
@@ -19,6 +20,7 @@ import {
   finalPositions,
   checkAllInvariants,
   noNodeBetweenPartners,
+  noCrossedDescentLines,
   boundedPartnerDistance,
   chartWidth,
   twinContiguity,
@@ -219,6 +221,41 @@ describe('reformatLayout — cross-branch coordinate phase (#141 residual 1a)', 
       }
     });
   }
+});
+
+// ---------------------------------------------------------------------------
+// OPEN residual 1b (issue #149) — failing-first fixture. The layered engine
+// models each generation as a 1-D total order (a node has ≤2 neighbours), so a
+// 3+-union hub cannot seat all of its required adjacencies. Shrunk from the
+// discovery harness (FULL_SPACE, seed 1) and deliberately absent from
+// ALL_FIXTURES / REFORMAT_FIXTURES because it does NOT yet pass.
+//
+// It gets two tests:
+//   1. a characterization pin (green) asserting the SPECIFIC invariant currently
+//      violated — a precise, reproducible record of the bug;
+//   2. an `it.fails` oracle asserting the desired end state. It passes today
+//      because its body throws; once the engine is fixed it will pass for real,
+//      flipping the `it.fails` red and forcing the fixer to drop the marker and
+//      graduate the fixture. See docs/auto-layout.md §5 and CLAUDE.md (widen the
+//      SUPPORTED_SPACE caps and re-arm the property gate on close).
+//
+// The twin half of residual 1b (#150) closed via the achievable-form
+// twinContiguity; its regression pin follows below. Node duplication — the
+// structural fix for this hub case, and the only one that resolves the
+// correctness half — is tracked in #162.
+// ---------------------------------------------------------------------------
+describe('reformatLayout — residual 1b: multi-union hub (open, #149)', () => {
+  it('hubThreeUnionCrossing: a 3-union hub currently crosses descent lines (#149)', () => {
+    const { doc } = hubThreeUnionCrossing();
+    const pos = reformatted(doc);
+    expect(noCrossedDescentLines(pos, doc).ok).toBe(false);
+  });
+
+  it.fails('hubThreeUnionCrossing: SHOULD satisfy all positional invariants once fixed (#149)', () => {
+    const { doc } = hubThreeUnionCrossing();
+    const pos = reformatted(doc);
+    expect(checkAllInvariants(pos, doc).violations).toEqual([]);
+  });
 });
 
 // ---------------------------------------------------------------------------
