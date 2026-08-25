@@ -845,6 +845,62 @@ export function marriedTwinInterleaved(): Fixture {
 }
 
 /**
+ * Residual 1b — **twin-as-hub / consanguineous sib-union** (issue #150).
+ * Sibship `u2 → {i3, i5, i7}`; `{i3, i5}` are MZ twins. The twin `i3` is itself a
+ * hub — partnered in `u11` (i3×i10) **and** `u14` (i3×i7) — and `u14` marries `i3`
+ * to its own **non-twin sibling** `i7` (a consanguineous sib-union).
+ *
+ *   i0 × i1 → i3(twin), i5(twin), i7
+ *   i3 × i10 (u11)   i3 × i7 (u14, sib-union)   i7 × i12 (u13)
+ *
+ * `i3` must be adjacent to both its co-twin `i5` and its spouse-sibling `i7`, but a
+ * 1-D row gives it ≤2 neighbours, and keeping the couple `i3×i7` adjacent is forced
+ * by `noNodeBetweenPartners` (a correctness rule) — so the co-twin `i5` loses the
+ * slot and the spouse-sibling `i7` necessarily tie-breaks *between* the twins. The
+ * strict `twinContiguity` therefore cannot be satisfied on the linear layer engine;
+ * its **achievable form** permits exactly this node (a same-row spouse of a twin
+ * that is itself a hub) between the twins, so the fixture passes. Shrunk from the
+ * discovery harness (`FULL_SPACE`, `allowMarriedTwins: true`, seed 1); ids kept
+ * verbatim. Companion to the single-union pin `marriedTwinInterleaved` (where the
+ * twin holds only one union, so contiguity IS achievable and stays enforced).
+ * Member of `ALL_FIXTURES`. See `docs/auto-layout.md` §5.
+ */
+export function twinAsHubSibUnion(): Fixture {
+  const twinGroups: Record<string, TwinGroup> = {
+    t9: {
+      id: 't9',
+      twinType: TwinType.Monozygotic,
+      individualIds: ['i3', 'i5'],
+      parentPartnershipId: 'u2',
+    },
+  };
+  return {
+    name: 'twinAsHubSibUnion',
+    doc: doc({
+      individuals: {
+        i0: ind('i0', 0, 0), i1: ind('i1', 0, 0),
+        i3: ind('i3', 0, 1), i5: ind('i5', 0, 1), i7: ind('i7', 0, 1),
+        i10: ind('i10', 0, 1), i12: ind('i12', 0, 1),
+      },
+      partnerships: {
+        u2: union('u2', 'i0', 'i1', ['i3', 'i5', 'i7']),
+        u11: union('u11', 'i3', 'i10', []),
+        u13: union('u13', 'i7', 'i12', []),
+        u14: union('u14', 'i3', 'i7', []),
+      },
+      parentChildLinks: {
+        l4: link('l4', 'u2', 'i3'),
+        l6: link('l6', 'u2', 'i5'),
+        l8: link('l8', 'u2', 'i7'),
+      },
+      twinGroups,
+    }),
+    rootUnionId: 'u2',
+    twinGroups,
+  };
+}
+
+/**
  * A connected single-family pedigree that `reformatLayout` lays out with
  * **overlapping subtrees** (`subtreeNonCollision` fails). Found by the
  * property-based discovery harness and shrunk to 14 nodes; no hub, no twins, no
@@ -1094,6 +1150,7 @@ export const ALL_FIXTURES: Array<() => Fixture> = [
   subtreeCollisionRegression,
   deepAsymmetricSubtree,
   marriedTwinInterleaved,
+  twinAsHubSibUnion,
   consanguineousSibCouple,
   crossBranchChainCrossing,
   cousinCoupleSubtreeCollision,
