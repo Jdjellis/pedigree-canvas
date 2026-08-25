@@ -5,6 +5,7 @@ import {
   ALL_FIXTURES,
   threeUnionHub,
   marriedTwinInterleaved,
+  twinAsHubSibUnion,
   subtreeCollisionRegression,
   consanguineousSibCouple,
   crossBranchChainCrossing,
@@ -218,4 +219,32 @@ describe('reformatLayout — cross-branch coordinate phase (#141 residual 1a)', 
       }
     });
   }
+});
+
+// ---------------------------------------------------------------------------
+// Twin-as-hub / consanguineous sib-union (issue #150, residual 1b twin half). A
+// twin that is ALSO a hub (≥2 same-row unions) cannot seat all of its required
+// adjacencies — co-twin + both spouses — on a 1-D row (a node has ≤2 neighbours).
+// Keeping each couple adjacent is forced by noNodeBetweenPartners (correctness),
+// so the co-twin loses its slot and the hub-twin's spouse-sibling is structurally
+// forced between the twins. twinContiguity is therefore defined in its achievable
+// form: a same-row spouse of a hub-twin is permitted between the twins, while any
+// plain sibling (and a single-union twin's spouse-sibling, the closed #146 case)
+// is still flagged. reformatLayout meets that form, so twinAsHubSibUnion has
+// graduated into ALL_FIXTURES (the loop above asserts it). This pin documents the
+// specific achievable-form behaviour so it cannot silently regress.
+// ---------------------------------------------------------------------------
+describe('reformatLayout — twin-as-hub (#150)', () => {
+  it('twinAsHubSibUnion: meets the achievable twinContiguity and every correctness invariant', () => {
+    const { doc, twinGroups } = twinAsHubSibUnion();
+    const pos = reformatted(doc);
+    // The hub-twin's spouse-sibling sits between the twins — the only
+    // structurally-unavoidable betweenness — which the achievable-form
+    // twinContiguity permits.
+    expect(twinContiguity(pos, doc, twinGroups ?? {}).ok).toBe(true);
+    // Correctness is untouched: no FOREIGN node between any couple, every
+    // positional invariant holds.
+    expect(checkAllInvariants(pos, doc).violations).toEqual([]);
+    expect(noNodeBetweenPartners(pos, doc).ok).toBe(true);
+  });
 });

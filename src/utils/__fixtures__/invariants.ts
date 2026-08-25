@@ -677,6 +677,28 @@ export function manualOrderPreserved(
 /**
  * Assert that all members of each twin group occupy a contiguous run in the
  * left-to-right ordering of their sibship.
+ *
+ * ### Achievable form for a twin-as-hub (issue #150)
+ *
+ * The strict rule — no non-twin sibling ever between the twins — is
+ * geometrically impossible for a twin that is **also a hub** (holds ≥ 2 same-row
+ * unions). Such a twin must be adjacent to its co-twin **and** to each of its
+ * spouses; that is 3+ required adjacencies for a node that has only two
+ * neighbours on a 1-D row. Keeping each couple adjacent is forced by the
+ * *correctness* invariant {@link noNodeBetweenPartners} (a ≤ 2-union node admits
+ * no node between its partners), so the co-twin necessarily loses its slot. When
+ * the hub-twin marries one of its own **non-twin siblings** — a consanguineous
+ * sib-union, exactly the shape genetic-counseling pedigrees draw — that
+ * spouse-sibling is structurally forced between the twins.
+ *
+ * So a between-node `X` is permitted **iff** it is a same-row spouse of a twin
+ * member that is a genuine hub (`X` partners some twin `T` in a union *and* `T`
+ * holds ≥ 2 same-row unions). This still flags:
+ * - any **plain** non-twin sibling between the twins — a fixable bad order (the
+ *   original reported bug); and
+ * - a spouse-sibling of a **single-union** twin, where a clean co-twin/spouse
+ *   straddle exists and the betweenness is a fixable order (the closed #146 case,
+ *   pinned by `marriedTwinInterleaved`).
  */
 export function twinContiguity(
   pos: Positions,
@@ -685,6 +707,29 @@ export function twinContiguity(
 ): InvariantResult {
   const violations: Violation[] = [];
   const sibMap = siblingsOf(doc);
+  const rowTol = 1;
+
+  // Same-row partner graph, for the twin-as-hub carve-out (mirrors the hub
+  // carve-out in noNodeBetweenPartners). `partnersOf` maps each individual to its
+  // partners across all unions; `sameRowDegree` counts how many of those are
+  // placed on the individual's own row — its effective union degree on the linear
+  // row it is laid out on.
+  const partnersOf = new Map<string, Set<string>>();
+  for (const u of Object.values(doc.partnerships)) {
+    const a = u.partner1Id;
+    const b = u.partner2Id;
+    if (!a || !b || a === b) continue;
+    (partnersOf.get(a) ?? partnersOf.set(a, new Set()).get(a)!).add(b);
+    (partnersOf.get(b) ?? partnersOf.set(b, new Set()).get(b)!).add(a);
+  }
+  const sameRowDegree = (id: string): number => {
+    if (!(id in pos)) return 0;
+    let n = 0;
+    for (const q of partnersOf.get(id) ?? []) {
+      if (q in pos && Math.abs(pos[q].y - pos[id].y) <= rowTol) n++;
+    }
+    return n;
+  };
 
   for (const [gid, group] of Object.entries(twinGroups)) {
     const members = new Set(group.individualIds.filter((id) => id in pos));
@@ -710,9 +755,22 @@ export function twinContiguity(
     const firstIdx = Math.min(...indices);
     const lastIdx = Math.max(...indices);
 
-    // All slots between firstIdx and lastIdx must be members.
+    /** A non-member sibling is permitted between the twins iff it is a same-row
+     *  spouse of a twin member that is itself a hub (≥ 2 same-row unions) — the
+     *  structurally-unavoidable twin-as-hub case (achievable form, issue #150). */
+    const isUnavoidableHubSpouse = (x: string): boolean => {
+      for (const t of members) {
+        if (partnersOf.get(t)?.has(x) === true && sameRowDegree(t) >= 2) return true;
+      }
+      return false;
+    };
+
+    // All slots between firstIdx and lastIdx must be members, except a
+    // structurally-forced hub-twin spouse-sibling.
     const run = ordered.slice(firstIdx, lastIdx + 1);
-    const nonMembersInRun = run.filter((id) => !members.has(id));
+    const nonMembersInRun = run.filter(
+      (id) => !members.has(id) && !isUnavoidableHubSpouse(id),
+    );
     if (nonMembersInRun.length > 0) {
       violations.push({
         rule: 'twinContiguity',

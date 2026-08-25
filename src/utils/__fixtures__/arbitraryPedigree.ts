@@ -35,6 +35,15 @@ export interface PedigreeGenOptions {
  * disconnected components, and cross-branch couples (residual 1a, fixed by the
  * cross-branch coordinate phase) — is handled and green. Widen these caps as
  * each remaining topology is closed (#141).
+ *
+ * NB `allowMarriedTwins` stays `false` even though the twin-as-hub *aesthetic*
+ * (`twinContiguity`) is now handled in its achievable form (#150, fixture
+ * `twinAsHubSibUnion`). Widening it to `true` currently reddens the gate on a
+ * *correctness* invariant, not `twinContiguity`: a cross-branch couple sharing a
+ * component with any married twin loses the cross-branch corrective (the
+ * `marriedTwin` guard in `retidyHubFreeComponents`), leaving `subtreeNonCollision`
+ * / `noCrossedDescentLines` failures. That correctness gap is tracked in #159;
+ * flip this flag once it closes.
  */
 export const SUPPORTED_SPACE: PedigreeGenOptions = {
   maxUnionDegree: 2,

@@ -224,25 +224,26 @@ fixture.
 
 ## 5. Known limitations — the open residual (1b)
 
-`SUPPORTED_SPACE` is green. The one **open** engine residual, tracked as
-**residual 1b**, is two structurally-related shapes the layered engine keeps on
-its linear path because delegating would balloon chart width
+`SUPPORTED_SPACE` is green. The **open** engine residuals, tracked as
+**residual 1b**, are structurally-related shapes the layered engine keeps on its
+linear path because delegating would balloon chart width
 ([`reformatLayout.ts` → `retidyHubFreeComponents`](../src/utils/reformatLayout.ts)):
 
-| Scenario | What fails | Tracking issue |
+| Scenario | What fails | Status |
 |---|---|---|
-| **Multi-union hub** (3+ same-row unions) | `subtreeNonCollision`, `noCrossedDescentLines` (correctness) + a foreign node between partners | *(filed — see issues labelled `layout`)* |
-| **Twin-as-hub** (a twin who is also partnered ≥2×, e.g. a consanguineous sib-union) | `twinContiguity` — a non-twin sibling tie-breaks between the twins | *(filed — see issues labelled `layout`)* |
+| **Multi-union hub** (3+ same-row unions) | `subtreeNonCollision`, `noCrossedDescentLines` (correctness) + a foreign node between partners | Open — needs a representation change (#149). |
+| **Twin-as-hub** (a twin also partnered ≥2×, e.g. a consanguineous sib-union) | `twinContiguity` — a non-twin sibling tie-breaks between the twins | **Aesthetic half closed (#150):** `twinContiguity` now has an *achievable form* — a hub-twin's own spouse-sibling may sit between the twins (it is structurally forced there once each couple is kept adjacent). Pinned by the `twinAsHubSibUnion` fixture. |
+| **Cross-branch couple + a married twin in the same component** | `subtreeNonCollision` / `noCrossedDescentLines` (correctness) | Open — the `marriedTwin` guard in `retidyHubFreeComponents` denies the cross-branch corrective to the *whole* component when any married twin is present. This is why `SUPPORTED_SPACE` still sets `allowMarriedTwins: false` even though the twin-as-hub *aesthetic* is handled. (#159.) |
 
 **The root cause is one fact.** `reformatLayout` models each generation as a
 *total order* — a 1-D line, where a node has ≤2 neighbours. A hub needing 3+
 adjacencies (three unions, or two unions plus a twin sibling) cannot be a single
 point on a line. This is a limitation of the representation, not of the problem:
-the fix needs either the *achievable-form* relaxation (for the aesthetic half) or
-a representation change such as **hub-node duplication** (for the correctness
-half). Node duplication is a new rendering concept — it would touch
-`CanvasContainer`, `svgExport.ts`, and every invariant — so it is deferred
-against its blast radius.
+the fix needs either the *achievable-form* relaxation (for the aesthetic half —
+**done for twin-as-hub `twinContiguity` in #150**) or a representation change such
+as **hub-node duplication** (for the correctness half). Node duplication is a new
+rendering concept — it would touch `CanvasContainer`, `svgExport.ts`, and every
+invariant — so it is deferred against its blast radius.
 
 **How often does it bite?** A census of 8,000 random `FULL_SPACE` documents
 (`reformatLayout` + all invariants) after the cross-branch fix (#148):

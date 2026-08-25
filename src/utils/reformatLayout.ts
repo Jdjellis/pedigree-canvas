@@ -391,6 +391,14 @@ function retidyHubFreeComponents(
       // MARRIED TWIN in the component (the corrective is validated only for the
       // supported space, which excludes married twins) — keeps the aligned
       // linear layout (residual 1b and the tracked follow-ups).
+      //
+      // The `marriedTwin` gate below is the last thing holding
+      // `allowMarriedTwins: false` in SUPPORTED_SPACE: the twin-as-hub *aesthetic*
+      // is handled (achievable-form `twinContiguity`, #150), but a cross-branch
+      // couple sharing a component with ANY married twin still forfeits this
+      // corrective and fails `subtreeNonCollision` — the tracked correctness
+      // follow-up (#159). Narrowing the gate to the entangled case would let the
+      // flag flip.
       const cross = crossUnions.length === 1 ? crossUnions[0] : null;
       const marriedTwin = Object.values(doc.twinGroups ?? {}).some((t) =>
         t.individualIds.some((id) => present.has(id) && (degree.get(id) ?? 0) > 0),
