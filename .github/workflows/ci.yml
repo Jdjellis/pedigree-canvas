@@ -49,10 +49,8 @@ jobs:
   e2e:
     name: E2E · Playwright (build a pedigree)
     runs-on: ubuntu-latest
-    # Non-blocking while the harness proves out: a failure here reports but does
-    # not fail the overall run. Drop this line to make the check required once
-    # it has been green across a handful of runs.
-    continue-on-error: true
+    # Required: the harness has been green on every completed run since it
+    # landed, so an e2e failure now fails the build.
     steps:
       - name: Checkout
         uses: actions/checkout@v4
