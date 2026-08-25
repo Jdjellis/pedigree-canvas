@@ -61,13 +61,13 @@ describe('updatePartnership', () => {
     );
   });
 
-  it('preserves other fields when patching type', () => {
+  it('preserves other fields when patching the consanguineous flag', () => {
     const id = seedPartnership();
     const before = usePedigreeStore.getState().document.partnerships[id];
-    usePedigreeStore
-      .getState()
-      .updatePartnership(id, { type: RelationshipType.Consanguinity });
+    usePedigreeStore.getState().updatePartnership(id, { consanguineous: true });
     const after = usePedigreeStore.getState().document.partnerships[id];
+    expect(after.consanguineous).toBe(true);
+    expect(after.type).toBe(before.type);
     expect(after.partner1Id).toBe(before.partner1Id);
     expect(after.partner2Id).toBe(before.partner2Id);
     expect(after.childrenIds).toEqual(before.childrenIds);

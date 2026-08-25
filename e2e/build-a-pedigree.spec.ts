@@ -13,7 +13,7 @@ import { seedFreshStart, readPersistedDoc, openRadialOnSeed } from './support/ha
 test.describe('build a pedigree', () => {
   test('adding a partner to the founder persists two joined individuals', async ({ page }) => {
     await seedFreshStart(page);
-    await page.goto('/');
+    await page.goto('/app/');
 
     // Fresh seed → the gender picker auto-opens on the founder. Choosing a sex
     // is the first real step of building a pedigree.

@@ -44,7 +44,7 @@ function seedTwoUnions(): void {
 
   // Insert the consanguinity union FIRST so it wins iteration order.
   pedigree.addPartnership({
-    id: CONSANG_UNION, type: RelationshipType.Consanguinity,
+    id: CONSANG_UNION, type: RelationshipType.Partnership, consanguineous: true,
     partner1Id: I3, partner2Id: OTHER, childrenIds: [KID],
   });
   pedigree.addParentChildLink({

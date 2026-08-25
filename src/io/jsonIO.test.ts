@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { serializeDocument, deserializeDocument, migrateAdoption } from './jsonIO';
+import {
+  serializeDocument,
+  deserializeDocument,
+  migrateAdoption,
+  migrateConsanguinity,
+} from './jsonIO';
 import { createDefaultDocument, createDefaultIndividual } from '../stores/pedigreeStore';
 import type { PedigreeDocument } from '../types/pedigree';
 import { RelationshipType } from '../types/enums';
@@ -269,6 +274,60 @@ describe('deserializeDocument legacy migrations', () => {
     const entry = loaded.legendConfig!.entries[0] as unknown as Record<string, unknown>;
     expect(entry.name).toBe('Diabetes');
     expect('conditionNames' in entry).toBe(false);
+  });
+
+  it('migrates a legacy consanguinity-typed union to a partnership + consanguineous flag', () => {
+    const doc = makeDocument();
+    // Legacy union stored under the old mutually-exclusive enum value.
+    (doc.partnerships['p1'] as unknown as Record<string, unknown>).type = 'consanguinity';
+    (doc.partnerships['p1'] as unknown as Record<string, unknown>).consanguinityDegree =
+      '1st cousins';
+
+    const loaded = deserializeDocument(JSON.stringify(doc));
+
+    expect(loaded.partnerships['p1'].type).toBe(RelationshipType.Partnership);
+    expect(loaded.partnerships['p1'].consanguineous).toBe(true);
+    // The degree is preserved through the migration.
+    expect(loaded.partnerships['p1'].consanguinityDegree).toBe('1st cousins');
+  });
+});
+
+describe('migrateConsanguinity', () => {
+  it('upgrades a legacy consanguinity union, preserving other fields', () => {
+    const doc = makeDocument();
+    (doc.partnerships['p1'] as unknown as Record<string, unknown>).type = 'consanguinity';
+
+    migrateConsanguinity(doc);
+
+    const p = doc.partnerships['p1'];
+    expect(p.type).toBe(RelationshipType.Partnership);
+    expect(p.consanguineous).toBe(true);
+    expect(p.childrenIds).toEqual(['kid-1']);
+  });
+
+  it('leaves partnership and separation unions untouched', () => {
+    const doc = makeDocument();
+    doc.partnerships['sep'] = {
+      id: 'sep',
+      type: RelationshipType.Separation,
+      childrenIds: [],
+    };
+
+    migrateConsanguinity(doc);
+
+    expect(doc.partnerships['p1'].type).toBe(RelationshipType.Partnership);
+    expect(doc.partnerships['p1'].consanguineous).toBeUndefined();
+    expect(doc.partnerships['sep'].type).toBe(RelationshipType.Separation);
+    expect(doc.partnerships['sep'].consanguineous).toBeUndefined();
+  });
+
+  it('is idempotent', () => {
+    const doc = makeDocument();
+    (doc.partnerships['p1'] as unknown as Record<string, unknown>).type = 'consanguinity';
+
+    const once = JSON.stringify(migrateConsanguinity(doc));
+    const twice = JSON.stringify(migrateConsanguinity(doc));
+    expect(once).toBe(twice);
   });
 });
 

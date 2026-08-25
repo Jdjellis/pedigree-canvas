@@ -8,6 +8,7 @@ import {
   LABEL_FONT_FAMILY,
   LABEL_COLOR,
   LABEL_OFFSET_Y,
+  ADOPTION_BRACKET_GAP,
 } from '../../../utils/constants';
 import { CHILDLESS_LABEL_OFFSET } from '../../../utils/childlessness';
 
@@ -27,10 +28,23 @@ export interface SymbolLabelProps {
 const LINE_HEIGHT = LABEL_FONT_SIZE + 4;
 
 /**
- * Horizontal gap between the symbol's right edge and the start of the
- * bottom-right individual number, so the digits never touch the outline.
+ * Horizontal gap between the symbol's right edge (or the adoption bracket's
+ * right arm, when the individual is adopted) and the start of the bottom-right
+ * individual number, so the digits never touch the outline or clip against the
+ * bracket.
  */
 const NUMBER_CORNER_GAP = 3;
+
+/**
+ * X of the bottom-right individual number's left edge. Normally just outside
+ * the symbol's bounding box; when the individual is adopted the number is
+ * shifted past the adoption bracket's right vertical stroke so the bracket
+ * arm cannot occlude the digits (see issue #152).
+ */
+function numberCornerX(adopted: boolean): number {
+  const base = adopted ? ADOPTION_BRACKET_GAP : SYMBOL_SIZE / 2;
+  return base + NUMBER_CORNER_GAP;
+}
 
 export const SymbolLabel: React.FC<SymbolLabelProps> = React.memo(
   ({ individual, individualNumber, childlessActive = false }) => {
@@ -123,7 +137,7 @@ export const SymbolLabel: React.FC<SymbolLabelProps> = React.memo(
         {individualNumber != null && (
           <Text
             text={`${individualNumber}`}
-            x={half + NUMBER_CORNER_GAP}
+            x={numberCornerX(individual.adopted ?? false)}
             y={half - LABEL_FONT_SIZE / 2}
             fontSize={LABEL_FONT_SIZE}
             fontFamily={LABEL_FONT_FAMILY}

@@ -224,14 +224,13 @@ describe('reformatLayout — cross-branch coordinate phase (#141 residual 1a)', 
 });
 
 // ---------------------------------------------------------------------------
-// OPEN residual 1b (issues #149 / #150) — failing-first fixtures. The layered
-// engine models each generation as a 1-D total order (a node has ≤2 neighbours),
-// so a 3+-union hub or a twin that is also a hub cannot seat all of its required
-// adjacencies. Both fixtures were shrunk from the discovery harness (FULL_SPACE,
-// seed 1) and are deliberately absent from ALL_FIXTURES / REFORMAT_FIXTURES
-// because they do NOT yet pass.
+// OPEN residual 1b (issue #149) — failing-first fixture. The layered engine
+// models each generation as a 1-D total order (a node has ≤2 neighbours), so a
+// 3+-union hub cannot seat all of its required adjacencies. Shrunk from the
+// discovery harness (FULL_SPACE, seed 1) and deliberately absent from
+// ALL_FIXTURES / REFORMAT_FIXTURES because it does NOT yet pass.
 //
-// Each shape gets two tests:
+// It gets two tests:
 //   1. a characterization pin (green) asserting the SPECIFIC invariant currently
 //      violated — a precise, reproducible record of the bug;
 //   2. an `it.fails` oracle asserting the desired end state. It passes today
@@ -239,8 +238,13 @@ describe('reformatLayout — cross-branch coordinate phase (#141 residual 1a)', 
 //      flipping the `it.fails` red and forcing the fixer to drop the marker and
 //      graduate the fixture. See docs/auto-layout.md §5 and CLAUDE.md (widen the
 //      SUPPORTED_SPACE caps and re-arm the property gate on close).
+//
+// The twin half of residual 1b (#150) closed via the achievable-form
+// twinContiguity; its regression pin follows below. Node duplication — the
+// structural fix for this hub case, and the only one that resolves the
+// correctness half — is tracked in #162.
 // ---------------------------------------------------------------------------
-describe('reformatLayout — residual 1b (open, #149 / #150)', () => {
+describe('reformatLayout — residual 1b: multi-union hub (open, #149)', () => {
   it('hubThreeUnionCrossing: a 3-union hub currently crosses descent lines (#149)', () => {
     const { doc } = hubThreeUnionCrossing();
     const pos = reformatted(doc);
@@ -252,16 +256,32 @@ describe('reformatLayout — residual 1b (open, #149 / #150)', () => {
     const pos = reformatted(doc);
     expect(checkAllInvariants(pos, doc).violations).toEqual([]);
   });
+});
 
-  it('twinAsHubSibUnion: a twin married to its sibling currently breaks twin contiguity (#150)', () => {
+// ---------------------------------------------------------------------------
+// Twin-as-hub / consanguineous sib-union (issue #150, residual 1b twin half). A
+// twin that is ALSO a hub (≥2 same-row unions) cannot seat all of its required
+// adjacencies — co-twin + both spouses — on a 1-D row (a node has ≤2 neighbours).
+// Keeping each couple adjacent is forced by noNodeBetweenPartners (correctness),
+// so the co-twin loses its slot and the hub-twin's spouse-sibling is structurally
+// forced between the twins. twinContiguity is therefore defined in its achievable
+// form: a same-row spouse of a hub-twin is permitted between the twins, while any
+// plain sibling (and a single-union twin's spouse-sibling, the closed #146 case)
+// is still flagged. reformatLayout meets that form, so twinAsHubSibUnion has
+// graduated into ALL_FIXTURES (the loop above asserts it). This pin documents the
+// specific achievable-form behaviour so it cannot silently regress.
+// ---------------------------------------------------------------------------
+describe('reformatLayout — twin-as-hub (#150)', () => {
+  it('twinAsHubSibUnion: meets the achievable twinContiguity and every correctness invariant', () => {
     const { doc, twinGroups } = twinAsHubSibUnion();
     const pos = reformatted(doc);
-    expect(twinContiguity(pos, doc, twinGroups ?? {}).ok).toBe(false);
-  });
-
-  it.fails('twinAsHubSibUnion: SHOULD keep twin-group members contiguous once fixed (#150)', () => {
-    const { doc, twinGroups } = twinAsHubSibUnion();
-    const pos = reformatted(doc);
+    // The hub-twin's spouse-sibling sits between the twins — the only
+    // structurally-unavoidable betweenness — which the achievable-form
+    // twinContiguity permits.
     expect(twinContiguity(pos, doc, twinGroups ?? {}).ok).toBe(true);
+    // Correctness is untouched: no FOREIGN node between any couple, every
+    // positional invariant holds.
+    expect(checkAllInvariants(pos, doc).violations).toEqual([]);
+    expect(noNodeBetweenPartners(pos, doc).ok).toBe(true);
   });
 });

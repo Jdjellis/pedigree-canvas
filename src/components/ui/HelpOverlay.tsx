@@ -113,6 +113,18 @@ export function HelpOverlay(): React.JSX.Element {
             </section>
 
             <section className={styles.section}>
+              <h3 className={styles.sectionLabel}>About</h3>
+              <a
+                className={styles.feedbackLink}
+                href="/"
+                target="_blank"
+                rel="noopener"
+              >
+                About Pedigree Canvas
+              </a>
+            </section>
+
+            <section className={styles.section}>
               <h3 className={styles.sectionLabel}>Feedback</h3>
               <a className={styles.feedbackLink} href={FEEDBACK_HREF}>
                 Send feedback

@@ -160,17 +160,26 @@ export interface Individual {
 
 export interface PartnershipRelationship {
   id: string;
-  type:
-    | RelationshipType.Partnership
-    | RelationshipType.Consanguinity
-    | RelationshipType.Separation;
+  /**
+   * The relationship *status*, an intact partnership or a separation/divorce.
+   * Consanguinity is NOT a status — it is the orthogonal {@link consanguineous}
+   * flag, so a couple can be both separated *and* consanguineous (issue #153).
+   */
+  type: RelationshipType.Partnership | RelationshipType.Separation;
   partner1Id?: string;
   partner2Id?: string;
   childrenIds: string[];
   /**
+   * True when the partners are biologically related, drawn as a double
+   * relationship line per NSGC/Bennett. Orthogonal to {@link type}: a
+   * consanguineous union may also be separated (double line + separation hash).
+   * Absent/false → a single relationship line.
+   */
+  consanguineous?: boolean;
+  /**
    * Free-text degree of relationship for a consanguineous union (e.g.
    * "1st cousins"), rendered above the double partnership line. Only
-   * meaningful when {@link type} is {@link RelationshipType.Consanguinity}.
+   * meaningful when {@link consanguineous} is true.
    */
   consanguinityDegree?: string;
   /**

@@ -195,6 +195,10 @@ describe('manualOrderPreserved', () => {
 });
 
 describe('twinContiguity', () => {
+  const tg = (): Record<string, TwinGroup> => ({
+    g: { id: 'g', twinType: TwinType.Monozygotic, individualIds: ['t1', 't2'], parentPartnershipId: 'u' },
+  });
+
   it('flags a non-twin sibling ordered between two twins', () => {
     const d = doc({
       individuals: { p: ind('p', 0, 0), t1: ind('t1', 0, 1), s: ind('s', 80, 1), t2: ind('t2', 160, 1) },
@@ -202,9 +206,50 @@ describe('twinContiguity', () => {
       parentChildLinks: { l1: link('l1', 'u', 't1'), l2: link('l2', 'u', 's'), l3: link('l3', 'u', 't2') },
     });
     // NOTE: TwinGroup uses `twinType` and `individualIds` (not `type`/`memberIds`); also requires `parentPartnershipId`.
-    const tg: Record<string, TwinGroup> = { g: { id: 'g', twinType: TwinType.Monozygotic, individualIds: ['t1', 't2'], parentPartnershipId: 'u' } };
     const pos = { p: { x: 0, y: 0 }, t1: { x: 0, y: 150 }, s: { x: 80, y: 150 }, t2: { x: 160, y: 150 } };
-    expect(twinContiguity(pos, d, tg).ok).toBe(false);
+    expect(twinContiguity(pos, d, tg()).ok).toBe(false);
+  });
+
+  // Achievable form (issue #150): a twin that is itself a HUB (≥2 same-row unions)
+  // cannot sit adjacent to its co-twin AND both spouses on a 1-D row. When one of
+  // its spouses is its own non-twin sibling (a consanguineous sib-union), that
+  // spouse-sibling is structurally forced between the twins — permitted.
+  it('permits a hub-twin’s spouse-sibling between the twins', () => {
+    // t1 holds two same-row unions — t1×s (sibling, consanguineous) and t1×m
+    // (married-in) — so it is a hub; s is forced between the twins.
+    const d = doc({
+      individuals: {
+        p: ind('p', 0, 0), m: ind('m', -80, 1),
+        t1: ind('t1', 0, 1), s: ind('s', 80, 1), t2: ind('t2', 160, 1),
+      },
+      partnerships: {
+        u: union('u', 'p', undefined, ['t1', 's', 't2']),
+        uts: union('uts', 't1', 's', []),
+        utm: union('utm', 't1', 'm', []),
+      },
+      parentChildLinks: { l1: link('l1', 'u', 't1'), l2: link('l2', 'u', 's'), l3: link('l3', 'u', 't2') },
+    });
+    const pos = {
+      p: { x: 0, y: 0 }, m: { x: -80, y: 150 },
+      t1: { x: 0, y: 150 }, s: { x: 80, y: 150 }, t2: { x: 160, y: 150 },
+    };
+    expect(twinContiguity(pos, d, tg()).ok).toBe(true);
+  });
+
+  // Threshold guard: a SINGLE-union twin's spouse-sibling is NOT forced between
+  // the twins — a clean co-twin/spouse straddle exists (the closed #146 case), so
+  // the strict rule still applies and the betweenness is flagged.
+  it('still flags a single-union twin’s spouse-sibling between the twins', () => {
+    const d = doc({
+      individuals: { p: ind('p', 0, 0), t1: ind('t1', 0, 1), s: ind('s', 80, 1), t2: ind('t2', 160, 1) },
+      partnerships: {
+        u: union('u', 'p', undefined, ['t1', 's', 't2']),
+        uts: union('uts', 't1', 's', []),
+      },
+      parentChildLinks: { l1: link('l1', 'u', 't1'), l2: link('l2', 'u', 's'), l3: link('l3', 'u', 't2') },
+    });
+    const pos = { p: { x: 0, y: 0 }, t1: { x: 0, y: 150 }, s: { x: 80, y: 150 }, t2: { x: 160, y: 150 } };
+    expect(twinContiguity(pos, d, tg()).ok).toBe(false);
   });
 });
 

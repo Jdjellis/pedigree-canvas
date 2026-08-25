@@ -39,6 +39,13 @@ export enum PregnancyOutcome {
 
 export enum RelationshipType {
   Partnership = 'partnership',
+  /**
+   * @deprecated Legacy union sub-type. Consanguinity is now an orthogonal
+   * boolean flag ({@link PartnershipRelationship.consanguineous}) that can
+   * co-exist with any {@link PartnershipRelationship.type}, so a union is never
+   * stored with this type. Retained only so the {@link jsonIO} migration can
+   * recognise and upgrade documents saved under the old mutually-exclusive enum.
+   */
   Consanguinity = 'consanguinity',
   Separation = 'separation',
   ParentChild = 'parentChild',

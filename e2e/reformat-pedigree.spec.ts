@@ -77,7 +77,7 @@ test.describe('reformat pedigree', () => {
     );
 
     // --- 3. Load the app; the wide seed must survive (no auto-reformat) ------
-    await page.goto('/');
+    await page.goto('/app/');
     await page.waitForLoadState('networkidle');
 
     const seeded = await readPersistedDoc(page);

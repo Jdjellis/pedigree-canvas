@@ -109,7 +109,7 @@ Ongoing / live pregnancy: diamond symbol (sex unknown) or sex-specific symbol wh
 | Line type | Visual description | App enum |
 |-----------|-------------------|----------|
 | Partnership (mating) | Single horizontal line between partners | `RelationshipType.Partnership` |
-| Consanguinity | **Double** horizontal line between partners who are biologically related | `RelationshipType.Consanguinity` |
+| Consanguinity | **Double** horizontal line between partners who are biologically related. Orthogonal to the status line above/below — a consanguineous union may also be separated (double line **and** slash) | `PartnershipRelationship.consanguineous` (boolean) + optional `consanguinityDegree` |
 | Separation / divorce | Single line with a **slash** through it | `RelationshipType.Separation` |
 | Line of descent | Vertical line dropping from centre of mating line | — (computed from partnership) |
 | Sibship line | Horizontal line from which siblings drop vertically | — (computed from partnership children) |

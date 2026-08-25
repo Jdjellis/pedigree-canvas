@@ -26,14 +26,15 @@ export function LinkTypePopup() {
   }, []);
 
   const createPartnership = useCallback(
-    (type: RelationshipType.Partnership | RelationshipType.Consanguinity) => {
+    (consanguineous = false) => {
       if (!sourceId || !targetId) return;
       const partnership: PartnershipRelationship = {
         id: generateId(),
-        type,
+        type: RelationshipType.Partnership,
         partner1Id: sourceId,
         partner2Id: targetId,
         childrenIds: [],
+        ...(consanguineous ? { consanguineous: true } : {}),
       };
       addPartnership(partnership);
       finishAfterCreate();
@@ -104,13 +105,13 @@ export function LinkTypePopup() {
         <div className={styles.title}>Create Relationship</div>
         <button
           className={styles.option}
-          onClick={() => createPartnership(RelationshipType.Partnership)}
+          onClick={() => createPartnership(false)}
         >
           Partnership
         </button>
         <button
           className={styles.option}
-          onClick={() => createPartnership(RelationshipType.Consanguinity)}
+          onClick={() => createPartnership(true)}
         >
           Consanguinity
         </button>

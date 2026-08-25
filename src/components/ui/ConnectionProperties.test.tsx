@@ -70,9 +70,12 @@ describe('ConnectionProperties via PropertiesPanel', () => {
     expect(screen.getByRole('button', { name: 'Adoptive' })).toHaveAttribute('aria-pressed', 'false');
   });
 
-  it('renders the relationship-status control and shows the degree input only when consanguineous', () => {
+  it('renders the status control and consanguineous checkbox, showing the degree input when consanguineous', () => {
     const doc = createDefaultDocument();
-    doc.partnerships['union1'] = makePartnership('union1', RelationshipType.Consanguinity, '1st cousins');
+    doc.partnerships['union1'] = {
+      ...makePartnership('union1', RelationshipType.Partnership, '1st cousins'),
+      consanguineous: true,
+    };
 
     act(() => {
       usePedigreeStore.getState().setDocument(doc);
@@ -85,11 +88,33 @@ describe('ConnectionProperties via PropertiesPanel', () => {
     render(<PropertiesPanel />);
 
     expect(screen.getByRole('group', { name: 'Relationship status' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Consanguineous' })).toHaveAttribute('aria-pressed', 'true');
+    // Status is a partnership; consanguinity is now an independent checkbox.
+    expect(screen.getByRole('button', { name: 'Partnership' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('checkbox', { name: /consanguineous/i })).toBeChecked();
     expect(screen.getByDisplayValue('1st cousins')).toBeInTheDocument();
   });
 
-  it('does not show the degree input for a plain partnership', () => {
+  it('renders a separated consanguineous union as separated status + consanguineous checked (issue #153)', () => {
+    const doc = createDefaultDocument();
+    doc.partnerships['union1'] = {
+      ...makePartnership('union1', RelationshipType.Separation),
+      consanguineous: true,
+    };
+
+    act(() => {
+      usePedigreeStore.getState().setDocument(doc);
+      useUIStore.setState({
+        selectedConnection: { kind: 'partnership', id: 'union1' },
+        propertiesPanelOpen: true,
+      });
+    });
+
+    render(<PropertiesPanel />);
+    expect(screen.getByRole('button', { name: 'Separated' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('checkbox', { name: /consanguineous/i })).toBeChecked();
+  });
+
+  it('does not show the degree input for a non-consanguineous partnership', () => {
     const doc = createDefaultDocument();
     doc.partnerships['union1'] = makePartnership('union1', RelationshipType.Partnership);
 
@@ -102,6 +127,7 @@ describe('ConnectionProperties via PropertiesPanel', () => {
     });
 
     render(<PropertiesPanel />);
+    expect(screen.getByRole('checkbox', { name: /consanguineous/i })).not.toBeChecked();
     expect(screen.queryByPlaceholderText('e.g. 1st cousins')).not.toBeInTheDocument();
   });
 

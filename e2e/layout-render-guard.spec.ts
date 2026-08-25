@@ -77,7 +77,7 @@ test.describe('layout render guard', () => {
     );
 
     // --- 4. Load the app and wait for hydration ------------------------------
-    await page.goto('/');
+    await page.goto('/app/');
     // Wait for the toolbar to be visible — a reliable signal that the app has
     // fully mounted and the autosave restore has run.
     await page.waitForLoadState('networkidle');

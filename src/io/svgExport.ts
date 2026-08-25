@@ -32,6 +32,7 @@ import {
   DECEASED_SLASH_OVERSHOOT,
   TWIN_UNKNOWN_FONT_SIZE,
   RELATIONSHIP_LABEL_OFFSET,
+  ADOPTION_BRACKET_GAP,
 } from '../utils/constants';
 import { adoptionBracketPolylines } from '../components/canvas/symbols/adoptionBracketGeometry';
 import { getPresentPartners } from '../utils/graphTraversal';
@@ -45,6 +46,7 @@ import {
   childlessMarks,
   consanguinityLines,
   partnershipMidpoint,
+  separationHashMarks,
 } from '../utils/partnershipGeometry';
 import {
   individualChildlessAnchor,
@@ -74,10 +76,21 @@ const PATTERN_STROKE_WIDTH = 1.5;
 /** Vertical spacing between successive label lines (see `SymbolLabel`). */
 const LABEL_LINE_HEIGHT = LABEL_FONT_SIZE + 4;
 /**
- * Horizontal gap between the symbol's right edge and the start of the
- * bottom-right individual number (see `SymbolLabel`).
+ * Horizontal gap between the symbol's right edge (or the adoption bracket's
+ * right arm, when the individual is adopted) and the start of the bottom-right
+ * individual number (see `SymbolLabel`).
  */
 const NUMBER_CORNER_GAP = 3;
+
+/**
+ * X of the bottom-right individual number's left edge. Mirrors
+ * `numberCornerX` in `SymbolLabel`: shifted past the adoption bracket when the
+ * individual is adopted so the bracket arm cannot occlude the digits.
+ */
+function numberCornerX(adopted: boolean): number {
+  const base = adopted ? ADOPTION_BRACKET_GAP : SYMBOL_SIZE / 2;
+  return base + NUMBER_CORNER_GAP;
+}
 /** Padding added around the content bounding box for the export viewBox. */
 const VIEWBOX_PADDING = 40;
 
@@ -459,7 +472,7 @@ function renderIndividual(
   // places its Text top at y = half - FONT/2; the SVG baseline sits FONT below
   // the top, so the baseline lands at y = half + FONT/2.
   if (individualNumber != null) {
-    const numberX = half + NUMBER_CORNER_GAP;
+    const numberX = numberCornerX(individual.adopted ?? false);
     const numberBaselineY = half + LABEL_FONT_SIZE / 2;
     parts.push(
       `<text x="${num(numberX)}" y="${num(
@@ -584,33 +597,36 @@ function renderPartnershipLine(
     return parts.join('');
   })();
 
-  if (partnership.type === RelationshipType.Consanguinity) {
-    const { a, b } = consanguinityLines(p1.position, p2.position, CONSANGUINITY_GAP);
-    const parts = [line(a[0], a[1], a[2], a[3]), line(b[0], b[1], b[2], b[3])];
-    const degree = partnership.consanguinityDegree?.trim();
-    if (degree) {
-      const baselineY = mid.y - CONSANGUINITY_GAP / 2 - RELATIONSHIP_LABEL_OFFSET;
-      parts.push(
-        `<text x="${num(mid.x)}" y="${num(
-          baselineY,
-        )}" text-anchor="middle" font-size="${LABEL_FONT_SIZE}" font-family="${escapeXml(
-          LABEL_FONT_FAMILY,
-        )}" fill="${LABEL_COLOR}">${escapeXml(degree)}</text>`,
-      );
-    }
-    return parts.join('') + childless;
-  }
+  // Base relationship line(s): a double line when consanguineous, a single line
+  // otherwise. Consanguinity and separation are independent (issue #153), so the
+  // separation hash and the degree label are layered on top of whichever base
+  // this union has — mirroring PartnershipLine.tsx.
+  const segments: [number, number, number, number][] = partnership.consanguineous
+    ? (() => {
+        const { a, b } = consanguinityLines(p1.position, p2.position, CONSANGUINITY_GAP);
+        return [a, b];
+      })()
+    : [[p1.position.x, p1.position.y, p2.position.x, p2.position.y]];
+
+  const parts = segments.map((s) => line(s[0], s[1], s[2], s[3]));
 
   if (partnership.type === RelationshipType.Separation) {
-    const hashSize = 6;
-    return [
-      line(p1.position.x, p1.position.y, p2.position.x, p2.position.y),
-      line(mid.x - 4, mid.y - hashSize, mid.x + 4, mid.y + hashSize),
-      line(mid.x + 2, mid.y - hashSize, mid.x + 10, mid.y + hashSize),
-    ].join('') + childless;
+    for (const h of separationHashMarks(mid)) parts.push(line(h[0], h[1], h[2], h[3]));
   }
 
-  return line(p1.position.x, p1.position.y, p2.position.x, p2.position.y) + childless;
+  const degree = partnership.consanguineous ? partnership.consanguinityDegree?.trim() : undefined;
+  if (degree) {
+    const baselineY = mid.y - CONSANGUINITY_GAP / 2 - RELATIONSHIP_LABEL_OFFSET;
+    parts.push(
+      `<text x="${num(mid.x)}" y="${num(
+        baselineY,
+      )}" text-anchor="middle" font-size="${LABEL_FONT_SIZE}" font-family="${escapeXml(
+        LABEL_FONT_FAMILY,
+      )}" fill="${LABEL_COLOR}">${escapeXml(degree)}</text>`,
+    );
+  }
+
+  return parts.join('') + childless;
 }
 
 /**
